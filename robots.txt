@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://plutonoc633-lgtm.github.io/plutonoc-astronomy/sitemap.xml
