@@ -56,21 +56,12 @@
     </section>
     <section class="work-filters" aria-label="作品分类筛选">
       <button class="active" data-filter="all">全部</button><button data-filter="nightscape">星野</button><button data-filter="deepsky">深空</button><button data-filter="planetary">行星</button>
+      <div class="gallery-status"><span class="gallery-current">01</span><i>/</i><span class="gallery-total">54</span></div>
+      <div class="gallery-arrows"><button class="gallery-prev" aria-label="上一张">←</button><button class="gallery-next" aria-label="下一张">→</button></div>
     </section>
-    <section class="work-grid">
-      <figure class="work-card hero-work" data-category="nightscape"><img src="assets/portfolio/milkyway-arch.jpg" alt="内蒙古银河拱桥" loading="lazy"><figcaption><b>内蒙古银河拱桥</b><span>星野 · NIGHTSCAPE</span></figcaption></figure>
-      <figure class="work-card" data-category="deepsky"><img src="assets/portfolio/m31.jpg" alt="仙女座星系 M31" loading="lazy"><figcaption><b>仙女座星系 M31</b><span>深空 · GALAXY</span></figcaption></figure>
-      <figure class="work-card portrait" data-category="deepsky"><img src="assets/portfolio/m42.jpg" alt="猎户座星云 M42" loading="lazy"><figcaption><b>猎户座星云 M42</b><span>深空 · NEBULA</span></figcaption></figure>
-      <figure class="work-card portrait" data-category="deepsky"><img src="assets/portfolio/heart-nebula.jpg" alt="心脏星云 IC1805" loading="lazy"><figcaption><b>心脏星云 IC1805</b><span>深空 · NEBULA</span></figcaption></figure>
-      <figure class="work-card" data-category="nightscape"><img src="assets/portfolio/geminids.jpg" alt="双子座流星雨" loading="lazy"><figcaption><b>双子座流星雨</b><span>星野 · METEOR SHOWER</span></figcaption></figure>
-      <figure class="work-card" data-category="deepsky"><img src="assets/portfolio/rosette-hoo.jpg" alt="玫瑰星云 HOO" loading="lazy"><figcaption><b>玫瑰星云 HOO</b><span>深空 · NARROWBAND</span></figcaption></figure>
-      <figure class="work-card" data-category="planetary"><img src="assets/portfolio/sunspots.jpg" alt="太阳黑子" loading="lazy"><figcaption><b>太阳黑子</b><span>行星 · SOLAR</span></figcaption></figure>
-      <figure class="work-card" data-category="nightscape"><img src="assets/portfolio/polaris-trails.jpg" alt="北极星轨" loading="lazy"><figcaption><b>北极星轨</b><span>星野 · STAR TRAILS</span></figcaption></figure>
-      <figure class="work-card portrait" data-category="deepsky"><img src="assets/portfolio/horsehead.jpg" alt="马头星云 IC434" loading="lazy"><figcaption><b>马头星云 IC434</b><span>深空 · NEBULA</span></figcaption></figure>
-      <figure class="work-card" data-category="deepsky"><img src="assets/portfolio/m51.jpg" alt="涡状星系 M51" loading="lazy"><figcaption><b>涡状星系 M51</b><span>深空 · GALAXY</span></figcaption></figure>
-      <figure class="work-card" data-category="planetary"><img src="assets/portfolio/moon-map.jpg" alt="月面部分地图" loading="lazy"><figcaption><b>月面部分地图</b><span>行星 · LUNAR</span></figcaption></figure>
-      <figure class="work-card" data-category="nightscape"><img src="assets/portfolio/winter-milkyway.jpg" alt="神农架冬季银河" loading="lazy"><figcaption><b>神农架冬季银河</b><span>星野 · NIGHTSCAPE</span></figcaption></figure>
-      <figure class="work-card motion" data-category="planetary"><img src="assets/portfolio/jupiter-motion.gif" alt="木星四小时自转动态影像" loading="lazy"><figcaption><b>木星四小时自转</b><span>行星 · 动态影像</span></figcaption></figure>
+    <section class="gallery-shell" aria-label="作品横向画廊">
+      <div class="work-track"></div>
+      <p class="gallery-hint">拖动浏览 · 使用左右箭头切换 · 点击作品查看大图</p>
     </section>
     <section class="quote"><div class="orb"></div><p>循此苦旅<br>以达天际</p><span>LIU GEYANG · TIANJIAN ASTRONOMY ASSOCIATION</span></section>
     <section class="records" id="records">
@@ -114,6 +105,7 @@
   </main>
   <dialog class="lightbox"><button aria-label="关闭">×</button><img alt=""><p></p></dialog>
   <footer><span>© 2026 LIU GEYANG</span><span>JIANGNAN · TIANJIAN · STARS</span><a href="#top">SCROLL TO TOP ↑</a></footer>
+  <script src="gallery-data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
