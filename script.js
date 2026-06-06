@@ -1,7 +1,21 @@
 const cursor=document.querySelector('.cursor');
 document.addEventListener('mousemove',e=>{cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px'});
+const hero=document.querySelector('.astro-hero');
 const moon=document.querySelector('.moon-inner');
-window.addEventListener('scroll',()=>{moon.style.transform=`translateY(${scrollY*.08}px) rotate(${scrollY*.02}deg)`});
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setHeroPointer(clientX,clientY){
+  if(reducedMotion||!hero)return;
+  const rect=hero.getBoundingClientRect();
+  const x=(clientX-rect.left)/rect.width-.5;
+  const y=(clientY-rect.top)/rect.height-.5;
+  hero.style.setProperty('--hero-x',`${x*34}px`);
+  hero.style.setProperty('--hero-y',`${y*26}px`);
+  moon.style.setProperty('--light-x',`${50+x*34}%`);
+  moon.style.setProperty('--light-y',`${50+y*34}%`);
+}
+hero?.addEventListener('pointermove',event=>setHeroPointer(event.clientX,event.clientY));
+hero?.addEventListener('pointerleave',()=>{hero.style.setProperty('--hero-x','0px');hero.style.setProperty('--hero-y','0px');moon.style.setProperty('--light-x','35%');moon.style.setProperty('--light-y','35%')});
+hero?.addEventListener('touchmove',event=>{const touch=event.touches[0];if(touch)setHeroPointer(touch.clientX,touch.clientY)},{passive:true});
 
 const labels={nightscape:'星野',deepsky:'深空',planetary:'行星'};
 const track=document.querySelector('.work-track');
@@ -84,3 +98,29 @@ journeyStops.forEach(stop=>stop.addEventListener('click',()=>{
     journeyViewer.classList.remove('is-changing');
   },220);
 }));
+
+const quote=document.querySelector('.quote-instrument');
+const orbControl=document.querySelector('.orb-control');
+function setQuotePointer(clientX,clientY){
+  if(reducedMotion||!quote)return;
+  const rect=quote.getBoundingClientRect();
+  const x=(clientX-rect.left)/rect.width-.5;
+  const y=(clientY-rect.top)/rect.height-.5;
+  quote.style.setProperty('--quote-x',`${x*28}px`);
+  quote.style.setProperty('--quote-y',`${y*22}px`);
+  quote.style.setProperty('--phase-x',`${50+x*42}%`);
+  quote.style.setProperty('--phase-y',`${50+y*42}%`);
+}
+quote?.addEventListener('pointermove',event=>setQuotePointer(event.clientX,event.clientY));
+quote?.addEventListener('pointerleave',()=>{quote.style.setProperty('--quote-x','0px');quote.style.setProperty('--quote-y','0px');quote.style.setProperty('--phase-x','42%');quote.style.setProperty('--phase-y','38%')});
+quote?.addEventListener('touchmove',event=>{const touch=event.touches[0];if(touch)setQuotePointer(touch.clientX,touch.clientY)},{passive:true});
+orbControl?.addEventListener('click',()=>{
+  const stars=quote.dataset.mode!=='stars';
+  quote.dataset.mode=stars?'stars':'moon';
+  orbControl.setAttribute('aria-pressed',String(stars));
+  orbControl.setAttribute('aria-label',stars?'切换为月相模式':'切换为星图模式');
+});
+if(quote){
+  const quoteObserver=new IntersectionObserver(entries=>entries.forEach(entry=>quote.classList.toggle('is-visible',entry.isIntersecting)),{threshold:.35});
+  quoteObserver.observe(quote);
+}
