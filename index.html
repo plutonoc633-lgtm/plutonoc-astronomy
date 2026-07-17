@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="PlutonoC 夜空 自然与观测影像">
-  <meta name="theme-color" content="#08090b">
-  <title>PlutonoC | 夜空 自然与动态影像</title>
+  <meta name="description" content="PlutonoC 的个人摄影与观测页面">
+  <meta name="theme-color" content="#090a0b">
+  <title>PlutonoC</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
-
   <div class="reading-progress" aria-hidden="true"><i data-reading-progress></i></div>
+
   <header class="site-header" data-header>
     <a class="brand" href="#home" data-transition-link aria-label="返回首页">PlutonoC</a>
     <div class="section-status" aria-live="polite"><span data-current-number>01</span><b data-current-section>首页</b></div>
@@ -21,25 +21,25 @@
   </header>
 
   <aside class="site-index" id="site-index" role="dialog" aria-modal="true" aria-label="网站索引" aria-hidden="true">
-    <div class="index-backdrop" aria-hidden="true"></div>
+    <button class="index-backdrop" type="button" data-index-close tabindex="-1" aria-label="关闭索引"></button>
     <div class="index-panel">
       <div class="index-top">
-        <a href="#home" data-transition-link>PlutonoC</a>
-        <button type="button" data-index-close aria-label="关闭索引">CLOSE <b>×</b></button>
+        <span>PlutonoC</span>
+        <button type="button" data-index-close aria-label="关闭索引">关闭 <b>×</b></button>
       </div>
       <div class="index-body">
         <nav class="index-nav" aria-label="栏目索引">
-          <a href="#home" data-index-link data-preview="assets/gallery/nightscape/nightscape-08.jpg"><span>01</span><b>首页</b><em>Home</em></a>
-          <a href="#about" data-index-link data-preview="assets/inner-mongolia.jpg"><span>02</span><b>关于</b><em>Profile</em></a>
-          <a href="#journey" data-index-link data-preview="assets/portfolio/moon-map.jpg"><span>03</span><b>观测历程</b><em>Journey</em></a>
-          <a href="#works" data-index-link data-preview="assets/gallery/deepsky/deepsky-25.jpg"><span>04</span><b>摄影作品</b><em>Photography</em></a>
-          <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>05</span><b>动态影像</b><em>Film</em></a>
-          <a href="#records" data-index-link data-preview="assets/gallery/planetary/planetary-04.jpg"><span>06</span><b>公开记录</b><em>Archive</em></a>
-          <a href="#equipment" data-index-link data-preview="assets/equipment.jpg"><span>07</span><b>设备</b><em>Equipment</em></a>
-          <a href="#contact" data-index-link data-preview="assets/gallery/nightscape/nightscape-11.jpg"><span>08</span><b>联系</b><em>Contact</em></a>
+          <a href="#home" data-index-link data-preview="assets/gallery/nightscape/nightscape-03.jpg"><span>01</span><b>首页</b><em>HOME</em></a>
+          <a href="#about" data-index-link data-preview="assets/inner-mongolia.jpg"><span>02</span><b>关于我</b><em>ABOUT</em></a>
+          <a href="#journey" data-index-link data-preview="assets/portfolio/milkyway-arch.jpg"><span>03</span><b>作品手记</b><em>STORIES</em></a>
+          <a href="#works" data-index-link data-preview="assets/gallery/deepsky/deepsky-25.jpg"><span>04</span><b>摄影作品</b><em>PHOTOGRAPHY</em></a>
+          <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>05</span><b>动态影像</b><em>FILM</em></a>
+          <a href="#records" data-index-link data-preview="assets/gallery/planetary/planetary-04.jpg"><span>06</span><b>公开记录</b><em>ARCHIVE</em></a>
+          <a href="#equipment" data-index-link data-preview="assets/equipment.jpg"><span>07</span><b>设备</b><em>EQUIPMENT</em></a>
+          <a href="#contact" data-index-link data-preview="assets/inner-mongolia.jpg"><span>08</span><b>联系</b><em>CONTACT</em></a>
         </nav>
         <figure class="index-preview" aria-hidden="true">
-          <img src="assets/gallery/nightscape/nightscape-08.jpg" alt="">
+          <img src="assets/gallery/nightscape/nightscape-03.jpg" alt="">
           <figcaption><span data-index-count>01</span><b data-index-name>首页</b></figcaption>
         </figure>
       </div>
@@ -51,95 +51,67 @@
 
   <main id="content">
     <section class="hero" id="home" data-section="01" data-section-name="首页">
-      <div class="hero-media" aria-hidden="true">
-        <img class="hero-image hero-image-current" src="assets/gallery/nightscape/nightscape-08.jpg" alt="">
-        <img class="hero-image hero-image-next" src="assets/gallery/nightscape/nightscape-08.jpg" alt="">
-        <div class="hero-shade"></div>
+      <div class="hero-signature">
+        <h1>PlutonoC</h1>
+        <span aria-hidden="true">01 / 08</span>
       </div>
-      <div class="hero-copy">
-        <p class="hero-meta reveal">ASTRONOMY / PHOTOGRAPHY / FILM</p>
-        <h1 class="reveal">PlutonoC</h1>
-        <p class="hero-tagline reveal">夜空　自然　动态影像</p>
-      </div>
-      <nav class="hero-projects reveal" aria-label="作品入口">
-        <a class="is-active" href="#works" data-transition-link data-home-preview data-home-filter="nightscape" data-preview="assets/gallery/nightscape/nightscape-08.jpg" data-title="星野">
-          <span>01</span><b>星野</b><em>14</em>
+      <nav class="contact-sheet" aria-label="主要栏目">
+        <a class="contact-panel is-active" href="#works" data-transition-link data-home-filter="nightscape">
+          <img src="assets/gallery/nightscape/nightscape-03.jpg" alt="不可名状 星野摄影作品">
+          <span class="contact-panel-shade"></span>
+          <span class="contact-panel-meta"><i>01</i><b>星野</b><em>14</em></span>
         </a>
-        <a href="#works" data-transition-link data-home-preview data-home-filter="deepsky" data-preview="assets/gallery/deepsky/deepsky-25.jpg" data-title="深空">
-          <span>02</span><b>深空</b><em>31</em>
+        <a class="contact-panel" href="#works" data-transition-link data-home-filter="deepsky">
+          <img src="assets/gallery/deepsky/deepsky-01.jpg" alt="LDN1622 深空摄影作品">
+          <span class="contact-panel-shade"></span>
+          <span class="contact-panel-meta"><i>02</i><b>深空</b><em>31</em></span>
         </a>
-        <a href="#works" data-transition-link data-home-preview data-home-filter="planetary" data-preview="assets/gallery/planetary/planetary-04.jpg" data-title="行星">
-          <span>03</span><b>行星</b><em>09</em>
+        <a class="contact-panel" href="#works" data-transition-link data-home-filter="planetary">
+          <img src="assets/portfolio/moon-map.jpg" alt="月面部分地图">
+          <span class="contact-panel-shade"></span>
+          <span class="contact-panel-meta"><i>03</i><b>行星</b><em>09</em></span>
         </a>
-        <a href="#journey" data-transition-link data-home-preview data-preview="assets/portfolio/milkyway-arch.jpg" data-title="观测历程">
-          <span>04</span><b>观测历程</b><em>03</em>
+        <a class="contact-panel" href="#journey" data-transition-link>
+          <img src="assets/portfolio/milkyway-arch.jpg" alt="太湖至内蒙古作品手记">
+          <span class="contact-panel-shade"></span>
+          <span class="contact-panel-meta"><i>04</i><b>作品手记</b><em>03</em></span>
         </a>
-        <a href="#films" data-transition-link data-home-preview data-preview="assets/videos/jupiter-poster.jpg" data-title="动态影像">
-          <span>05</span><b>动态影像</b><em>00:06</em>
+        <a class="contact-panel" href="#films" data-transition-link>
+          <img src="assets/videos/jupiter-poster.jpg" alt="木星动态观测影像">
+          <span class="contact-panel-shade"></span>
+          <span class="contact-panel-meta"><i>05</i><b>动态影像</b><em>00:06</em></span>
         </a>
       </nav>
-      <div class="hero-foot" aria-hidden="true"><span>01 / 08</span><span>PER ASPERA AD ASTRA</span></div>
+      <div class="hero-foot"><span>PER ASPERA AD ASTRA</span><span>SCROLL ↓</span></div>
     </section>
 
-    <section class="profile section-pad" id="about" data-section="02" data-section-name="关于">
-      <div class="section-heading reveal">
-        <p><span>02</span> ABOUT</p>
-        <h2>关于 PlutonoC</h2>
+    <section class="about" id="about" data-section="02" data-section-name="关于我">
+      <div class="about-title reveal"><span>02 / ABOUT</span><h2>关于我</h2></div>
+      <div class="about-facts reveal">
+        <p>网名 <b>PlutonoC</b></p>
+        <p>江南大学天见天文协会创始人</p>
+        <p>星野 / 深空 / 行星 / 自然</p>
       </div>
-      <div class="profile-grid">
-        <div class="profile-statement reveal">
-          <p>PlutonoC 是一个持续更新的影像档案</p>
-          <h3>记录夜空<br>自然与观测现场</h3>
-        </div>
-        <div class="profile-details reveal">
-          <p class="profile-role">江南大学天见天文协会创始人</p>
-          <dl>
-            <div><dt>关注方向</dt><dd>星野 / 深空 / 行星 / 自然</dd></div>
-            <div><dt>记录时间</dt><dd>2023—NOW</dd></div>
-          </dl>
-        </div>
-      </div>
-      <article class="association-card reveal">
-        <figure><img src="assets/inner-mongolia.jpg" alt="内蒙古拍摄的银河拱桥" loading="lazy"></figure>
-        <div>
-          <p>TIANJIAN ASTRONOMY</p>
-          <h3>天见天文</h3>
-          <span>由共同观测与摄影交流开始，持续组织观测与分享</span>
-        </div>
-      </article>
-    </section>
-
-    <section class="journey section-pad" id="journey" data-section="03" data-section-name="观测历程">
-      <div class="section-heading reveal">
-        <p><span>03</span> JOURNEY</p>
-        <h2>观测历程</h2>
-      </div>
-      <div class="journey-tabs reveal" role="tablist" aria-label="观测历程">
-        <button class="journey-stop active" id="journey-tab-1" type="button" role="tab" aria-selected="true" aria-controls="journey-panel" data-image="assets/portfolio/moon-map.jpg" data-ratio="1.426307" data-title="月面记录" data-copy="自制月面地图与校内观测" data-alt="标注月海与环形山的月面地图"><span>01</span><b>月面记录</b></button>
-        <button class="journey-stop" id="journey-tab-2" type="button" role="tab" aria-selected="false" aria-controls="journey-panel" data-image="assets/portfolio/milkyway-arch.jpg" data-ratio="2.635432" data-title="太湖至内蒙古" data-copy="江苏 安徽 浙江 甘肃 内蒙古" data-alt="内蒙古夜空下的银河拱桥"><span>02</span><b>太湖至内蒙古</b></button>
-        <button class="journey-stop" id="journey-tab-3" type="button" role="tab" aria-selected="false" aria-controls="journey-panel" data-image="assets/blood-moon.jpg" data-ratio="1" data-title="月全食" data-copy="与协会成员共同观测" data-alt="月全食过程拼图"><span>03</span><b>月全食</b></button>
-      </div>
-      <figure class="journey-viewer reveal" id="journey-panel" role="tabpanel" aria-labelledby="journey-tab-1">
-        <div class="journey-stage" style="--journey-ratio: 1.426307">
-          <img src="assets/portfolio/moon-map.jpg" alt="标注月海与环形山的月面地图" loading="lazy">
-        </div>
-        <figcaption>
-          <div><h3>月面记录</h3><p>自制月面地图与校内观测</p></div>
-          <div class="journey-controls">
-            <span><b data-journey-current>01</b> / 03</span>
-            <button type="button" data-journey-prev aria-label="上一段观测历程">←</button>
-            <button type="button" data-journey-next aria-label="下一段观测历程">→</button>
-          </div>
-        </figcaption>
+      <figure class="about-image reveal">
+        <img src="assets/inner-mongolia.jpg" alt="星空观测现场" loading="lazy">
+        <figcaption><span>天见天文</span><span>共同观测与摄影交流</span></figcaption>
       </figure>
     </section>
 
-    <section class="works section-pad" id="works" data-section="04" data-section-name="摄影作品">
-      <div class="section-heading works-heading reveal">
-        <p><span>04</span> PHOTOGRAPHY</p>
-        <h2>摄影作品</h2>
-        <div class="works-count"><b>54</b><span>星野 14<br>深空 31<br>行星 09</span></div>
-      </div>
+    <section class="stories" id="journey" data-section="03" data-section-name="作品手记">
+      <header class="stories-intro reveal">
+        <span>03 / STORIES</span>
+        <h2>作品手记</h2>
+        <p><b data-story-count>03</b> 组</p>
+      </header>
+      <div class="story-layout" data-story-root></div>
+    </section>
+
+    <section class="works" id="works" data-section="04" data-section-name="摄影作品">
+      <header class="works-header reveal">
+        <div><span>04 / PHOTOGRAPHY</span><h2>摄影作品</h2></div>
+        <p><b>54</b><span>星野 14 / 深空 31 / 行星 09</span></p>
+      </header>
       <div class="gallery-toolbar reveal" aria-label="作品分类筛选">
         <div class="gallery-filters">
           <button class="active" type="button" data-filter="all">全部</button>
@@ -156,21 +128,15 @@
       <div class="gallery-shell reveal" aria-label="作品横向画廊" tabindex="0"><div class="work-track"></div></div>
     </section>
 
-    <section class="films section-pad" id="films" data-section="05" data-section-name="动态影像">
-      <div class="section-heading reveal">
-        <p><span>05</span> FILM</p>
-        <h2>动态影像</h2>
-      </div>
+    <section class="films" id="films" data-section="05" data-section-name="动态影像">
+      <header class="films-header reveal"><span>05 / FILM</span><h2>动态影像</h2></header>
       <div class="film-feature reveal" data-film-feature aria-live="polite"></div>
       <div class="film-list" data-film-list aria-label="更多视频作品"></div>
       <p class="film-status" data-film-status aria-live="polite"></p>
     </section>
 
-    <section class="records section-pad" id="records" data-section="06" data-section-name="公开记录">
-      <div class="section-heading reveal">
-        <p><span>06</span> ARCHIVE</p>
-        <h2>公开记录</h2>
-      </div>
+    <section class="records" id="records" data-section="06" data-section-name="公开记录">
+      <header class="records-header reveal"><span>06 / ARCHIVE</span><h2>公开记录</h2></header>
       <div class="archive-list reveal">
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>A1 星野相机赛道优秀奖《坠入地球的银河子民》</b><em>星耀山河 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B1 天体·日月行星赛道三等奖《月与血月》</b><em>星耀山河 ↗</em></a>
@@ -183,38 +149,35 @@
       </div>
     </section>
 
-    <section class="equipment section-pad" id="equipment" data-section="07" data-section-name="设备">
-      <div class="section-heading reveal">
-        <p><span>07</span> EQUIPMENT</p>
-        <h2>观测与影像设备</h2>
-      </div>
-      <div class="equipment-layout reveal">
-        <figure class="equipment-media"><img src="assets/equipment.jpg" alt="PlutonoC 使用的摄影设备" loading="lazy"></figure>
-        <div class="equipment-console">
-          <div class="equipment-tabs" role="tablist" aria-label="设备分类">
-            <button class="active" id="equipment-tab-deep" type="button" role="tab" aria-selected="true" aria-controls="equipment-deep" data-equipment-tab="deep">深空系统</button>
-            <button id="equipment-tab-daily" type="button" role="tab" aria-selected="false" aria-controls="equipment-daily" data-equipment-tab="daily">日常影像</button>
-          </div>
-          <div class="equipment-panel active" id="equipment-deep" role="tabpanel" aria-labelledby="equipment-tab-deep" data-equipment-panel="deep">
-            <dl><div><dt>主镜</dt><dd>锐星 103APO / 星特朗 C925HD</dd></div><div><dt>相机</dt><dd>QHY 268C</dd></div><div><dt>赤道仪</dt><dd>晴空 ST20R</dd></div><div><dt>导星</dt><dd>QHY OAG-M PRO / 图谱 290C</dd></div><div><dt>滤镜</dt><dd>宇隆 L-eXtreme / 锐星 D2 / XIMEI 红外截止</dd></div></dl>
-          </div>
-          <div class="equipment-panel" id="equipment-daily" role="tabpanel" aria-labelledby="equipment-tab-daily" data-equipment-panel="daily" hidden>
-            <dl><div><dt>相机</dt><dd>松下 S5M2 / 海鸥 4A / 宾得 K100D</dd></div><div><dt>镜头</dt><dd>松下 70-300 / 松下 20-60 / 唯卓仕 16mm F1.8</dd></div><div><dt>其他</dt><dd>DJI Mavic 2 Pro / DJI RS3 / Fotopro 脚架</dd></div></dl>
-          </div>
+    <section class="equipment" id="equipment" data-section="07" data-section-name="设备">
+      <figure class="equipment-visual reveal"><img src="assets/equipment.jpg" alt="摄影与观测设备" loading="lazy"></figure>
+      <div class="equipment-console reveal">
+        <header><span>07 / EQUIPMENT</span><h2>设备</h2></header>
+        <div class="equipment-tabs" role="tablist" aria-label="设备分类">
+          <button class="active" id="equipment-tab-deep" type="button" role="tab" aria-selected="true" aria-controls="equipment-deep" data-equipment-tab="deep">深空系统</button>
+          <button id="equipment-tab-daily" type="button" role="tab" aria-selected="false" aria-controls="equipment-daily" data-equipment-tab="daily">日常影像</button>
+        </div>
+        <div class="equipment-panel active" id="equipment-deep" role="tabpanel" aria-labelledby="equipment-tab-deep" data-equipment-panel="deep">
+          <dl><div><dt>主镜</dt><dd>锐星 103APO / 星特朗 C925HD</dd></div><div><dt>相机</dt><dd>QHY 268C</dd></div><div><dt>赤道仪</dt><dd>晴空 ST20R</dd></div><div><dt>导星</dt><dd>QHY OAG-M PRO / 图谱 290C</dd></div><div><dt>滤镜</dt><dd>宇隆 L-eXtreme / 锐星 D2 / XIMEI 红外截止</dd></div></dl>
+        </div>
+        <div class="equipment-panel" id="equipment-daily" role="tabpanel" aria-labelledby="equipment-tab-daily" data-equipment-panel="daily" hidden>
+          <dl><div><dt>相机</dt><dd>松下 S5M2 / 海鸥 4A / 宾得 K100D</dd></div><div><dt>镜头</dt><dd>松下 70-300 / 松下 20-60 / 松下 50mm F1.8 / 唯卓仕 16mm F1.8</dd></div><div><dt>其他</dt><dd>DJI Mavic 2 Pro / DJI RS3 / Fotopro 脚架</dd></div></dl>
         </div>
       </div>
     </section>
 
-    <section class="contact section-pad" id="contact" data-section="08" data-section-name="联系">
-      <div class="contact-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
-      <div class="contact-content reveal">
-        <p>PER ASPERA AD ASTRA</p>
-        <h2>循此苦旅<br>以达天际</h2>
-        <div class="social-links">
-          <a href="https://space.bilibili.com/86671281" target="_blank" rel="noopener"><span>BILIBILI</span><b>PlutonoC ↗</b></a>
-          <a href="https://v.douyin.com/pswzeVgv1D0/" target="_blank" rel="noopener"><span>抖音</span><b>PlutonoC ↗</b></a>
-        </div>
+    <section class="contact" id="contact" data-section="08" data-section-name="联系">
+      <img class="contact-background" src="assets/inner-mongolia.jpg" alt="" loading="lazy">
+      <div class="contact-shade" aria-hidden="true"></div>
+      <div class="contact-phrase" aria-label="循此苦旅 以达天际">
+        <span class="contact-phrase-first">循此苦旅</span>
+        <span class="contact-phrase-second">以达天际</span>
       </div>
+      <div class="social-links reveal">
+        <a href="https://space.bilibili.com/86671281" target="_blank" rel="noopener"><span>BILIBILI</span><b>PlutonoC ↗</b></a>
+        <a href="https://v.douyin.com/pswzeVgv1D0/" target="_blank" rel="noopener"><span>抖音</span><b>PlutonoC ↗</b></a>
+      </div>
+      <p class="contact-latin">PER ASPERA AD ASTRA</p>
     </section>
   </main>
 
@@ -236,6 +199,7 @@
   <script src="cloudbase-config.js"></script>
   <script src="video-data.js"></script>
   <script src="gallery-data.js"></script>
+  <script src="featured-data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

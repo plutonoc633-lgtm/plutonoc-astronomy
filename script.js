@@ -9,6 +9,13 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
+  const categoryLabels = {
+    nightscape: '星野',
+    deepsky: '深空',
+    planetary: '行星',
+    nature: '自然',
+    video: '动态影像'
+  };
 
   const header = $('[data-header]');
   const progress = $('[data-reading-progress]');
@@ -17,20 +24,18 @@
   function updateScrollChrome() {
     scrollFrame = 0;
     const scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
-    const ratio = Math.min(Math.max(scrollY / scrollable, 0), 1);
-    progress?.style.setProperty('transform', `scaleX(${ratio})`);
+    progress?.style.setProperty('transform', `scaleX(${Math.min(Math.max(scrollY / scrollable, 0), 1)})`);
     header?.classList.toggle('is-scrolled', scrollY > 20);
   }
 
   window.addEventListener('scroll', () => {
-    if (scrollFrame) return;
-    scrollFrame = requestAnimationFrame(updateScrollChrome);
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollChrome);
   }, { passive: true });
   updateScrollChrome();
 
-  const reveals = $$('.reveal');
+  const revealElements = $$('.reveal');
   if (reducedMotion || !('IntersectionObserver' in window)) {
-    reveals.forEach(element => element.classList.add('is-visible'));
+    revealElements.forEach(element => element.classList.add('is-visible'));
   } else {
     const revealObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
@@ -38,8 +43,8 @@
         entry.target.classList.add('is-visible');
         revealObserver.unobserve(entry.target);
       });
-    }, { threshold: 0.08, rootMargin: '0px 0px -6% 0px' });
-    reveals.forEach(element => revealObserver.observe(element));
+    }, { threshold: .08, rootMargin: '0px 0px -7% 0px' });
+    revealElements.forEach(element => revealObserver.observe(element));
   }
 
   const siteIndex = $('#site-index');
@@ -53,59 +58,56 @@
 
   function openIndex(event) {
     indexReturnFocus = event?.currentTarget || document.activeElement;
-    siteIndex.classList.add('is-open');
-    siteIndex.setAttribute('aria-hidden', 'false');
+    siteIndex?.classList.add('is-open');
+    siteIndex?.setAttribute('aria-hidden', 'false');
     document.body.classList.add('index-open');
-    window.setTimeout(() => $('[data-index-close]', siteIndex)?.focus(), reducedMotion ? 0 : 120);
+    window.setTimeout(() => $('[data-index-close]:not(.index-backdrop)', siteIndex)?.focus(), reducedMotion ? 0 : 130);
   }
 
   function closeIndex({ restoreFocus = true } = {}) {
-    siteIndex.classList.remove('is-open');
-    siteIndex.setAttribute('aria-hidden', 'true');
+    siteIndex?.classList.remove('is-open');
+    siteIndex?.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('index-open');
     if (restoreFocus) indexReturnFocus?.focus?.();
   }
 
   function updateIndexPreview(link) {
-    if (!link) return;
-    const nextSource = link.dataset.preview;
-    const number = $('span', link)?.textContent || '';
-    const name = $('b', link)?.textContent || '';
-    indexCount.textContent = number;
-    indexName.textContent = name;
-    if (!nextSource || indexPreview.getAttribute('src') === nextSource) return;
+    if (!link || !indexPreview) return;
+    const source = link.dataset.preview;
+    indexCount.textContent = $('span', link)?.textContent || '';
+    indexName.textContent = $('b', link)?.textContent || '';
+    if (!source || indexPreview.getAttribute('src') === source) return;
     clearTimeout(indexPreviewTimer);
     indexPreview.classList.add('is-changing');
     indexPreviewTimer = window.setTimeout(() => {
-      indexPreview.src = nextSource;
+      indexPreview.src = source;
       indexPreview.classList.remove('is-changing');
-    }, reducedMotion ? 0 : 150);
+    }, reducedMotion ? 0 : 140);
   }
 
   $$('[data-index-open]').forEach(button => button.addEventListener('click', openIndex));
-  $('[data-index-close]', siteIndex)?.addEventListener('click', () => closeIndex());
-  $('.index-backdrop', siteIndex)?.addEventListener('click', () => closeIndex());
+  $$('[data-index-close]', siteIndex).forEach(button => button.addEventListener('click', () => closeIndex()));
   indexLinks.forEach(link => {
     link.addEventListener('pointerenter', () => updateIndexPreview(link));
     link.addEventListener('focus', () => updateIndexPreview(link));
   });
 
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && siteIndex.classList.contains('is-open')) {
+    if (event.key === 'Escape' && siteIndex?.classList.contains('is-open')) {
       event.preventDefault();
       closeIndex();
       return;
     }
-    if (event.key !== 'Tab' || !siteIndex.classList.contains('is-open')) return;
-    const focusable = $$('a[href], button:not([disabled])', indexPanel);
+    if (event.key !== 'Tab' || !siteIndex?.classList.contains('is-open')) return;
+    const focusable = $$('a[href], button:not([disabled]):not([tabindex="-1"])', indexPanel);
     const first = focusable[0];
     const last = focusable.at(-1);
     if (event.shiftKey && document.activeElement === first) {
       event.preventDefault();
-      last.focus();
+      last?.focus();
     } else if (!event.shiftKey && document.activeElement === last) {
       event.preventDefault();
-      first.focus();
+      first?.focus();
     }
   });
 
@@ -115,7 +117,7 @@
   function finishNavigation(hash, pushHistory = true) {
     const target = $(hash);
     if (!target) return;
-    target.scrollIntoView({ block: 'start', behavior: 'instant' });
+    target.scrollIntoView({ block: 'start', behavior: 'auto' });
     if (pushHistory && location.hash !== hash) history.pushState(null, '', hash);
   }
 
@@ -143,18 +145,21 @@
             document.body.classList.remove('is-transitioning');
             transitionActive = false;
           });
-        }, 400);
+        }, 430);
       });
-    }, 390);
+    }, 380);
   }
 
   $$('a[data-transition-link], [data-index-link]').forEach(link => {
     link.addEventListener('click', event => {
-      const hash = link.hash;
-      if (!hash || !$(hash)) return;
+      if (!link.hash || !$(link.hash)) return;
       event.preventDefault();
-      transitionTo(hash);
+      transitionTo(link.hash);
     });
+  });
+
+  window.addEventListener('popstate', () => {
+    if (location.hash && $(location.hash)) finishNavigation(location.hash, false);
   });
 
   const sections = $$('main section[id]');
@@ -178,130 +183,149 @@
       });
       const active = [...visibleSections.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
       if (active) setCurrentSection(active);
-    }, { threshold: [0.15, 0.3, 0.5, 0.7], rootMargin: '-15% 0px -35% 0px' });
+    }, { threshold: [.15, .3, .5, .7], rootMargin: '-12% 0px -38% 0px' });
     sections.forEach(section => sectionObserver.observe(section));
   }
 
-  const hero = $('.hero');
-  const heroMedia = $('.hero-media', hero);
-  const heroCurrent = $('.hero-image-current', hero);
-  const heroNext = $('.hero-image-next', hero);
-  const homeLinks = $$('[data-home-preview]', hero);
-  let heroSwapToken = 0;
-
-  function activateHeroLink(link) {
-    if (!link || link.classList.contains('is-active')) return;
-    homeLinks.forEach(item => item.classList.toggle('is-active', item === link));
-    const source = link.dataset.preview;
-    if (!source || heroCurrent.src.endsWith(source)) return;
-    const token = ++heroSwapToken;
-    heroNext.src = source;
-    const showNext = () => {
-      if (token !== heroSwapToken) return;
-      heroNext.classList.add('is-visible');
-      window.setTimeout(() => {
-        if (token !== heroSwapToken) return;
-        heroCurrent.src = source;
-        heroNext.classList.remove('is-visible');
-      }, reducedMotion ? 0 : 570);
-    };
-    if (heroNext.complete) showNext();
-    else heroNext.addEventListener('load', showNext, { once: true });
-  }
-
-  homeLinks.forEach(link => {
-    link.addEventListener('pointerenter', () => activateHeroLink(link));
-    link.addEventListener('focus', () => activateHeroLink(link));
-    link.addEventListener('click', () => {
-      if (link.dataset.homeFilter) setGalleryFilter(link.dataset.homeFilter, true);
+  const contactPanels = $$('.contact-panel');
+  contactPanels.forEach(panel => {
+    const activate = () => contactPanels.forEach(item => item.classList.toggle('is-active', item === panel));
+    panel.addEventListener('pointerenter', activate);
+    panel.addEventListener('focus', activate);
+    panel.addEventListener('click', () => {
+      if (panel.dataset.homeFilter) setGalleryFilter(panel.dataset.homeFilter, true);
     });
   });
 
-  if (supportsHover && !reducedMotion) {
-    let heroFrame = 0;
-    hero?.addEventListener('pointermove', event => {
-      cancelAnimationFrame(heroFrame);
-      heroFrame = requestAnimationFrame(() => {
-        const bounds = hero.getBoundingClientRect();
-        const x = ((event.clientX - bounds.left) / bounds.width - .5) * -14;
-        const y = ((event.clientY - bounds.top) / bounds.height - .5) * -14;
-        heroMedia.style.setProperty('--hero-x', `${x}px`);
-        heroMedia.style.setProperty('--hero-y', `${y}px`);
+  function mediaMarkup(media, className = '') {
+    if (!media) return '';
+    if (media.type === 'video') {
+      return `<video class="${className}" src="${escapeHtml(media.src)}" poster="${escapeHtml(media.poster || '')}" muted loop playsinline preload="metadata" aria-label="${escapeHtml(media.alt || '')}"></video>`;
+    }
+    return `<img class="${className}" src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt || '')}" loading="lazy" decoding="async">`;
+  }
+
+  const stories = [...(window.featuredStories || [])];
+  const storyRoot = $('[data-story-root]');
+  let activeStory = 0;
+  let activeStoryMedia = new Map();
+
+  function storyDetail(label, value, className) {
+    if (!value) return '';
+    return `<p class="${className}"><span class="story-detail-label">${escapeHtml(label)}</span>${escapeHtml(value)}</p>`;
+  }
+
+  function renderStories() {
+    if (!storyRoot) return;
+    $('[data-story-count]').textContent = pad(stories.length);
+    if (!stories.length) {
+      storyRoot.innerHTML = '<p class="story-empty">暂无作品手记</p>';
+      return;
+    }
+
+    const stageMedia = stories.map((story, storyIndex) => (story.media || []).map((media, mediaIndex) => `
+      <div class="story-stage-media${storyIndex === 0 && mediaIndex === 0 ? ' is-active' : ''}" data-story-stage="${storyIndex}" data-story-media="${mediaIndex}">
+        ${mediaMarkup(media)}
+      </div>`).join('')).join('');
+
+    const chapters = stories.map((story, storyIndex) => {
+      const media = story.media || [];
+      const meta = [story.date, story.location].filter(Boolean);
+      const parameters = (story.parameters || []).filter(item => item?.label && item?.value);
+      const selectors = media.length > 1 ? `<div class="story-media-selectors" aria-label="${escapeHtml(story.title)}媒体">
+        ${media.map((item, mediaIndex) => `<button type="button" class="${mediaIndex === 0 ? 'active' : ''}" data-story-media-select="${storyIndex}:${mediaIndex}">${pad(mediaIndex + 1)}</button>`).join('')}
+      </div>` : '';
+      return `<article class="story-chapter${storyIndex === 0 ? ' is-active' : ''}" data-story-chapter="${storyIndex}">
+        <div class="story-number"><span>${pad(storyIndex + 1)} / ${pad(stories.length)}</span><span>${escapeHtml(categoryLabels[story.category] || story.category || '')}</span></div>
+        <h3>${escapeHtml(story.title)}</h3>
+        ${meta.length ? `<p class="story-meta">${meta.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</p>` : ''}
+        <div class="story-mobile-media">${media.map(item => mediaMarkup(item)).join('')}</div>
+        ${selectors}
+        ${story.story ? `<p class="story-copy">${escapeHtml(story.story)}</p>` : ''}
+        ${parameters.length ? `<dl class="story-parameters">${parameters.map(item => `<div><dt>${escapeHtml(item.label)}</dt><dd>${escapeHtml(item.value)}</dd></div>`).join('')}</dl>` : ''}
+        ${storyDetail('处理方式', story.process, 'story-process')}
+        ${storyDetail('备注', story.notes, 'story-notes')}
+      </article>`;
+    }).join('');
+
+    storyRoot.innerHTML = `
+      <figure class="story-stage" aria-live="polite">
+        ${stageMedia}
+        <figcaption class="story-stage-caption"><span data-story-stage-count>01 / ${pad(stories.length)}</span><b data-story-stage-title>${escapeHtml(stories[0].title)}</b></figcaption>
+      </figure>
+      <div class="story-chapters">${chapters}</div>`;
+
+    activeStoryMedia = new Map(stories.map((story, index) => [index, 0]));
+    wireStoryInteractions();
+  }
+
+  function setStoryMedia(storyIndex, mediaIndex) {
+    activeStoryMedia.set(storyIndex, mediaIndex);
+    $$(`[data-story-stage="${storyIndex}"]`, storyRoot).forEach(element => {
+      const active = Number(element.dataset.storyMedia) === mediaIndex && storyIndex === activeStory;
+      element.classList.toggle('is-active', active);
+      const video = $('video', element);
+      if (video) {
+        if (active && supportsHover && !reducedMotion) video.play().catch(() => {});
+        else video.pause();
+      }
+    });
+    $$(`[data-story-media-select^="${storyIndex}:"]`, storyRoot).forEach(button => {
+      button.classList.toggle('active', Number(button.dataset.storyMediaSelect.split(':')[1]) === mediaIndex);
+    });
+  }
+
+  function activateStory(index) {
+    if (!stories[index]) return;
+    activeStory = index;
+    $$('[data-story-chapter]', storyRoot).forEach(chapter => chapter.classList.toggle('is-active', Number(chapter.dataset.storyChapter) === index));
+    $$('[data-story-stage]', storyRoot).forEach(element => {
+      const active = Number(element.dataset.storyStage) === index && Number(element.dataset.storyMedia) === (activeStoryMedia.get(index) || 0);
+      element.classList.toggle('is-active', active);
+      const video = $('video', element);
+      if (video) {
+        if (active && supportsHover && !reducedMotion) video.play().catch(() => {});
+        else video.pause();
+      }
+    });
+    $('[data-story-stage-count]', storyRoot).textContent = `${pad(index + 1)} / ${pad(stories.length)}`;
+    $('[data-story-stage-title]', storyRoot).textContent = stories[index].title;
+  }
+
+  function wireStoryInteractions() {
+    $$('[data-story-media-select]', storyRoot).forEach(button => {
+      button.addEventListener('click', () => {
+        const [storyIndex, mediaIndex] = button.dataset.storyMediaSelect.split(':').map(Number);
+        activateStory(storyIndex);
+        setStoryMedia(storyIndex, mediaIndex);
       });
     });
-    hero?.addEventListener('pointerleave', () => {
-      heroMedia.style.setProperty('--hero-x', '0px');
-      heroMedia.style.setProperty('--hero-y', '0px');
-    });
+    if (!('IntersectionObserver' in window)) return;
+    const chapters = $$('[data-story-chapter]', storyRoot);
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) activateStory(Number(visible.target.dataset.storyChapter));
+    }, { threshold: [.28, .5, .7], rootMargin: '-24% 0px -30% 0px' });
+    chapters.forEach(chapter => observer.observe(chapter));
   }
 
-  const journeyStops = $$('.journey-stop');
-  const journeyViewer = $('.journey-viewer');
-  const journeyStage = $('.journey-stage', journeyViewer);
-  const journeyImage = $('img', journeyStage);
-  const journeyCurrent = $('[data-journey-current]');
-  let currentJourney = 0;
-  let journeyTimer = 0;
+  renderStories();
 
-  function showJourney(indexNumber, moveFocus = false) {
-    if (!journeyStops.length) return;
-    currentJourney = (indexNumber + journeyStops.length) % journeyStops.length;
-    const stop = journeyStops[currentJourney];
-    journeyStops.forEach((item, itemIndex) => {
-      const active = itemIndex === currentJourney;
-      item.classList.toggle('active', active);
-      item.setAttribute('aria-selected', String(active));
-      item.tabIndex = active ? 0 : -1;
-    });
-    journeyViewer.setAttribute('aria-labelledby', stop.id);
-    journeyCurrent.textContent = pad(currentJourney + 1);
-    journeyViewer.classList.add('is-changing');
-    clearTimeout(journeyTimer);
-    journeyTimer = window.setTimeout(() => {
-      journeyStage.style.setProperty('--journey-ratio', stop.dataset.ratio);
-      journeyImage.src = stop.dataset.image;
-      journeyImage.alt = stop.dataset.alt;
-      $('figcaption h3', journeyViewer).textContent = stop.dataset.title;
-      $('figcaption p', journeyViewer).textContent = stop.dataset.copy;
-      journeyViewer.classList.remove('is-changing');
-      if (moveFocus) stop.focus();
-    }, reducedMotion ? 0 : 210);
+  function restoreInitialHash() {
+    if (!location.hash || !$(location.hash)) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => finishNavigation(location.hash, false)));
   }
 
-  journeyStops.forEach((stop, indexNumber) => {
-    stop.addEventListener('click', () => showJourney(indexNumber));
-    stop.addEventListener('keydown', event => {
-      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
-      event.preventDefault();
-      if (event.key === 'Home') showJourney(0, true);
-      else if (event.key === 'End') showJourney(journeyStops.length - 1, true);
-      else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') showJourney(currentJourney - 1, true);
-      else showJourney(currentJourney + 1, true);
-    });
-  });
-  $('[data-journey-prev]')?.addEventListener('click', () => showJourney(currentJourney - 1));
-  $('[data-journey-next]')?.addEventListener('click', () => showJourney(currentJourney + 1));
+  if (document.readyState === 'complete') restoreInitialHash();
+  else window.addEventListener('load', restoreInitialHash, { once: true });
 
-  let journeySwipeStart = null;
-  journeyViewer?.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'mouse') return;
-    journeySwipeStart = event.clientX;
-  });
-  journeyViewer?.addEventListener('pointerup', event => {
-    if (journeySwipeStart === null) return;
-    const distance = event.clientX - journeySwipeStart;
-    journeySwipeStart = null;
-    if (Math.abs(distance) >= 48) showJourney(currentJourney + (distance < 0 ? 1 : -1));
-  });
-
-  const labels = { nightscape: '星野', deepsky: '深空', planetary: '行星' };
+  const allWorks = [...(window.galleryData || [])];
   const track = $('.work-track');
   const filters = $$('.gallery-filters [data-filter]');
   const currentElement = $('.gallery-current');
   const totalElement = $('.gallery-total');
   const photoDialog = $('[data-photo-dialog]');
   const photoDialogImage = $('img', photoDialog);
-  const allWorks = [...(window.galleryData || [])];
   let visibleWorks = [...allWorks];
   let currentIndex = 0;
   let photoIndex = 0;
@@ -309,12 +333,13 @@
   let filterTimer = 0;
 
   function renderGallery(filter = 'all') {
+    if (!track) return;
     visibleWorks = filter === 'all' ? [...allWorks] : allWorks.filter(work => work.category === filter);
     currentIndex = 0;
-    track.innerHTML = visibleWorks.map((work, indexNumber) => `
-      <figure class="work-card" data-index="${indexNumber}" tabindex="0">
-        <img src="${escapeHtml(work.src)}" alt="${escapeHtml(work.title)}" loading="${indexNumber < 2 ? 'eager' : 'lazy'}" decoding="async">
-        <figcaption><b>${escapeHtml(work.title)}</b><span>${escapeHtml(labels[work.category])} / ${pad(indexNumber + 1)}</span></figcaption>
+    track.innerHTML = visibleWorks.map((work, index) => `
+      <figure class="work-card" data-index="${index}" tabindex="0">
+        <img src="${escapeHtml(work.src)}" alt="${escapeHtml(work.title)}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async">
+        <figcaption><b>${escapeHtml(work.title)}</b><span>${escapeHtml(categoryLabels[work.category])} / ${pad(index + 1)}</span></figcaption>
       </figure>`).join('');
     totalElement.textContent = pad(visibleWorks.length);
     currentElement.textContent = visibleWorks.length ? '01' : '00';
@@ -338,10 +363,11 @@
   }
 
   const galleryCards = () => $$('.work-card', track);
-  function goToWork(indexNumber) {
+
+  function goToWork(index) {
     const cards = galleryCards();
     if (!cards.length) return;
-    currentIndex = (indexNumber + cards.length) % cards.length;
+    currentIndex = (index + cards.length) % cards.length;
     cards[currentIndex].scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
     currentElement.textContent = pad(currentIndex + 1);
   }
@@ -358,11 +384,11 @@
       const center = track.scrollLeft + track.clientWidth / 2;
       let nearest = 0;
       let distance = Infinity;
-      galleryCards().forEach((card, indexNumber) => {
+      galleryCards().forEach((card, index) => {
         const nextDistance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center);
         if (nextDistance < distance) {
           distance = nextDistance;
-          nearest = indexNumber;
+          nearest = index;
         }
       });
       currentIndex = nearest;
@@ -377,8 +403,9 @@
   let dragVelocity = 0;
   let inertiaFrame = 0;
 
-  function stopGalleryDrag() {
-    track.classList.remove('is-dragging');
+  function stopGalleryDrag(event) {
+    if (event && track?.hasPointerCapture?.(event.pointerId)) track.releasePointerCapture(event.pointerId);
+    track?.classList.remove('is-dragging');
     if (reducedMotion || Math.abs(dragVelocity) < .05) return;
     cancelAnimationFrame(inertiaFrame);
     const glide = () => {
@@ -420,11 +447,11 @@
     if (!work) return;
     photoDialogImage.src = work.src;
     photoDialogImage.alt = work.title;
-    $('p', photoDialog).textContent = `${pad(photoIndex + 1)} / ${pad(visibleWorks.length)}　${work.title}　${labels[work.category]}`;
+    $('p', photoDialog).textContent = `${pad(photoIndex + 1)} / ${pad(visibleWorks.length)}　${work.title}　${categoryLabels[work.category]}`;
   }
 
-  function openPhoto(indexNumber) {
-    photoIndex = indexNumber;
+  function openPhoto(index) {
+    photoIndex = index;
     updatePhotoDialog();
     photoDialog.showModal();
     document.body.classList.add('dialog-open');
@@ -438,8 +465,7 @@
 
   track?.addEventListener('click', event => {
     const card = event.target.closest('.work-card');
-    if (!card || dragged) return;
-    openPhoto(Number(card.dataset.index));
+    if (card && !dragged) openPhoto(Number(card.dataset.index));
   });
   track?.addEventListener('keydown', event => {
     const card = event.target.closest('.work-card');
@@ -459,8 +485,8 @@
       if (event.key === 'ArrowRight') movePhoto(1);
       return;
     }
-    const workSection = $('#works')?.getBoundingClientRect();
-    if (!workSection || workSection.bottom < 0 || workSection.top > innerHeight) return;
+    const worksBounds = $('#works')?.getBoundingClientRect();
+    if (!worksBounds || worksBounds.bottom < 0 || worksBounds.top > innerHeight) return;
     if (event.key === 'ArrowLeft') goToWork(currentIndex - 1);
     if (event.key === 'ArrowRight') goToWork(currentIndex + 1);
   });
@@ -468,6 +494,7 @@
 
   const equipmentTabs = $$('[data-equipment-tab]');
   const equipmentPanels = $$('[data-equipment-panel]');
+
   function showEquipment(name, moveFocus = false) {
     equipmentTabs.forEach(tab => {
       const active = tab.dataset.equipmentTab === name;
@@ -482,15 +509,27 @@
       panel.classList.toggle('active', active);
     });
   }
-  equipmentTabs.forEach((tab, indexNumber) => {
+
+  equipmentTabs.forEach((tab, index) => {
     tab.addEventListener('click', () => showEquipment(tab.dataset.equipmentTab));
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
       event.preventDefault();
-      const next = (indexNumber + (event.key === 'ArrowRight' ? 1 : -1) + equipmentTabs.length) % equipmentTabs.length;
+      const next = (index + (event.key === 'ArrowRight' ? 1 : -1) + equipmentTabs.length) % equipmentTabs.length;
       showEquipment(equipmentTabs[next].dataset.equipmentTab, true);
     });
   });
+
+  const contact = $('#contact');
+  if (contact) {
+    if (reducedMotion || !('IntersectionObserver' in window)) contact.classList.add('is-in-view');
+    else {
+      const contactObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => contact.classList.toggle('is-in-view', entry.isIntersecting));
+      }, { threshold: .3 });
+      contactObserver.observe(contact);
+    }
+  }
 
   const videoDialog = $('[data-video-dialog]');
   const videoPlayer = $('video', videoDialog);
@@ -533,8 +572,8 @@
     })).filter(record => record.videoUrl);
   }
 
-  function filmCard(film, indexNumber, featured = false) {
-    return `<figure class="film-card" data-film-index="${indexNumber}">
+  function filmCard(film, index, featured = false) {
+    return `<figure class="film-card" data-film-index="${index}">
       <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="${featured ? 'eager' : 'lazy'}">
       <video class="film-preview" muted loop playsinline preload="none" aria-hidden="true"></video>
       <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
@@ -559,7 +598,6 @@
         const preview = $('.film-preview', card);
         if (!film || !preview || card.classList.contains('is-previewing')) return;
         preview.src = film.videoUrl;
-        preview.currentTime = 0;
         try {
           await preview.play();
           card.classList.add('is-previewing');
@@ -597,8 +635,8 @@
     $$('.film-card.is-previewing', $('#films')).forEach(stopFilmPreview);
   }
 
-  function openFilm(indexNumber) {
-    const film = loadedFilms[indexNumber];
+  function openFilm(index) {
+    const film = loadedFilms[index];
     if (!film) return;
     stopAllFilmPreviews();
     videoPlayer.src = film.videoUrl;
