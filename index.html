@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="PlutonoC 的天文摄影、动态影像与观测记录">
-  <meta name="theme-color" content="#090909">
-  <title>PlutonoC | 天文摄影与观测记录</title>
+  <meta name="description" content="PlutonoC，记录夜空、自然与观测现场的持续影像档案">
+  <meta name="theme-color" content="#e8e6df">
+  <title>PlutonoC | 夜空、自然与动态影像</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
+
   <header class="site-header" data-header>
     <a class="brand" href="#home" aria-label="返回首页">PlutonoC</a>
-    <div class="header-meta" aria-hidden="true">ASTRONOMY / PHOTOGRAPHY</div>
+    <div class="header-meta" aria-hidden="true">VISUAL ARCHIVE / JIANGNAN</div>
     <button class="index-trigger" type="button" data-index-open aria-haspopup="dialog" aria-controls="site-index">
       <span>INDEX</span><i aria-hidden="true"></i>
     </button>
@@ -26,45 +27,59 @@
     <nav class="index-nav" aria-label="栏目索引">
       <a href="#home" data-index-link data-preview="assets/gallery/nightscape/nightscape-08.jpg"><span>01</span><b>首页</b><em>Home</em></a>
       <a href="#about" data-index-link data-preview="assets/inner-mongolia.jpg"><span>02</span><b>关于</b><em>Profile</em></a>
-      <a href="#journey" data-index-link data-preview="assets/blood-moon.jpg"><span>03</span><b>追星历程</b><em>Journey</em></a>
+      <a href="#journey" data-index-link data-preview="assets/blood-moon.jpg"><span>03</span><b>观测历程</b><em>Journey</em></a>
       <a href="#works" data-index-link data-preview="assets/gallery/deepsky/deepsky-25.jpg"><span>04</span><b>摄影作品</b><em>Photography</em></a>
-      <a href="#films" data-index-link data-preview="assets/gallery/planetary/planetary-02.jpg"><span>05</span><b>动态影像</b><em>Films</em></a>
-      <a href="#records" data-index-link data-preview="assets/portfolio/moon-map.jpg"><span>06</span><b>记录与荣誉</b><em>Archive</em></a>
+      <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>05</span><b>动态影像</b><em>Film</em></a>
+      <a href="#records" data-index-link data-preview="assets/portfolio/moon-map.jpg"><span>06</span><b>公开记录</b><em>Archive</em></a>
       <a href="#equipment" data-index-link data-preview="assets/equipment.jpg"><span>07</span><b>设备</b><em>Equipment</em></a>
       <a href="#contact" data-index-link data-preview="assets/gallery/nightscape/nightscape-11.jpg"><span>08</span><b>联系</b><em>Contact</em></a>
     </nav>
     <figure class="index-preview" aria-hidden="true"><img src="assets/gallery/nightscape/nightscape-08.jpg" alt=""></figure>
-    <div class="index-foot"><span>JIANGNAN / TIANJIAN</span><span>© 2026</span></div>
+    <div class="index-foot"><span>ASTRONOMY / NATURE / MOVING IMAGE</span><span>© 2026</span></div>
   </aside>
 
   <main id="content">
-    <section class="hero" id="home" data-section="01">
-      <img class="hero-media" src="assets/gallery/nightscape/nightscape-08.jpg" alt="内蒙古暗夜中的夏季银河" fetchpriority="high">
-      <div class="hero-shade"></div>
-      <div class="hero-content reveal">
-        <p class="eyebrow">ASTRONOMY / PHOTOGRAPHY / FILM</p>
-        <h1>PlutonoC</h1>
-        <div class="hero-bottom">
-          <p>天文摄影与观测记录<br>江南大学天见天文协会创始人、会长</p>
-          <div class="hero-actions">
-            <a href="#works">查看作品 <span>↘</span></a>
-            <button type="button" data-index-open>打开索引 <span>＋</span></button>
-          </div>
+    <section class="home" id="home" data-section="01">
+      <div class="home-copy">
+        <p class="home-identity reveal">PlutonoC / 夜空、自然与动态影像</p>
+        <div class="home-intro reveal">
+          <h1>持续更新的<br>观测与影像档案</h1>
+          <p>从观测现场出发，以照片和动态影像保存每一次抬头。</p>
         </div>
+        <nav class="home-work-index reveal" aria-label="作品快速索引">
+          <a class="is-active" href="#works" data-home-preview data-home-filter="nightscape" data-preview="assets/gallery/nightscape/nightscape-08.jpg" data-title="星野" data-copy="银河、流星与暗夜地景">
+            <span>01</span><b>星野</b><em>Nightscape</em><img src="assets/gallery/nightscape/nightscape-08.jpg" alt="内蒙古夏季银河" loading="eager">
+          </a>
+          <a href="#works" data-home-preview data-home-filter="deepsky" data-preview="assets/gallery/deepsky/deepsky-25.jpg" data-title="深空" data-copy="星云、星团与遥远星系">
+            <span>02</span><b>深空</b><em>Deep sky</em><img src="assets/gallery/deepsky/deepsky-25.jpg" alt="仙女座星系" loading="lazy">
+          </a>
+          <a href="#works" data-home-preview data-home-filter="planetary" data-preview="assets/gallery/planetary/planetary-04.jpg" data-title="行星" data-copy="太阳、月球与行星观测">
+            <span>03</span><b>行星</b><em>Planetary</em><img src="assets/gallery/planetary/planetary-04.jpg" alt="血月全食" loading="lazy">
+          </a>
+          <a href="#journey" data-home-preview data-preview="assets/portfolio/milkyway-arch.jpg" data-title="观测历程" data-copy="从校园到更远的暗夜">
+            <span>04</span><b>观测历程</b><em>Journey</em><img src="assets/portfolio/milkyway-arch.jpg" alt="内蒙古银河拱桥" loading="lazy">
+          </a>
+          <a href="#films" data-home-preview data-preview="assets/videos/jupiter-poster.jpg" data-title="动态影像" data-copy="用时间呈现观测过程">
+            <span>05</span><b>动态影像</b><em>Moving image</em><img src="assets/videos/jupiter-poster.jpg" alt="木星观测视频封面" loading="lazy">
+          </a>
+        </nav>
       </div>
-      <div class="hero-counter" aria-hidden="true">01 / 08</div>
-      <div class="hero-scroll" aria-hidden="true">SCROLL <i></i></div>
+      <figure class="home-preview reveal" aria-live="polite">
+        <div class="home-preview-frame"><img src="assets/gallery/nightscape/nightscape-08.jpg" alt="内蒙古夏季银河" fetchpriority="high"></div>
+        <figcaption><b>星野</b><span>银河、流星与暗夜地景</span></figcaption>
+      </figure>
+      <button class="home-index-button" type="button" data-index-open>打开完整索引 <span>↗</span></button>
     </section>
 
     <section class="profile section-pad" id="about" data-section="02">
-      <div class="section-label reveal"><span>02</span><p>PROFILE / 关于</p></div>
+      <div class="section-label reveal"><span>02</span><p>ABOUT / 关于</p></div>
       <div class="profile-grid">
-        <h2 class="reveal">PlutonoC</h2>
-        <p class="profile-intro reveal">江南大学智能制造学院<br>2023级机器人工程专业<br>天见天文协会创始人、会长</p>
-        <div class="profile-copy reveal">
-          <p>初涉天文时走过的弯路，萌生了创立社团的想法。天见天文协会为天文与摄影爱好者搭建交流平台，普及天文知识，分享深空摄影实践。</p>
+        <h2 class="reveal">PlutonoC 是一个持续更新的影像档案，记录夜空、自然与观测现场。</h2>
+        <div class="profile-details reveal">
+          <p class="profile-role">江南大学天见天文协会创始人</p>
+          <p>从最初独自摸索设备与拍摄方法，到与同学共同观测，镜头逐渐成为连接知识、地点与同行者的方式。</p>
           <dl>
-            <div><dt>关注方向</dt><dd>星野 / 深空 / 行星</dd></div>
+            <div><dt>关注方向</dt><dd>星野 / 深空 / 行星 / 自然</dd></div>
             <div><dt>持续记录</dt><dd>2023 — NOW</dd></div>
           </dl>
         </div>
@@ -75,23 +90,33 @@
       <figure class="association-media reveal"><img src="assets/inner-mongolia.jpg" alt="内蒙古拍摄的银河拱桥" loading="lazy"></figure>
       <div class="association-copy section-pad reveal">
         <div class="section-label"><span>TIANJIAN</span><p>天见天文</p></div>
-        <h2>从个人爱好<br>到共同观测</h2>
-        <p>2025年7月14日，天见天文协会正式成立，成为江南大学江阴霞客湾校区第一个“土生土长”的学生兴趣类社团。在周敏宁教授指导下，PlutonoC 与同学们把对宇宙的好奇，变成了一群人的共同探索。</p>
-        <blockquote>我们希望能帮助更多喜爱星空的同学少走弯路，一起感受宇宙的浩瀚与神秘</blockquote>
+        <h2>把个人爱好<br>变成共同观测</h2>
+        <p>2025年7月14日，天见天文协会正式成立，成为江南大学江阴霞客湾校区第一个从本校区成长起来的学生兴趣类社团。在周敏宁教授指导下，协会成员一起交流器材、普及天文知识，并持续组织观测与摄影实践。</p>
+        <blockquote>帮助更多喜爱星空的同学少走弯路，一起感受宇宙的浩瀚与神秘。</blockquote>
       </div>
     </section>
 
     <section class="journey section-pad" id="journey" data-section="03">
-      <div class="section-label reveal"><span>03</span><p>OBSERVATION LOG / 追星历程</p></div>
+      <div class="section-heading reveal">
+        <div class="section-label"><span>03</span><p>JOURNEY / 观测历程</p></div>
+        <p>三个片段，记录观测从校园延伸到更远暗夜的过程。</p>
+      </div>
       <div class="journey-layout">
         <div class="journey-list reveal" role="tablist" aria-label="观测经历">
-          <button class="journey-stop active" type="button" role="tab" aria-selected="true" data-image="assets/portfolio/moon-map.jpg" data-kicker="CAMPUS OBSERVATION / JIANGYIN" data-title="霞客湾观测起点" data-copy="从校园操场开始，近十次仰望与拍摄，让观测成为可以与同学共享的日常。自制月面地图也诞生于这里。"><span>01</span><b>霞客湾</b><em>校内观测与月面记录</em></button>
-          <button class="journey-stop" type="button" role="tab" aria-selected="false" data-image="assets/portfolio/milkyway-arch.jpg" data-kicker="FIELD JOURNEY / ACROSS CHINA" data-title="从太湖到内蒙古" data-copy="追星足迹从江苏延伸至安徽、浙江、甘肃与内蒙古巴丹吉林。不同地貌与天气，构成每一次星野摄影的现场。"><span>02</span><b>太湖 → 内蒙古</b><em>跨越多地寻找暗夜</em></button>
-          <button class="journey-stop" type="button" role="tab" aria-selected="false" data-image="assets/blood-moon.jpg" data-kicker="TOTAL LUNAR ECLIPSE" data-title="共同见证月全食" data-copy="云层散开后，PlutonoC 与副会长俞辰熙带领同学共同见证月全食。一次天象，也成为社团共享的记忆。"><span>03</span><b>血月全食</b><em>云层散开后的共同见证</em></button>
+          <button class="journey-stop active" id="journey-tab-1" type="button" role="tab" aria-selected="true" aria-controls="journey-panel" data-image="assets/portfolio/moon-map.jpg" data-kicker="CAMPUS OBSERVATION / JIANGYIN" data-title="霞客湾观测起点" data-copy="从校园操场开始，近十次仰望与拍摄，让观测成为可以与同学共享的日常。自制月面地图也诞生于这里。"><span>01</span><b>霞客湾</b><em>校内观测与月面记录</em></button>
+          <button class="journey-stop" id="journey-tab-2" type="button" role="tab" aria-selected="false" aria-controls="journey-panel" data-image="assets/portfolio/milkyway-arch.jpg" data-kicker="FIELD JOURNEY / ACROSS CHINA" data-title="从太湖到内蒙古" data-copy="追星足迹从江苏延伸至安徽、浙江、甘肃与内蒙古巴丹吉林。不同地貌与天气，构成每一次星野摄影的现场。"><span>02</span><b>太湖 → 内蒙古</b><em>跨越多地寻找暗夜</em></button>
+          <button class="journey-stop" id="journey-tab-3" type="button" role="tab" aria-selected="false" aria-controls="journey-panel" data-image="assets/blood-moon.jpg" data-kicker="TOTAL LUNAR ECLIPSE" data-title="共同见证月全食" data-copy="云层散开后，与协会成员共同见证月全食。一次天象，也成为社团共享的观测记忆。"><span>03</span><b>血月全食</b><em>云层散开后的共同见证</em></button>
         </div>
-        <figure class="journey-viewer reveal">
-          <img src="assets/portfolio/moon-map.jpg" alt="霞客湾观测起点代表影像" loading="lazy">
-          <figcaption><span>CAMPUS OBSERVATION / JIANGYIN</span><h3>霞客湾观测起点</h3><p>从校园操场开始，近十次仰望与拍摄，让观测成为可以与同学共享的日常。自制月面地图也诞生于这里。</p></figcaption>
+        <figure class="journey-viewer reveal" id="journey-panel" role="tabpanel" aria-labelledby="journey-tab-1">
+          <div class="journey-media-frame"><img src="assets/portfolio/moon-map.jpg" alt="霞客湾观测起点代表影像" loading="lazy"></div>
+          <figcaption>
+            <div><span>CAMPUS OBSERVATION / JIANGYIN</span><h3>霞客湾观测起点</h3></div>
+            <p>从校园操场开始，近十次仰望与拍摄，让观测成为可以与同学共享的日常。自制月面地图也诞生于这里。</p>
+          </figcaption>
+          <div class="journey-controls">
+            <span><b data-journey-current>01</b> / 03</span>
+            <div><button type="button" data-journey-prev aria-label="上一段观测历程">←</button><button type="button" data-journey-next aria-label="下一段观测历程">→</button></div>
+          </div>
         </figure>
       </div>
     </section>
@@ -99,7 +124,7 @@
     <section class="works" id="works" data-section="04">
       <div class="works-head section-pad">
         <div class="section-label reveal"><span>04</span><p>PHOTOGRAPHY / 摄影作品</p></div>
-        <div class="works-title reveal"><h2>摄影作品</h2><p><b>54</b> 幅作品<br>按拍摄类型归档</p></div>
+        <div class="works-title reveal"><h2>按拍摄方向浏览</h2><p><b>54</b> 幅作品<br>星野 14 / 深空 31 / 行星 9</p></div>
       </div>
       <div class="gallery-toolbar" aria-label="作品分类筛选">
         <div class="gallery-filters"><button class="active" type="button" data-filter="all">全部</button><button type="button" data-filter="nightscape">星野</button><button type="button" data-filter="deepsky">深空</button><button type="button" data-filter="planetary">行星</button></div>
@@ -109,30 +134,29 @@
     </section>
 
     <section class="films section-pad" id="films" data-section="05">
-      <div class="section-label reveal"><span>05</span><p>MOTION / 动态影像</p></div>
-      <div class="films-head reveal"><h2>动态影像</h2><p>行星自转、天象过程与观测现场。点击封面进入播放器。</p></div>
+      <div class="films-head reveal">
+        <div class="section-label"><span>05</span><p>FILM / 动态影像</p></div>
+        <p>以短片保存静态照片无法呈现的变化。桌面端悬停可静音预览，点击进入播放器。</p>
+      </div>
       <div class="film-feature" data-film-feature aria-live="polite"></div>
-      <div class="film-list" data-film-list aria-label="视频作品列表"></div>
+      <div class="film-list" data-film-list aria-label="更多视频作品"></div>
       <p class="film-status" data-film-status>正在读取影像资料</p>
     </section>
 
     <section class="records section-pad" id="records" data-section="06">
-      <div class="section-label reveal"><span>06</span><p>ARCHIVE / 记录与荣誉</p></div>
-      <div class="records-head reveal"><h2>记录与荣誉</h2><p>公开报道、作品发表与赛事记录</p></div>
-      <div class="record-grid">
-        <article class="award-card reveal">
-          <span>AWARD / 2025 星耀山河</span>
-          <h3>三个赛道<br>三项荣誉</h3>
-          <ul><li>A1 星野相机赛道优秀奖《坠入地球的银河子民》</li><li>B1 天体·日月行星赛道三等奖《月与血月》</li><li>B2 天体·深空天体赛道优秀奖《深空》</li></ul>
-          <a href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener">查看获奖公示 ↗</a>
-        </article>
-        <div class="publication-list reveal">
-          <a href="https://mp.weixin.qq.com/s/b8GBWK_bFoLBnD4GFYRFUQ" target="_blank" rel="noopener"><time>2025.10.19</time><b>美美Sunday，一起来数星星~</b><span>江南大学 / 人物与天见天文协会报道</span><i>↗</i></a>
-          <a href="https://peking.bjd.com.cn/content/s68f4f62ae4b02424b0c1c554.html" target="_blank" rel="noopener"><time>2025.10.19</time><b>美美Sunday，一起来数星星～</b><span>北京日报客户端 / 江南大学报道转载</span><i>↗</i></a>
-          <a href="https://mp.weixin.qq.com/s/1MxA0iLaNUAKzhco-4RU5A" target="_blank" rel="noopener"><time>2026.01.28</time><b>星影｜亿万星辰奔涌向我</b><span>中国国家天文 / 冬季银河深空天体位置图</span><i>↗</i></a>
-          <a href="https://mp.weixin.qq.com/s/EjBPA65iruF6-iadVOWCZA" target="_blank" rel="noopener"><time>2026.02.05</time><b>星影｜风霜固成雪，时光结为星</b><span>中国国家天文 / 月面部分地图</span><i>↗</i></a>
-          <a href="https://mp.weixin.qq.com/s/K_0qa-cIS_PpmyEyQJ11Sg" target="_blank" rel="noopener"><time>2026.02.11</time><b>星影｜何时达遥夜，伫见初日明</b><span>中国国家天文 / 木星自转四小时与木掩木卫一</span><i>↗</i></a>
-        </div>
+      <div class="records-head reveal">
+        <div class="section-label"><span>06</span><p>ARCHIVE / 公开记录</p></div>
+        <p>公开报道、作品发表与赛事记录，按时间归档。</p>
+      </div>
+      <div class="archive-list reveal">
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>A1 星野相机赛道优秀奖《坠入地球的银河子民》</b><em>星耀山河 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B1 天体·日月行星赛道三等奖《月与血月》</b><em>星耀山河 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B2 天体·深空天体赛道优秀奖《深空》</b><em>星耀山河 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/b8GBWK_bFoLBnD4GFYRFUQ" target="_blank" rel="noopener"><time>2025.10.19</time><span>报道</span><b>美美Sunday，一起来数星星~</b><em>江南大学 ↗</em></a>
+        <a class="archive-row" href="https://peking.bjd.com.cn/content/s68f4f62ae4b02424b0c1c554.html" target="_blank" rel="noopener"><time>2025.10.19</time><span>转载</span><b>美美Sunday，一起来数星星~</b><em>北京日报客户端 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/1MxA0iLaNUAKzhco-4RU5A" target="_blank" rel="noopener"><time>2026.01.28</time><span>发表</span><b>星影｜亿万星辰奔涌向我</b><em>中国国家天文 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/EjBPA65iruF6-iadVOWCZA" target="_blank" rel="noopener"><time>2026.02.05</time><span>发表</span><b>星影｜风霜固成雪，时光结为星</b><em>中国国家天文 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/K_0qa-cIS_PpmyEyQJ11Sg" target="_blank" rel="noopener"><time>2026.02.11</time><span>发表</span><b>星影｜何时达遥夜，伫见初日明</b><em>中国国家天文 ↗</em></a>
       </div>
     </section>
 
@@ -143,7 +167,7 @@
         <h2 class="reveal">观测与影像设备</h2>
         <div class="equipment-groups reveal">
           <article><h3>深空系统</h3><p><b>主镜</b> 锐星 103APO / 星特朗 C925HD</p><p><b>相机</b> QHY 268C</p><p><b>赤道仪</b> 晴空 ST20R</p><p><b>导星</b> QHY OAG-M PRO / 图谱 290C</p><p><b>滤镜</b> 宇隆 L-eXtreme / 锐星 D2 / XIMEI 红外截止</p></article>
-          <article><h3>日常影像</h3><p><b>相机</b> 松下 S5M2 / 海鸥 4A / 宾得 K100D</p><p><b>镜头</b> 松下 70-300 / 松下 20-60 / 维卓仕 16mm F1.8</p><p><b>其他</b> DJI Mavic 2 Pro / DJI RS3 / Fotopro 脚架</p></article>
+          <article><h3>日常影像</h3><p><b>相机</b> 松下 S5M2 / 海鸥 4A / 宾得 K100D</p><p><b>镜头</b> 松下 70-300 / 松下 20-60 / 唯卓仕 16mm F1.8</p><p><b>其他</b> DJI Mavic 2 Pro / DJI RS3 / Fotopro 脚架</p></article>
         </div>
       </div>
     </section>
@@ -151,9 +175,8 @@
     <section class="contact section-pad" id="contact" data-section="08">
       <div class="section-label reveal"><span>08</span><p>CONTACT / 联系</p></div>
       <div class="contact-grid reveal">
-        <h2>PlutonoC</h2>
-        <p>持续记录天文观测、深空摄影与动态影像</p>
-        <div class="social-links"><a href="https://space.bilibili.com/86671281" target="_blank" rel="noopener"><span>BILIBILI</span><b>PlutonoC ↗</b></a><a href="https://v.douyin.com/pswzeVgv1D0/" target="_blank" rel="noopener"><span>抖音</span><b>PlutonoC ↗</b></a></div>
+        <div><p class="contact-kicker">PLUTONOC / VISUAL ARCHIVE</p><h2>继续观测，<br>继续记录。</h2></div>
+        <div class="contact-copy"><p>夜空、自然与动态影像会在这里持续更新。</p><div class="social-links"><a href="https://space.bilibili.com/86671281" target="_blank" rel="noopener"><span>BILIBILI</span><b>PlutonoC ↗</b></a><a href="https://v.douyin.com/pswzeVgv1D0/" target="_blank" rel="noopener"><span>抖音</span><b>PlutonoC ↗</b></a></div></div>
       </div>
     </section>
   </main>
