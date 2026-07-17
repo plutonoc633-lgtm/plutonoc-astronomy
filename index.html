@@ -2,17 +2,52 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="PlutonoC 的个人摄影与观测页面">
-  <meta name="theme-color" content="#090a0b">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="PlutonoC 的摄影与动态影像记录">
+  <meta name="theme-color" content="#050609">
   <title>PlutonoC</title>
-  <link rel="stylesheet" href="style.css?v=20260718-3">
+  <link rel="preload" href="assets/fonts/source-han-sans-cn-medium.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/source-han-serif-cn-vf.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css?v=20260718-light-1">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
+
+  <div class="descent-background" aria-hidden="true" data-descent-background>
+    <div class="background-stage background-deepsky"></div>
+    <div class="background-stage background-sunmoon"></div>
+    <div class="background-stage background-planet"></div>
+    <div class="background-stage background-nightscape"></div>
+    <div class="background-stage background-earth"></div>
+    <svg class="background-drawing" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+      <path class="celestial-grid" d="M-80 300C300 80 710 80 1120 270S1740 600 1650 850M-40 520C340 310 760 320 1190 540S1670 780 1720 930"/>
+      <path class="planet-limb" d="M1140-120A610 610 0 0 1 1740 520"/>
+      <path class="horizon-shape" d="M-100 860C170 760 350 830 560 770S920 720 1110 805 1420 790 1700 700V1100H-100Z"/>
+    </svg>
+  </div>
+
+  <svg class="light-system" data-light-system aria-hidden="true">
+    <defs>
+      <linearGradient id="light-gradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#9ec8ff"/>
+        <stop offset=".28" stop-color="#e5edf4"/>
+        <stop offset=".52" stop-color="#edf0f2"/>
+        <stop offset=".74" stop-color="#f4f1e9"/>
+        <stop offset="1" stop-color="#ddb477"/>
+      </linearGradient>
+      <filter id="light-blur" x="-80%" y="-20%" width="260%" height="140%">
+        <feGaussianBlur stdDeviation="7"/>
+      </filter>
+    </defs>
+    <path class="light-path light-path-outer" data-light-path-outer/>
+    <path class="light-path light-path-glow" data-light-path-glow/>
+    <path class="light-path light-path-core" data-light-path-core/>
+    <circle class="light-traveller" data-light-traveller r="3.5"/>
+  </svg>
+
   <div class="reading-progress" aria-hidden="true"><i data-reading-progress></i></div>
 
-  <header class="site-header" data-header>
+  <header class="site-header" data-header data-light-anchor>
     <a class="brand" href="#home" data-transition-link aria-label="返回首页">PlutonoC</a>
     <div class="section-status" aria-live="polite"><span data-current-number>01</span><b data-current-section>首页</b></div>
     <button class="index-trigger" type="button" data-index-open aria-haspopup="dialog" aria-controls="site-index">
@@ -23,120 +58,119 @@
   <aside class="site-index" id="site-index" role="dialog" aria-modal="true" aria-label="网站索引" aria-hidden="true">
     <button class="index-backdrop" type="button" data-index-close tabindex="-1" aria-label="关闭索引"></button>
     <div class="index-panel">
-      <div class="index-top">
-        <span>PlutonoC</span>
-        <button type="button" data-index-close aria-label="关闭索引">关闭 <b>×</b></button>
-      </div>
+      <div class="index-top"><span>THE DESCENT OF LIGHT</span><button type="button" data-index-close aria-label="关闭索引">关闭 <b>×</b></button></div>
       <div class="index-body">
         <nav class="index-nav" aria-label="栏目索引">
           <a href="#home" data-index-link data-preview="assets/gallery/nightscape/nightscape-03.jpg"><span>01</span><b>首页</b><em>HOME</em></a>
-          <a href="#about" data-index-link data-preview="assets/gallery/nightscape/nightscape-03.jpg"><span>02</span><b>关于我</b><em>ABOUT</em></a>
-          <a href="#works" data-index-link data-preview="assets/gallery/nightscape/nightscape-04.jpg"><span>03</span><b>摄影作品</b><em>PHOTOGRAPHY</em></a>
-          <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>04</span><b>动态影像</b><em>FILM</em></a>
-          <a href="#records" data-index-link data-preview="assets/gallery/planetary/planetary-04.jpg"><span>05</span><b>公开记录</b><em>ARCHIVE</em></a>
-          <a href="#equipment" data-index-link data-preview="assets/equipment.jpg"><span>06</span><b>设备</b><em>EQUIPMENT</em></a>
-          <a href="#contact" data-index-link data-preview="assets/inner-mongolia.jpg"><span>07</span><b>联系</b><em>CONTACT</em></a>
+          <a href="#works" data-index-link data-gallery-target="deepsky" data-preview="assets/gallery/hero/deepsky.webp"><span>02</span><b>深空</b><em>DEEP SPACE</em><i data-index-category-count="deepsky"></i></a>
+          <a href="#works" data-index-link data-gallery-target="sunmoon" data-preview="assets/gallery/hero/sunmoon.webp"><span>03</span><b>日月</b><em>SUN &amp; MOON</em><i data-index-category-count="sunmoon"></i></a>
+          <a href="#works" data-index-link data-gallery-target="planet" data-preview="assets/gallery/hero/planet.webp"><span>04</span><b>行星</b><em>PLANETS</em><i data-index-category-count="planet"></i></a>
+          <a href="#works" data-index-link data-gallery-target="nightscape" data-preview="assets/gallery/hero/nightscape.webp"><span>05</span><b>星野</b><em>NIGHTSCAPE</em><i data-index-category-count="nightscape"></i></a>
+          <a href="#works" data-index-link data-gallery-target="earth" data-preview="assets/gallery/hero/earth.webp"><span>06</span><b>大地</b><em>EARTH</em><i data-index-category-count="earth"></i></a>
+          <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>07</span><b>动态影像</b><em>MOTION</em></a>
+          <a href="#records" data-index-link data-preview="assets/gallery/planetary/planetary-04.jpg"><span>08</span><b>公开记录</b><em>ARCHIVE</em></a>
+          <a href="#equipment" data-index-link data-preview="assets/equipment/previews/equipment-c925hd.webp"><span>09</span><b>设备</b><em>EQUIPMENT</em></a>
+          <a href="#contact" data-index-link data-preview="assets/gallery/earth/earth-007.jpg"><span>10</span><b>抵达</b><em>CONTACT</em></a>
         </nav>
         <figure class="index-preview" aria-hidden="true">
           <img src="assets/gallery/nightscape/nightscape-03.jpg" alt="">
           <figcaption><span data-index-count>01</span><b data-index-name>首页</b></figcaption>
         </figure>
       </div>
-      <div class="index-foot"><span>PER ASPERA AD ASTRA</span><span>© 2026</span></div>
+      <div class="index-foot"><span>PER ASPERA AD ASTRA</span><span>© 2026 PLUTONOC</span></div>
     </div>
   </aside>
 
-  <div class="page-curtain" data-page-curtain aria-hidden="true"></div>
+  <div class="page-curtain" data-page-curtain aria-hidden="true">
+    <p><span data-curtain-kicker>ARCHIVE OPENED</span><b data-curtain-category>DEEP SPACE</b><em data-curtain-count>31 OBSERVATIONS</em></p>
+  </div>
 
   <main id="content">
-    <section class="hero" id="home" data-section="01" data-section-name="首页">
-      <nav class="contact-sheet" aria-label="主要栏目">
-        <a class="contact-panel" href="#works" data-transition-link data-home-filter="nightscape">
-          <img src="assets/gallery/nightscape/nightscape-04.jpg" alt="冬季银河接片带星云标识">
-          <span class="contact-panel-shade"></span>
-          <span class="contact-panel-meta"><i>01</i><b>星野</b><em>14</em></span>
+    <section class="hero" id="home" data-section="01" data-section-name="首页" data-light-anchor>
+      <header class="hero-title">
+        <p>THE DESCENT OF LIGHT</p>
+        <h1>光的降落</h1>
+      </header>
+      <nav class="descent-sheet" aria-label="摄影分类">
+        <a class="descent-panel" href="#works" data-home-filter="deepsky" data-transition-link style="--panel-color:#9ec8ff">
+          <img src="assets/gallery/hero/deepsky.webp" alt="猎户座星云与跑步者星云">
+          <span class="descent-panel-shade"></span>
+          <span class="descent-panel-index">01</span>
+          <span class="descent-panel-meta"><b>深空</b><i>DEEP SPACE</i><em data-category-count="deepsky">31</em><small>遥远天体与星云</small></span>
         </a>
-        <a class="contact-panel" href="#works" data-transition-link data-home-filter="deepsky">
-          <img src="assets/gallery/deepsky/deepsky-09.jpg" alt="猎户座星云和跑步者星云">
-          <span class="contact-panel-shade"></span>
-          <span class="contact-panel-meta"><i>02</i><b>深空</b><em>31</em></span>
+        <a class="descent-panel" href="#works" data-home-filter="sunmoon" data-transition-link style="--panel-color:#e5edf4">
+          <img src="assets/gallery/hero/sunmoon.webp" alt="月面部分地图">
+          <span class="descent-panel-shade"></span>
+          <span class="descent-panel-index">02</span>
+          <span class="descent-panel-meta"><b>日月</b><i>SUN &amp; MOON</i><em data-category-count="sunmoon">7</em><small>日光 月相与食象</small></span>
         </a>
-        <a class="contact-panel" href="#works" data-transition-link data-home-filter="planetary">
-          <img src="assets/gallery/planetary/planetary-02.jpg" alt="木星自转四小时">
-          <span class="contact-panel-shade"></span>
-          <span class="contact-panel-meta"><i>03</i><b>行星</b><em>03</em></span>
+        <a class="descent-panel" href="#works" data-home-filter="planet" data-transition-link style="--panel-color:#edf0f2">
+          <img src="assets/gallery/hero/planet.webp" alt="木星自转四小时">
+          <span class="descent-panel-shade"></span>
+          <span class="descent-panel-index">03</span>
+          <span class="descent-panel-meta"><b>行星</b><i>PLANETS</i><em data-category-count="planet">4</em><small>行星表面与运动</small></span>
         </a>
-        <a class="contact-panel" href="#works" data-transition-link data-home-filter="sunmoon">
-          <img src="assets/gallery/planetary/planetary-06.jpg" alt="月面部分地图">
-          <span class="contact-panel-shade"></span>
-          <span class="contact-panel-meta"><i>04</i><b>日月</b><em>06</em></span>
+        <a class="descent-panel" href="#works" data-home-filter="nightscape" data-transition-link style="--panel-color:#f4f1e9">
+          <img src="assets/gallery/hero/nightscape.webp" alt="冬季银河接片带星云标识">
+          <span class="descent-panel-shade"></span>
+          <span class="descent-panel-index">04</span>
+          <span class="descent-panel-meta"><b>星野</b><i>NIGHTSCAPE</i><em data-category-count="nightscape">14</em><small>银河 流星与地平线</small></span>
         </a>
-        <a class="contact-panel" href="#films" data-transition-link>
-          <video src="assets/videos/jupiter.mp4" poster="assets/videos/jupiter-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="木星动态观测影像"></video>
-          <span class="contact-panel-shade"></span>
-          <span class="contact-panel-meta"><i>05</i><b>动态影像</b><em>00:06</em></span>
+        <a class="descent-panel" href="#works" data-home-filter="earth" data-transition-link style="--panel-color:#ddb477">
+          <img src="assets/gallery/hero/earth.webp" alt="云隐珠峰">
+          <span class="descent-panel-shade"></span>
+          <span class="descent-panel-index">05</span>
+          <span class="descent-panel-meta"><b>大地</b><i>EARTH</i><em data-category-count="earth">60</em><small>山川 城市与地面光影</small></span>
         </a>
       </nav>
-      <div class="hero-foot"><span>PER ASPERA AD ASTRA</span><span>SCROLL ↓</span></div>
-    </section>
-
-    <section class="about" id="about" data-section="02" data-section-name="关于我">
-      <div class="about-name reveal">PlutonoC</div>
-      <div class="about-facts reveal">
-        <p>江南大学天见天文协会创始人</p>
-        <p>星野 / 深空 / 行星 / 日月 / 自然</p>
+      <a class="motion-gateway" href="#films" data-transition-link>
+        <video src="assets/videos/jupiter.mp4" poster="assets/videos/jupiter-poster.jpg" muted loop playsinline preload="metadata" data-home-motion aria-label="木星动态观测影像"></video>
+        <span><i>06</i><b>动态影像</b><em>MOTION / 光进入时间</em><small>00:06</small></span>
+      </a>
+      <div class="identity-rail" aria-label="个人身份与拍摄方向">
+        <div><span>PlutonoC / 江南大学天见天文协会创始人</span><i>深空 / 日月 / 行星 / 星野 / 大地 / 动态影像</i><span aria-hidden="true">PlutonoC / 江南大学天见天文协会创始人</span><i aria-hidden="true">深空 / 日月 / 行星 / 星野 / 大地 / 动态影像</i></div>
       </div>
     </section>
 
-    <section class="works" id="works" data-section="03" data-section-name="摄影作品">
-      <header class="works-header reveal">
-        <div><h2>摄影作品</h2></div>
-        <p><b>54</b><span>星野 14 / 深空 31 / 行星 03 / 日月 06</span></p>
+    <section class="works" id="works" data-section="02" data-section-name="摄影作品" data-light-anchor>
+      <header class="section-heading reveal">
+        <p>PHOTOGRAPHY / 116 OBSERVATIONS</p>
+        <h2>摄影作品</h2>
+        <span><b data-work-total>116</b> PHOTOGRAPHS</span>
       </header>
-      <div class="featured-grid" aria-label="分类代表作">
-        <button class="featured-card featured-nightscape reveal" type="button" data-feature-filter="nightscape">
-          <img src="assets/gallery/nightscape/nightscape-04.jpg" alt="冬季银河接片带星云标识" loading="lazy">
-          <span><i>星野</i><b>冬季银河接片带星云标识</b><em>14</em></span>
-        </button>
-        <button class="featured-card featured-deepsky reveal" type="button" data-feature-filter="deepsky">
-          <img src="assets/gallery/deepsky/deepsky-09.jpg" alt="猎户座星云和跑步者星云" loading="lazy">
-          <span><i>深空</i><b>猎户座星云 + 跑步者星云</b><em>31</em></span>
-        </button>
-        <button class="featured-card featured-planetary reveal" type="button" data-feature-filter="planetary">
-          <img src="assets/gallery/planetary/planetary-02.jpg" data-static-src="assets/gallery/planetary/planetary-02.jpg" data-motion-src="assets/gallery/planetary/jupiter-motion.gif" alt="木星自转四小时" loading="lazy">
-          <span><i>行星</i><b>木星自转 4 小时</b><em>03</em></span>
-        </button>
-        <button class="featured-card featured-sunmoon reveal" type="button" data-feature-filter="sunmoon">
-          <img src="assets/gallery/planetary/planetary-06.jpg" alt="月面部分地图" loading="lazy">
-          <span><i>日月</i><b>月面部分地图</b><em>06</em></span>
-        </button>
-      </div>
-      <div class="gallery-toolbar reveal" aria-label="作品分类筛选">
+      <div class="gallery-toolbar reveal" aria-label="作品分类筛选" data-light-anchor>
         <div class="gallery-filters">
-          <button class="active" type="button" data-filter="all">全部</button>
-          <button type="button" data-filter="nightscape">星野</button>
-          <button type="button" data-filter="deepsky">深空</button>
-          <button type="button" data-filter="planetary">行星</button>
-          <button type="button" data-filter="sunmoon">日月</button>
+          <button class="active" type="button" data-filter="all">全部 <i data-filter-count="all">116</i></button>
+          <button type="button" data-filter="deepsky">深空 <i data-filter-count="deepsky">31</i></button>
+          <button type="button" data-filter="sunmoon">日月 <i data-filter-count="sunmoon">7</i></button>
+          <button type="button" data-filter="planet">行星 <i data-filter-count="planet">4</i></button>
+          <button type="button" data-filter="nightscape">星野 <i data-filter-count="nightscape">14</i></button>
+          <button type="button" data-filter="earth">大地 <i data-filter-count="earth">60</i></button>
         </div>
         <div class="gallery-controls">
-          <span><b class="gallery-current">01</b> / <i class="gallery-total">54</i></span>
+          <span><b class="gallery-current">01</b> / <i class="gallery-total">116</i></span>
           <button class="gallery-prev" type="button" aria-label="上一张">←</button>
           <button class="gallery-next" type="button" aria-label="下一张">→</button>
         </div>
       </div>
-      <div class="gallery-shell reveal" aria-label="作品横向画廊" tabindex="0"><div class="work-track"></div></div>
+      <div class="canvas-stage reveal" data-canvas-stage>
+        <canvas class="archive-canvas" data-archive-canvas tabindex="0" role="application" aria-label="可拖动的无限摄影作品画布"></canvas>
+        <div class="canvas-coordinate" aria-hidden="true"><span>RA 00H 00M</span><span>DEC +00° 00′</span></div>
+        <p class="canvas-status" data-canvas-status aria-live="polite">全部 / 116</p>
+        <p class="sr-only" data-canvas-live aria-live="polite"></p>
+      </div>
     </section>
 
-    <section class="films" id="films" data-section="04" data-section-name="动态影像">
-      <header class="films-header reveal"><h2>动态影像</h2></header>
+    <section class="films" id="films" data-section="03" data-section-name="动态影像" data-light-anchor>
+      <header class="section-heading reveal"><p>MOTION / LIGHT ENTERS TIME</p><h2>动态影像</h2></header>
+      <div class="timecode" aria-hidden="true" data-timecode>00:00:00:00</div>
       <div class="film-feature reveal" data-film-feature aria-live="polite"></div>
       <div class="film-list" data-film-list aria-label="更多视频作品"></div>
       <p class="film-status" data-film-status aria-live="polite"></p>
     </section>
 
-    <section class="records" id="records" data-section="05" data-section-name="公开记录">
-      <header class="records-header reveal"><h2>公开记录</h2></header>
+    <section class="records" id="records" data-section="04" data-section-name="公开记录" data-light-anchor>
+      <header class="section-heading reveal"><p>ARCHIVE / LIGHT BECOMES RECORD</p><h2>公开记录</h2></header>
       <div class="archive-list reveal">
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>A1 星野相机赛道优秀奖《坠入地球的银河子民》</b><em>星耀山河 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B1 天体·日月行星赛道三等奖《月与血月》</b><em>星耀山河 ↗</em></a>
@@ -149,10 +183,17 @@
       </div>
     </section>
 
-    <section class="equipment" id="equipment" data-section="06" data-section-name="设备">
-      <figure class="equipment-visual reveal"><img src="assets/equipment.jpg" alt="摄影与观测设备" loading="lazy"></figure>
+    <section class="equipment" id="equipment" data-section="05" data-section-name="设备" data-light-anchor>
+      <div class="equipment-media reveal" aria-label="设备与观测现场">
+        <div class="equipment-track" data-equipment-track>
+          <figure><img src="assets/equipment.jpg" alt="摄影与观测设备" loading="lazy"><figcaption>设备记录</figcaption></figure>
+          <figure><img src="assets/equipment/previews/equipment-c925hd.webp" alt="C925HD 观测设备" loading="lazy"><figcaption>C925HD</figcaption></figure>
+          <figure><img src="assets/equipment/previews/equipment-field-01.webp" alt="夜间观测现场" loading="lazy"><figcaption>观测现场</figcaption></figure>
+          <figure><img src="assets/equipment/previews/equipment-field-02.webp" alt="观测现场与风机" loading="lazy"><figcaption>观测现场</figcaption></figure>
+        </div>
+      </div>
       <div class="equipment-console reveal">
-        <header><h2>设备</h2></header>
+        <header><p>EQUIPMENT</p><h2>设备</h2></header>
         <div class="equipment-tabs" role="tablist" aria-label="设备分类">
           <button class="active" id="equipment-tab-deep" type="button" role="tab" aria-selected="true" aria-controls="equipment-deep" data-equipment-tab="deep">深空系统</button>
           <button id="equipment-tab-daily" type="button" role="tab" aria-selected="false" aria-controls="equipment-daily" data-equipment-tab="daily">日常影像</button>
@@ -166,39 +207,47 @@
       </div>
     </section>
 
-    <section class="contact" id="contact" data-section="07" data-section-name="联系">
-      <img class="contact-background" src="assets/inner-mongolia.jpg" alt="" loading="lazy">
-      <div class="contact-shade" aria-hidden="true"></div>
-      <div class="contact-phrase" aria-label="循此苦旅 以达天际">
-        <span class="contact-phrase-first">循此苦旅</span>
-        <span class="contact-phrase-second">以达天际</span>
+    <section class="arrival" id="contact" data-section="06" data-section-name="抵达" data-light-anchor>
+      <div class="arrival-horizon" aria-hidden="true"></div>
+      <div class="arrival-copy reveal">
+        <p>THE LIGHT ARRIVED HERE.</p>
+        <h2>光最终抵达这里。</h2>
+        <strong>PLUTONOC</strong>
+        <span>ASTROPHOTOGRAPHY<br>PHOTOGRAPHY<br>MOTION</span>
       </div>
       <div class="social-links reveal">
         <a href="https://space.bilibili.com/86671281" target="_blank" rel="noopener"><span>BILIBILI</span><b>PlutonoC ↗</b></a>
         <a href="https://v.douyin.com/pswzeVgv1D0/" target="_blank" rel="noopener"><span>抖音</span><b>PlutonoC ↗</b></a>
       </div>
-      <p class="contact-latin">PER ASPERA AD ASTRA</p>
+      <footer><span>© 2026 PLUTONOC</span><span>PER ASPERA AD ASTRA</span><a href="#home" data-transition-link>BACK TO TOP ↑</a></footer>
     </section>
   </main>
 
-  <dialog class="media-dialog" data-photo-dialog>
+  <dialog class="photo-dialog" data-photo-dialog>
     <button class="dialog-close" type="button" aria-label="关闭">×</button>
     <button class="dialog-prev" type="button" aria-label="上一张">←</button>
-    <img alt="">
+    <div class="photo-stage"><img alt=""></div>
+    <aside class="photo-information">
+      <p class="photo-position"><span data-photo-current>01</span> / <span data-photo-total>116</span></p>
+      <section data-detail-object><i>01 / <span data-object-label>OBJECT</span></i><h2 data-photo-title></h2><p data-photo-category></p></section>
+      <section data-detail-capture hidden><i>02 / CAPTURE</i><dl><div data-detail-date hidden><dt>日期</dt><dd></dd></div><div data-detail-location hidden><dt>地点</dt><dd></dd></div></dl></section>
+      <section data-detail-system hidden><i>03 / SYSTEM</i><dl><div data-detail-equipment hidden><dt>设备</dt><dd></dd></div><div data-detail-parameters hidden><dt>参数</dt><dd></dd></div></dl></section>
+      <section data-detail-process hidden><i>04 / PROCESS</i><p></p></section>
+      <section data-detail-notes hidden><i>05 / NOTES</i><p data-detail-story hidden></p><p data-detail-note hidden></p></section>
+    </aside>
     <button class="dialog-next" type="button" aria-label="下一张">→</button>
-    <p></p>
   </dialog>
+
   <dialog class="video-dialog" data-video-dialog>
     <button class="dialog-close" type="button" aria-label="关闭">×</button>
     <div class="video-frame"><video controls playsinline preload="metadata"></video></div>
     <div class="video-caption"><h3></h3><p></p></div>
   </dialog>
 
-  <footer><span>© 2026 PLUTONOC</span><span>PER ASPERA AD ASTRA</span><a href="#home" data-transition-link>BACK TO TOP ↑</a></footer>
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js"></script>
-  <script src="video-data.js?v=20260718-3"></script>
-  <script src="gallery-data.js?v=20260718-3"></script>
-  <script src="script.js?v=20260718-3"></script>
+  <script src="video-data.js?v=20260718-light-1"></script>
+  <script src="gallery-data.js?v=20260718-light-1"></script>
+  <script src="script.js?v=20260718-light-1"></script>
 </body>
 </html>

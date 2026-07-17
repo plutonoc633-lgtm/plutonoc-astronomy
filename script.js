@@ -3,37 +3,68 @@
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const isMobile = window.matchMedia('(max-width: 760px)').matches;
   const $ = (selector, root = document) => root?.querySelector(selector);
   const $$ = (selector, root = document) => [...(root?.querySelectorAll(selector) || [])];
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+  const mod = (value, size) => ((value % size) + size) % size;
   const pad = number => String(number).padStart(2, '0');
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
-  const categoryLabels = {
-    nightscape: '星野',
-    deepsky: '深空',
-    planetary: '行星',
-    sunmoon: '日月',
-    nature: '自然',
-    video: '动态影像'
-  };
 
-  const header = $('[data-header]');
-  const progress = $('[data-reading-progress]');
-  let scrollFrame = 0;
+  const allWorks = [...(window.galleryData || [])];
+  const categoryConfig = window.categoryConfig || {};
+  const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
+  const categoryCounts = Object.fromEntries(categoryOrder.map(category => [category, allWorks.filter(work => work.category === category).length]));
+  const categoryLabel = category => categoryConfig[category]?.label || category;
+  const categoryEnglish = category => categoryConfig[category]?.english || category.toUpperCase();
 
-  function updateScrollChrome() {
-    scrollFrame = 0;
-    const scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
-    progress?.style.setProperty('transform', `scaleX(${Math.min(Math.max(scrollY / scrollable, 0), 1)})`);
-    header?.classList.toggle('is-scrolled', scrollY > 20);
+  let frameRequested = false;
+  let scrollDirty = true;
+  let lightDirty = true;
+  let filmSectionVisible = false;
+  let archiveCanvas = null;
+  let timecodeStart = performance.now();
+
+  function requestMainFrame() {
+    if (frameRequested) return;
+    frameRequested = true;
+    requestAnimationFrame(runMainFrame);
   }
 
-  window.addEventListener('scroll', () => {
-    if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollChrome);
-  }, { passive: true });
-  updateScrollChrome();
+  function runMainFrame(time) {
+    frameRequested = false;
+    let needsNext = false;
+    if (scrollDirty || lightDirty) {
+      updateScrollAndLight();
+      scrollDirty = false;
+      lightDirty = false;
+    }
+    if (archiveCanvas?.frame(time)) needsNext = true;
+    if (filmSectionVisible && !reducedMotion) {
+      const elapsed = (time - timecodeStart) / 1000;
+      const totalFrames = Math.floor((elapsed % 3600) * 24);
+      const seconds = Math.floor(totalFrames / 24);
+      const frame = totalFrames % 24;
+      const timecode = $('[data-timecode]');
+      if (timecode) timecode.textContent = `00:${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}:${pad(frame)}`;
+      needsNext = true;
+    }
+    if (needsNext) requestMainFrame();
+  }
 
+  function updateDynamicCounts() {
+    $$('[data-category-count]').forEach(node => { node.textContent = categoryCounts[node.dataset.categoryCount] ?? 0; });
+    $$('[data-index-category-count]').forEach(node => { node.textContent = pad(categoryCounts[node.dataset.indexCategoryCount] ?? 0); });
+    $$('[data-filter-count]').forEach(node => {
+      node.textContent = node.dataset.filterCount === 'all' ? allWorks.length : (categoryCounts[node.dataset.filterCount] ?? 0);
+    });
+    $$('[data-work-total]').forEach(node => { node.textContent = allWorks.length; });
+  }
+  updateDynamicCounts();
+
+  /* Reveal and section state */
   const revealElements = $$('.reveal');
   if (reducedMotion || !('IntersectionObserver' in window)) {
     revealElements.forEach(element => element.classList.add('is-visible'));
@@ -44,14 +75,42 @@
         entry.target.classList.add('is-visible');
         revealObserver.unobserve(entry.target);
       });
-    }, { threshold: .08, rootMargin: '0px 0px -7% 0px' });
+    }, { threshold: .08, rootMargin: '0px 0px -6% 0px' });
     revealElements.forEach(element => revealObserver.observe(element));
   }
 
+  const sections = $$('[data-section]');
+  const currentNumber = $('[data-current-number]');
+  const currentSection = $('[data-current-section]');
+  let activeSection = sections[0];
+
+  function setActiveSection(section) {
+    if (!section || activeSection === section) return;
+    activeSection = section;
+    currentNumber.textContent = section.dataset.section;
+    currentSection.textContent = section.dataset.sectionName;
+    $$('[data-index-link]').forEach(link => {
+      const category = link.dataset.galleryTarget;
+      const current = section.id === 'works' && category
+        ? category === (archiveCanvas?.filter === 'all' ? 'deepsky' : archiveCanvas?.filter)
+        : !category && link.hash === `#${section.id}`;
+      link.classList.toggle('is-current', Boolean(current));
+    });
+  }
+
+  if ('IntersectionObserver' in window) {
+    const sectionObserver = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visible[0]) setActiveSection(visible[0].target);
+      entries.forEach(entry => entry.target.classList.toggle('is-lit', entry.isIntersecting));
+    }, { threshold: [0, .2, .45, .7], rootMargin: '-18% 0px -46% 0px' });
+    sections.forEach(section => sectionObserver.observe(section));
+  }
+
+  /* Index */
   const siteIndex = $('#site-index');
   const indexPanel = $('.index-panel', siteIndex);
   const indexPreview = $('.index-preview img', siteIndex);
-  const indexLinks = $$('[data-index-link]', siteIndex);
   const indexCount = $('[data-index-count]', siteIndex);
   const indexName = $('[data-index-name]', siteIndex);
   let indexReturnFocus = null;
@@ -59,28 +118,28 @@
 
   function openIndex(event) {
     indexReturnFocus = event?.currentTarget || document.activeElement;
-    siteIndex?.classList.add('is-open');
-    siteIndex?.setAttribute('aria-hidden', 'false');
+    siteIndex.classList.add('is-open');
+    siteIndex.setAttribute('aria-hidden', 'false');
     document.body.classList.add('index-open');
-    window.setTimeout(() => $('[data-index-close]:not(.index-backdrop)', siteIndex)?.focus(), reducedMotion ? 0 : 130);
+    setTimeout(() => $('[data-index-close]:not(.index-backdrop)', siteIndex)?.focus(), reducedMotion ? 0 : 140);
   }
 
   function closeIndex({ restoreFocus = true } = {}) {
-    siteIndex?.classList.remove('is-open');
-    siteIndex?.setAttribute('aria-hidden', 'true');
+    siteIndex.classList.remove('is-open');
+    siteIndex.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('index-open');
     if (restoreFocus) indexReturnFocus?.focus?.();
   }
 
   function updateIndexPreview(link) {
     if (!link || !indexPreview) return;
-    const source = link.dataset.preview;
     indexCount.textContent = $('span', link)?.textContent || '';
     indexName.textContent = $('b', link)?.textContent || '';
+    const source = link.dataset.preview;
     if (!source || indexPreview.getAttribute('src') === source) return;
     clearTimeout(indexPreviewTimer);
     indexPreview.classList.add('is-changing');
-    indexPreviewTimer = window.setTimeout(() => {
+    indexPreviewTimer = setTimeout(() => {
       indexPreview.src = source;
       indexPreview.classList.remove('is-changing');
     }, reducedMotion ? 0 : 140);
@@ -88,18 +147,18 @@
 
   $$('[data-index-open]').forEach(button => button.addEventListener('click', openIndex));
   $$('[data-index-close]', siteIndex).forEach(button => button.addEventListener('click', () => closeIndex()));
-  indexLinks.forEach(link => {
+  $$('[data-index-link]', siteIndex).forEach(link => {
     link.addEventListener('pointerenter', () => updateIndexPreview(link));
     link.addEventListener('focus', () => updateIndexPreview(link));
   });
 
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && siteIndex?.classList.contains('is-open')) {
+    if (event.key === 'Escape' && siteIndex.classList.contains('is-open')) {
       event.preventDefault();
       closeIndex();
       return;
     }
-    if (event.key !== 'Tab' || !siteIndex?.classList.contains('is-open')) return;
+    if (event.key !== 'Tab' || !siteIndex.classList.contains('is-open')) return;
     const focusable = $$('a[href], button:not([disabled]):not([tabindex="-1"])', indexPanel);
     const first = focusable[0];
     const last = focusable.at(-1);
@@ -112,317 +171,734 @@
     }
   });
 
+  /* Navigation transition */
   const curtain = $('[data-page-curtain]');
   let transitionActive = false;
+  let pendingGalleryFilter = null;
 
-  function finishNavigation(hash, pushHistory = true) {
-    const target = $(hash);
-    if (!target) return;
-    target.scrollIntoView({ block: 'start', behavior: 'auto' });
-    if (pushHistory && location.hash !== hash) history.pushState(null, '', hash);
+  function updateCurtain(category, hash) {
+    const config = categoryConfig[category];
+    const destinations = {
+      '#home': ['THE DESCENT OF LIGHT', 'HOME', 'BEGIN'],
+      '#films': ['LIGHT ENTERS TIME', 'MOTION', '00:06'],
+      '#records': ['LIGHT BECOMES RECORD', 'ARCHIVE', 'PUBLIC RECORDS'],
+      '#equipment': ['LIGHT MEETS OPTICS', 'EQUIPMENT', 'SYSTEMS'],
+      '#contact': ['THE LIGHT ARRIVED HERE', 'ARRIVAL', 'PER ASPERA AD ASTRA']
+    };
+    const copy = category
+      ? ['ARCHIVE OPENED', config?.english || 'ARCHIVE', `${categoryCounts[category] || allWorks.length} OBSERVATIONS`]
+      : destinations[hash] || ['THE DESCENT OF LIGHT', 'PLUTONOC', ''];
+    $('[data-curtain-kicker]').textContent = copy[0];
+    $('[data-curtain-category]').textContent = copy[1];
+    $('[data-curtain-count]').textContent = copy[2];
   }
 
-  function transitionTo(hash) {
+  function finishNavigation(hash, category, pushHistory = true) {
+    const target = $(hash);
+    if (!target) return;
+    if (category && archiveCanvas) archiveCanvas.setFilter(category, true);
+    target.scrollIntoView({ block: 'start', behavior: 'auto' });
+    if (pushHistory && location.hash !== hash) history.pushState({ category }, '', hash);
+  }
+
+  function transitionTo(hash, category = null) {
     if (transitionActive || !$(hash)) return;
+    pendingGalleryFilter = category;
+    updateCurtain(category, hash);
     if (reducedMotion) {
       closeIndex({ restoreFocus: false });
-      finishNavigation(hash);
+      finishNavigation(hash, category);
       return;
     }
     transitionActive = true;
     document.body.classList.add('is-transitioning');
-    curtain.className = 'page-curtain is-covering';
-    window.setTimeout(() => {
-      closeIndex({ restoreFocus: false });
-      finishNavigation(hash);
-      requestAnimationFrame(() => {
-        curtain.className = 'page-curtain is-revealing';
-        window.setTimeout(() => {
-          curtain.className = 'page-curtain';
-          curtain.style.transition = 'none';
-          curtain.style.transform = 'translateY(100%)';
-          requestAnimationFrame(() => {
-            curtain.removeAttribute('style');
-            document.body.classList.remove('is-transitioning');
-            transitionActive = false;
-          });
-        }, 430);
-      });
-    }, 380);
+    closeIndex({ restoreFocus: false });
+    setTimeout(() => finishNavigation(hash, category), category ? 520 : 320);
+    setTimeout(() => document.body.classList.remove('is-transitioning'), category ? 960 : 650);
+    setTimeout(() => { transitionActive = false; pendingGalleryFilter = null; }, category ? 1180 : 760);
   }
 
   $$('a[data-transition-link], [data-index-link]').forEach(link => {
     link.addEventListener('click', event => {
       if (!link.hash || !$(link.hash)) return;
       event.preventDefault();
-      transitionTo(link.hash);
+      const category = link.dataset.homeFilter || link.dataset.galleryTarget || null;
+      transitionTo(link.hash, category);
     });
   });
 
-  window.addEventListener('popstate', () => {
-    if (location.hash && $(location.hash)) finishNavigation(location.hash, false);
+  window.addEventListener('popstate', event => {
+    const category = event.state?.category || null;
+    finishNavigation(location.hash || '#home', category, false);
   });
 
-  const sections = $$('main section[id]');
-  const currentNumber = $('[data-current-number]');
-  const currentSection = $('[data-current-section]');
+  /* Hero interaction */
+  const descentSheet = $('.descent-sheet');
+  const descentPanels = $$('.descent-panel');
+  const homeMotion = $('[data-home-motion]');
+  let visualStageOverride = null;
 
-  function setCurrentSection(section) {
-    if (!section) return;
-    const hash = `#${section.id}`;
-    currentNumber.textContent = section.dataset.section || '';
-    currentSection.textContent = section.dataset.sectionName || '';
-    indexLinks.forEach(link => link.classList.toggle('is-current', link.hash === hash));
+  function setVisualStage(category) {
+    const stage = categoryOrder.includes(category) ? category : 'deepsky';
+    document.body.dataset.visualStage = stage;
+    document.documentElement.style.setProperty('--stage-color', categoryConfig[stage]?.color || '#9ec8ff');
   }
 
-  if ('IntersectionObserver' in window) {
-    const visibleSections = new Map();
-    const sectionObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) visibleSections.set(entry.target, entry.intersectionRatio);
-        else visibleSections.delete(entry.target);
-      });
-      const active = [...visibleSections.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      if (active) setCurrentSection(active);
-    }, { threshold: [.15, .3, .5, .7], rootMargin: '-12% 0px -38% 0px' });
-    sections.forEach(section => sectionObserver.observe(section));
-  }
-
-  const contactPanels = $$('.contact-panel');
-  const contactSheet = $('.contact-sheet');
-  const homePreviewVideos = $$('.contact-panel video');
-  const resetContactPanels = () => contactPanels.forEach(item => item.classList.remove('is-active'));
-  if (reducedMotion) {
-    homePreviewVideos.forEach(video => video.pause());
-  } else if ('IntersectionObserver' in window) {
-    const homeVideoObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        const video = entry.target;
-        if (entry.isIntersecting) video.play().catch(() => {});
-        else video.pause();
-      });
-    }, { threshold: .35 });
-    homePreviewVideos.forEach(video => homeVideoObserver.observe(video));
-  }
-  contactPanels.forEach(panel => {
-    const activate = () => contactPanels.forEach(item => item.classList.toggle('is-active', item === panel));
+  descentPanels.forEach(panel => {
+    const category = panel.dataset.homeFilter;
+    const activate = () => {
+      descentPanels.forEach(item => item.classList.toggle('is-active', item === panel));
+      visualStageOverride = category;
+      setVisualStage(category);
+      lightDirty = true;
+      requestMainFrame();
+    };
     panel.addEventListener('pointerenter', activate);
     panel.addEventListener('focus', activate);
-    panel.addEventListener('click', () => {
-      if (panel.dataset.homeFilter) setGalleryFilter(panel.dataset.homeFilter, true);
-    });
-  });
-  contactSheet?.addEventListener('pointerleave', resetContactPanels);
-  contactSheet?.addEventListener('focusout', event => {
-    if (!contactSheet.contains(event.relatedTarget)) resetContactPanels();
-  });
-
-  const featuredMotionImage = $('[data-motion-src]');
-  if (featuredMotionImage && !reducedMotion && 'IntersectionObserver' in window) {
-    const featuredMotionObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        const image = entry.target;
-        const nextSource = image.dataset.motionSrc;
-        if (nextSource && image.getAttribute('src') !== nextSource) image.src = nextSource;
-        featuredMotionObserver.unobserve(image);
+    if (supportsHover && !reducedMotion) {
+      panel.addEventListener('pointermove', event => {
+        const bounds = panel.getBoundingClientRect();
+        const x = ((event.clientX - bounds.left) / bounds.width - .5) * -10;
+        const y = ((event.clientY - bounds.top) / bounds.height - .5) * -7;
+        panel.style.setProperty('--parallax-x', `${x}px`);
+        panel.style.setProperty('--parallax-y', `${y}px`);
       });
-    }, { threshold: .45 });
-    featuredMotionObserver.observe(featuredMotionImage);
-  }
-
-  function restoreInitialHash() {
-    if (!location.hash || !$(location.hash)) return;
-    requestAnimationFrame(() => requestAnimationFrame(() => finishNavigation(location.hash, false)));
-  }
-
-  if (document.readyState === 'complete') restoreInitialHash();
-  else window.addEventListener('load', restoreInitialHash, { once: true });
-
-  const allWorks = [...(window.galleryData || [])];
-  const track = $('.work-track');
-  const filters = $$('.gallery-filters [data-filter]');
-  const currentElement = $('.gallery-current');
-  const totalElement = $('.gallery-total');
-  const photoDialog = $('[data-photo-dialog]');
-  const photoDialogImage = $('img', photoDialog);
-  let visibleWorks = [...allWorks];
-  let currentIndex = 0;
-  let photoIndex = 0;
-  let dragged = false;
-  let filterTimer = 0;
-
-  function renderGallery(filter = 'all') {
-    if (!track) return;
-    visibleWorks = filter === 'all' ? [...allWorks] : allWorks.filter(work => work.category === filter);
-    currentIndex = 0;
-    track.innerHTML = visibleWorks.map((work, index) => `
-      <figure class="work-card" data-index="${index}" data-src="${escapeHtml(work.src)}" tabindex="0">
-        <img src="${escapeHtml(work.src)}" alt="${escapeHtml(work.title)}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async">
-        <figcaption><b>${escapeHtml(work.title)}</b><span>${escapeHtml(categoryLabels[work.category])} / ${pad(index + 1)}</span></figcaption>
-      </figure>`).join('');
-    totalElement.textContent = pad(visibleWorks.length);
-    currentElement.textContent = visibleWorks.length ? '01' : '00';
-    track.scrollLeft = 0;
-  }
-
-  function setGalleryFilter(filter, immediate = false) {
-    const target = filters.find(button => button.dataset.filter === filter);
-    if (!target) return;
-    filters.forEach(button => button.classList.toggle('active', button === target));
-    clearTimeout(filterTimer);
-    if (immediate || reducedMotion) {
-      renderGallery(filter);
-      return;
     }
-    track.classList.add('is-filtering');
-    filterTimer = window.setTimeout(() => {
-      renderGallery(filter);
-      requestAnimationFrame(() => track.classList.remove('is-filtering'));
-    }, 180);
-  }
-
-  $$('[data-feature-filter]').forEach(card => {
-    card.addEventListener('click', () => {
-      setGalleryFilter(card.dataset.featureFilter);
-      const toolbar = $('.gallery-toolbar');
-      toolbar?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' });
-    });
+  });
+  descentSheet?.addEventListener('pointerleave', () => {
+    descentPanels.forEach(panel => panel.classList.remove('is-active'));
+    visualStageOverride = null;
+    scrollDirty = true;
+    requestMainFrame();
   });
 
-  const galleryCards = () => $$('.work-card', track);
-
-  function goToWork(index) {
-    const cards = galleryCards();
-    if (!cards.length) return;
-    currentIndex = (index + cards.length) % cards.length;
-    cards[currentIndex].scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
-    currentElement.textContent = pad(currentIndex + 1);
+  if (isMobile && 'IntersectionObserver' in window) {
+    const mobilePanelObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => entry.target.classList.toggle('is-mobile-current', entry.isIntersecting && entry.intersectionRatio > .6));
+    }, { root: descentSheet, threshold: [.6] });
+    descentPanels.forEach(panel => mobilePanelObserver.observe(panel));
   }
 
-  filters.forEach(button => button.addEventListener('click', () => setGalleryFilter(button.dataset.filter)));
-  $('.gallery-prev')?.addEventListener('click', () => goToWork(currentIndex - 1));
-  $('.gallery-next')?.addEventListener('click', () => goToWork(currentIndex + 1));
-
-  let galleryScrollFrame = 0;
-  track?.addEventListener('scroll', () => {
-    if (galleryScrollFrame) return;
-    galleryScrollFrame = requestAnimationFrame(() => {
-      galleryScrollFrame = 0;
-      const center = track.scrollLeft + track.clientWidth / 2;
-      let nearest = 0;
-      let distance = Infinity;
-      galleryCards().forEach((card, index) => {
-        const nextDistance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center);
-        if (nextDistance < distance) {
-          distance = nextDistance;
-          nearest = index;
-        }
+  if (homeMotion && supportsHover && !reducedMotion && 'IntersectionObserver' in window) {
+    const homeVideoObserver = new IntersectionObserver(entries => {
+      entries.forEach(async entry => {
+        if (entry.isIntersecting) {
+          try { await homeMotion.play(); } catch (_) { /* Poster remains visible. */ }
+        } else homeMotion.pause();
       });
-      currentIndex = nearest;
-      currentElement.textContent = pad(currentIndex + 1);
-    });
-  }, { passive: true });
-
-  let dragStart = 0;
-  let scrollStart = 0;
-  let lastPointerX = 0;
-  let lastPointerTime = 0;
-  let dragVelocity = 0;
-  let inertiaFrame = 0;
-
-  function stopGalleryDrag(event) {
-    if (event && track?.hasPointerCapture?.(event.pointerId)) track.releasePointerCapture(event.pointerId);
-    track?.classList.remove('is-dragging');
-    if (reducedMotion || Math.abs(dragVelocity) < .05) return;
-    cancelAnimationFrame(inertiaFrame);
-    const glide = () => {
-      track.scrollLeft -= dragVelocity * 16;
-      dragVelocity *= .92;
-      if (Math.abs(dragVelocity) > .04) inertiaFrame = requestAnimationFrame(glide);
-      else track.classList.remove('is-dragging');
-    };
-    track.classList.add('is-dragging');
-    inertiaFrame = requestAnimationFrame(glide);
+    }, { threshold: .3 });
+    homeVideoObserver.observe(homeMotion);
   }
 
-  track?.addEventListener('pointerdown', event => {
-    cancelAnimationFrame(inertiaFrame);
-    dragStart = event.clientX;
-    scrollStart = track.scrollLeft;
-    lastPointerX = event.clientX;
-    lastPointerTime = performance.now();
-    dragVelocity = 0;
-    dragged = false;
-    track.classList.add('is-dragging');
-    track.setPointerCapture(event.pointerId);
-  });
-  track?.addEventListener('pointermove', event => {
-    if (!track.classList.contains('is-dragging')) return;
-    const delta = event.clientX - dragStart;
-    if (Math.abs(delta) > 5) dragged = true;
-    track.scrollLeft = scrollStart - delta;
-    const now = performance.now();
-    const elapsed = Math.max(now - lastPointerTime, 1);
-    dragVelocity = (event.clientX - lastPointerX) / elapsed;
-    lastPointerX = event.clientX;
-    lastPointerTime = now;
-  });
-  ['pointerup', 'pointercancel'].forEach(type => track?.addEventListener(type, stopGalleryDrag));
+  /* Main light path */
+  const header = $('[data-header]');
+  const progressBar = $('[data-reading-progress]');
+  const lightSystem = $('[data-light-system]');
+  const lightPaths = [
+    $('[data-light-path-outer]'),
+    $('[data-light-path-glow]'),
+    $('[data-light-path-core]')
+  ];
+  const lightTraveller = $('[data-light-traveller]');
+  let lightLength = 1;
 
-  function updatePhotoDialog() {
-    const work = visibleWorks[photoIndex];
+  function rebuildLightPath() {
+    if (!lightSystem) return;
+    const width = innerWidth;
+    const height = innerHeight;
+    const docHeight = Math.max(document.documentElement.scrollHeight, height + 1);
+    lightSystem.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    const anchors = [
+      $('.hero-title'),
+      ...descentPanels,
+      ...$$('.gallery-filters [data-filter]:not([data-filter="all"])'),
+      $('#films .section-heading'),
+      $('#records .section-heading'),
+      $('#equipment .equipment-console'),
+      $('#contact .arrival-copy')
+    ].filter(Boolean).map(anchor => {
+      const rect = anchor.getBoundingClientRect();
+      const documentTop = rect.top + scrollY + rect.height / 2;
+      return {
+        x: clamp(rect.left + rect.width / 2, width * .08, width * .92),
+        y: 38 + (documentTop / docHeight) * (height - 88)
+      };
+    });
+    if (!anchors.length) return;
+    const points = [{ x: width * .5, y: -20 }, ...anchors, { x: width * .08, y: height - 32 }, { x: width * .92, y: height - 32 }];
+    let d = `M${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const point = points[index];
+      const midpoint = (previous.y + point.y) / 2;
+      d += ` C${previous.x.toFixed(1)} ${midpoint.toFixed(1)} ${point.x.toFixed(1)} ${midpoint.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+    }
+    lightPaths.forEach(path => path?.setAttribute('d', d));
+    lightLength = lightPaths[2]?.getTotalLength?.() || 1;
+    lightPaths.forEach(path => {
+      path.style.strokeDasharray = `${lightLength}`;
+      path.style.strokeDashoffset = `${lightLength}`;
+    });
+    lightDirty = true;
+    requestMainFrame();
+  }
+
+  function updateScrollAndLight() {
+    const scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
+    const ratio = clamp(scrollY / scrollable, 0, 1);
+    progressBar.style.transform = `scaleX(${ratio})`;
+    header.classList.toggle('is-scrolled', scrollY > 20);
+    const drawn = lightLength * ratio;
+    lightPaths.forEach(path => { path.style.strokeDashoffset = String(lightLength - drawn); });
+    if (!reducedMotion && lightPaths[2] && lightTraveller) {
+      const point = lightPaths[2].getPointAtLength(clamp(drawn, 0, lightLength));
+      lightTraveller.setAttribute('cx', point.x);
+      lightTraveller.setAttribute('cy', point.y);
+    }
+
+    let fallbackStage = 'deepsky';
+    if (ratio >= .2) fallbackStage = 'sunmoon';
+    if (ratio >= .4) fallbackStage = 'planet';
+    if (ratio >= .6) fallbackStage = 'nightscape';
+    if (ratio >= .78) fallbackStage = 'earth';
+    const worksBounds = $('#works')?.getBoundingClientRect();
+    const worksVisible = worksBounds && worksBounds.top < innerHeight * .72 && worksBounds.bottom > innerHeight * .25;
+    setVisualStage(visualStageOverride || (worksVisible && archiveCanvas?.filter !== 'all' ? archiveCanvas.filter : fallbackStage));
+  }
+
+  window.addEventListener('scroll', () => { scrollDirty = true; requestMainFrame(); }, { passive: true });
+  const layoutObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { lightDirty = true; rebuildLightPath(); }) : null;
+  $$('[data-light-anchor], .gallery-toolbar').forEach(anchor => layoutObserver?.observe(anchor));
+  window.addEventListener('resize', () => { lightDirty = true; rebuildLightPath(); archiveCanvas?.resize(); }, { passive: true });
+  window.addEventListener('load', rebuildLightPath, { once: true });
+  document.fonts?.ready?.then(rebuildLightPath);
+
+  /* ImageBitmap LRU */
+  class BitmapCache {
+    constructor(budget) {
+      this.budget = budget;
+      this.bytes = 0;
+      this.entries = new Map();
+    }
+
+    get(source) {
+      const entry = this.entries.get(source);
+      if (entry) entry.used = performance.now();
+      return entry?.bitmap || null;
+    }
+
+    request(source) {
+      if (!source || this.entries.has(source)) return;
+      const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true };
+      this.entries.set(source, entry);
+      const finish = bitmap => {
+        entry.bitmap = bitmap;
+        entry.pending = false;
+        entry.bytes = (bitmap.width || 1) * (bitmap.height || 1) * 4;
+        this.bytes += entry.bytes;
+        this.prune();
+        archiveCanvas?.requestDraw();
+      };
+      const fallback = () => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.onload = () => finish(image);
+        image.onerror = () => { entry.pending = false; entry.failed = true; };
+        image.src = source;
+      };
+      if (location.protocol !== 'file:' && 'createImageBitmap' in window) {
+        fetch(source).then(response => {
+          if (!response.ok) throw new Error(`Image ${response.status}`);
+          return response.blob();
+        }).then(blob => createImageBitmap(blob)).then(finish).catch(fallback);
+      } else fallback();
+    }
+
+    prune() {
+      if (this.bytes <= this.budget) return;
+      const removable = [...this.entries.entries()].filter(([, entry]) => entry.bitmap && !entry.pending).sort((a, b) => a[1].used - b[1].used);
+      for (const [source, entry] of removable) {
+        if (this.bytes <= this.budget) break;
+        entry.bitmap.close?.();
+        this.bytes -= entry.bytes;
+        this.entries.delete(source);
+      }
+    }
+  }
+
+  function hashNumber(value) {
+    let hash = 2166136261;
+    for (let index = 0; index < value.length; index += 1) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0) / 4294967295;
+  }
+
+  class InfiniteArchiveCanvas {
+    constructor(canvas, works) {
+      this.canvas = canvas;
+      this.context = canvas.getContext('2d', { alpha: false, desynchronized: true });
+      this.allWorks = works;
+      this.visibleWorks = works;
+      this.filter = 'all';
+      this.nodes = [];
+      this.rendered = [];
+      this.camera = { x: 0, y: 0 };
+      this.velocity = { x: 0, y: 0 };
+      this.tile = { width: 2600, height: 1800 };
+      this.pointer = null;
+      this.hovered = null;
+      this.focusedIndex = 0;
+      this.dragged = false;
+      this.needsDraw = true;
+      this.lastFrame = performance.now();
+      this.cache = new BitmapCache((isMobile ? 72 : 160) * 1024 * 1024);
+      this.live = $('[data-canvas-live]');
+      this.status = $('[data-canvas-status]');
+      this.currentElement = $('.gallery-current');
+      this.totalElement = $('.gallery-total');
+      this.bind();
+      this.resize();
+      this.setFilter('all', true);
+    }
+
+    bind() {
+      this.canvas.addEventListener('pointerdown', event => this.pointerDown(event));
+      this.canvas.addEventListener('pointermove', event => this.pointerMove(event));
+      this.canvas.addEventListener('pointerup', event => this.pointerUp(event));
+      this.canvas.addEventListener('pointercancel', event => this.pointerUp(event));
+      this.canvas.addEventListener('pointerleave', () => { if (!this.pointer) { this.hovered = null; this.requestDraw(); } });
+      this.canvas.addEventListener('keydown', event => this.keyDown(event));
+      this.canvas.addEventListener('contextmenu', event => event.preventDefault());
+    }
+
+    resize() {
+      const bounds = this.canvas.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const dpr = Math.min(devicePixelRatio || 1, isMobile ? 1.35 : 1.75);
+      this.width = bounds.width;
+      this.height = bounds.height;
+      this.dpr = dpr;
+      this.canvas.width = Math.round(bounds.width * dpr);
+      this.canvas.height = Math.round(bounds.height * dpr);
+      this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.layout();
+      this.requestDraw();
+    }
+
+    setFilter(filter, immediate = false) {
+      const normalized = filter === 'planetary' ? 'planet' : filter;
+      if (normalized !== 'all' && !categoryConfig[normalized]) return;
+      this.filter = normalized;
+      this.visibleWorks = normalized === 'all' ? [...this.allWorks] : this.allWorks.filter(work => work.category === normalized);
+      this.focusedIndex = 0;
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      const apply = () => {
+        this.layout();
+        this.camera.x = this.tile.width / 2;
+        this.camera.y = this.tile.height / 2;
+        this.totalElement.textContent = pad(this.visibleWorks.length);
+        this.currentElement.textContent = this.visibleWorks.length ? '01' : '00';
+        this.status.textContent = `${normalized === 'all' ? '全部' : categoryLabel(normalized)} / ${this.visibleWorks.length}`;
+        $$('.gallery-filters [data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === normalized));
+        $$('[data-index-link][data-gallery-target]').forEach(link => link.classList.toggle('is-current', activeSection?.id === 'works' && link.dataset.galleryTarget === (normalized === 'all' ? 'deepsky' : normalized)));
+        if (normalized !== 'all') setVisualStage(normalized);
+        this.requestDraw();
+      };
+      const stage = $('[data-canvas-stage]');
+      if (immediate || reducedMotion) apply();
+      else {
+        stage.classList.add('is-changing');
+        setTimeout(() => { apply(); stage.classList.remove('is-changing'); }, 180);
+      }
+    }
+
+    layout() {
+      const count = Math.max(this.visibleWorks.length, 1);
+      const preset = {
+        all: { spacingX: 350, spacingY: 285, jitter: 130, density: 1 },
+        deepsky: { spacingX: 430, spacingY: 350, jitter: 170, density: 1.22 },
+        sunmoon: { spacingX: 390, spacingY: 315, jitter: 95, density: 1.08 },
+        planet: { spacingX: 520, spacingY: 390, jitter: 80, density: 1.3 },
+        nightscape: { spacingX: 430, spacingY: 300, jitter: 100, density: 1.08 },
+        earth: { spacingX: 330, spacingY: 260, jitter: 105, density: .92 }
+      }[this.filter] || null;
+      const columns = Math.max(3, Math.ceil(Math.sqrt(count * 1.45)));
+      const rows = Math.max(2, Math.ceil(count / columns));
+      this.tile.width = Math.max(this.width * 2.2, columns * preset.spacingX * preset.density);
+      this.tile.height = Math.max(this.height * 2.2, rows * preset.spacingY * preset.density);
+      this.nodes = this.visibleWorks.map((work, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        const randomX = hashNumber(`${work.id}-x`) - .5;
+        const randomY = hashNumber(`${work.id}-y`) - .5;
+        let x = (column + .5) * this.tile.width / columns + randomX * preset.jitter;
+        let y = (row + .5) * this.tile.height / rows + randomY * preset.jitter;
+        if (this.filter === 'sunmoon') y += Math.sin((x / this.tile.width) * Math.PI * 2) * 110;
+        if (this.filter === 'planet') {
+          const angle = index / count * Math.PI * 2 + randomX;
+          x = this.tile.width / 2 + Math.cos(angle) * this.tile.width * .31;
+          y = this.tile.height / 2 + Math.sin(angle) * this.tile.height * .28;
+        }
+        if (this.filter === 'nightscape') y = (row + .58) * this.tile.height / rows + randomY * 45;
+        const rotated = Math.abs(work.previewRotation || 0) % 180 === 90;
+        const sourceWidth = rotated ? work.height : work.width;
+        const sourceHeight = rotated ? work.width : work.height;
+        const aspect = clamp(sourceWidth / Math.max(sourceHeight, 1), .45, 2.8);
+        const featured = Boolean(work.featured);
+        let width = featured ? clamp(this.width * .39, 340, 570) : 190 + hashNumber(`${work.id}-size`) * 115;
+        if (this.filter === 'earth') width *= .93;
+        let height = width / aspect;
+        if (height > 430) { height = 430; width = height * aspect; }
+        if (height < 135) { height = 135; width = height * aspect; }
+        return { work, index, x: mod(x, this.tile.width), y: mod(y, this.tile.height), width, height, featured };
+      });
+    }
+
+    requestDraw() {
+      this.needsDraw = true;
+      requestMainFrame();
+    }
+
+    frame(time) {
+      const delta = Math.min((time - this.lastFrame) / 16.667, 2);
+      this.lastFrame = time;
+      const moving = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04;
+      if (!this.pointer?.dragging && moving && !reducedMotion) {
+        this.camera.x = mod(this.camera.x + this.velocity.x * delta, this.tile.width);
+        this.camera.y = mod(this.camera.y + this.velocity.y * delta, this.tile.height);
+        this.velocity.x *= Math.pow(.925, delta);
+        this.velocity.y *= Math.pow(.925, delta);
+        this.needsDraw = true;
+      } else if (reducedMotion || !moving) {
+        this.velocity.x = 0;
+        this.velocity.y = 0;
+      }
+      if (this.needsDraw) this.draw();
+      return !this.pointer?.dragging && (Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04);
+    }
+
+    draw() {
+      this.needsDraw = false;
+      const context = this.context;
+      context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      context.fillStyle = '#020305';
+      context.fillRect(0, 0, this.width, this.height);
+      this.rendered = [];
+      const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
+
+      if (slow && this.nodes.length < 70) this.drawConnections(context);
+      for (const node of this.nodes) {
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+            const x = node.x - this.camera.x + this.width / 2 + offsetX * this.tile.width;
+            const y = node.y - this.camera.y + this.height / 2 + offsetY * this.tile.height;
+            if (x + node.width / 2 < -80 || x - node.width / 2 > this.width + 80 || y + node.height / 2 < -80 || y - node.height / 2 > this.height + 80) continue;
+            this.drawNode(context, node, x, y, slow);
+          }
+        }
+      }
+    }
+
+    drawConnections(context) {
+      context.save();
+      context.strokeStyle = 'rgba(238,234,224,.055)';
+      context.lineWidth = 1;
+      context.setLineDash([2, 12]);
+      const visibleNodes = this.nodes.slice(0, Math.min(this.nodes.length, 32));
+      for (let index = 1; index < visibleNodes.length; index += 1) {
+        const previous = visibleNodes[index - 1];
+        const node = visibleNodes[index];
+        let x1 = previous.x - this.camera.x + this.width / 2;
+        let y1 = previous.y - this.camera.y + this.height / 2;
+        let x2 = node.x - this.camera.x + this.width / 2;
+        let y2 = node.y - this.camera.y + this.height / 2;
+        if (Math.abs(x2 - x1) > this.tile.width / 2) x2 += x2 < x1 ? this.tile.width : -this.tile.width;
+        if (Math.abs(y2 - y1) > this.tile.height / 2) y2 += y2 < y1 ? this.tile.height : -this.tile.height;
+        context.beginPath();
+        context.moveTo(x1, y1);
+        context.lineTo(x2, y2);
+        context.stroke();
+      }
+      context.restore();
+    }
+
+    drawNode(context, node, x, y, slow) {
+      const hovered = this.hovered?.node === node && Math.abs(this.hovered.x - x) < 2 && Math.abs(this.hovered.y - y) < 2;
+      const focused = node.index === this.focusedIndex && document.activeElement === this.canvas;
+      const scale = hovered || focused ? 1.035 : 1;
+      const width = node.width * scale;
+      const height = node.height * scale;
+      const source = node.work.previewSrc || node.work.src;
+      const bitmap = this.cache.get(source);
+      if (!bitmap) this.cache.request(source);
+
+      context.save();
+      context.translate(x, y);
+      if (hovered || focused) {
+        context.shadowColor = categoryConfig[node.work.category]?.color || '#eeeae0';
+        context.shadowBlur = 18;
+      }
+      context.fillStyle = '#0a0c10';
+      context.fillRect(-width / 2, -height / 2, width, height);
+      if (bitmap) {
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        if (node.work.previewRotation === 90) {
+          context.rotate(Math.PI / 2);
+          context.drawImage(bitmap, -height / 2, -width / 2, height, width);
+        } else context.drawImage(bitmap, -width / 2, -height / 2, width, height);
+      } else {
+        const gradient = context.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
+        gradient.addColorStop(0, '#0b0d11');
+        gradient.addColorStop(1, '#141820');
+        context.fillStyle = gradient;
+        context.fillRect(-width / 2, -height / 2, width, height);
+      }
+      context.shadowBlur = 0;
+      context.strokeStyle = hovered || focused ? 'rgba(238,234,224,.58)' : 'rgba(238,234,224,.12)';
+      context.lineWidth = 1;
+      context.strokeRect(-width / 2, -height / 2, width, height);
+      context.restore();
+
+      if (slow && (hovered || focused || node.featured)) {
+        context.save();
+        context.fillStyle = 'rgba(238,234,224,.92)';
+        context.font = `${node.featured ? 18 : 14}px "Source Han Sans CN", sans-serif`;
+        context.fillText(node.work.title, x - width / 2, y + height / 2 + 24);
+        context.fillStyle = categoryConfig[node.work.category]?.color || '#8d9097';
+        context.font = '9px "IBM Plex Sans", monospace';
+        context.fillText(`${categoryEnglish(node.work.category)} / ${pad(node.index + 1)}`, x - width / 2, y + height / 2 + 41);
+        context.restore();
+      }
+      this.rendered.push({ node, x, y, width, height });
+    }
+
+    hitTest(x, y) {
+      for (let index = this.rendered.length - 1; index >= 0; index -= 1) {
+        const item = this.rendered[index];
+        if (x >= item.x - item.width / 2 && x <= item.x + item.width / 2 && y >= item.y - item.height / 2 && y <= item.y + item.height / 2) return item;
+      }
+      return null;
+    }
+
+    pointerDown(event) {
+      if (event.button !== undefined && event.button !== 0) return;
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      this.pointer = {
+        id: event.pointerId,
+        type: event.pointerType,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
+        lastTime: performance.now(),
+        dragging: false,
+        verticalPageGesture: false
+      };
+      this.dragged = false;
+    }
+
+    pointerMove(event) {
+      const bounds = this.canvas.getBoundingClientRect();
+      const localX = event.clientX - bounds.left;
+      const localY = event.clientY - bounds.top;
+      if (!this.pointer || this.pointer.id !== event.pointerId) {
+        const hit = this.hitTest(localX, localY);
+        this.hovered = hit ? { ...hit } : null;
+        this.canvas.style.cursor = hit ? 'pointer' : 'grab';
+        this.requestDraw();
+        return;
+      }
+      const totalX = event.clientX - this.pointer.startX;
+      const totalY = event.clientY - this.pointer.startY;
+      if (!this.pointer.dragging && !this.pointer.verticalPageGesture && Math.hypot(totalX, totalY) > 8) {
+        if (event.pointerType === 'touch' && Math.abs(totalY) > Math.abs(totalX) * 1.2) {
+          this.pointer.verticalPageGesture = true;
+          return;
+        }
+        this.pointer.dragging = true;
+        this.dragged = true;
+        this.canvas.classList.add('is-dragging');
+        this.canvas.setPointerCapture?.(event.pointerId);
+      }
+      if (!this.pointer.dragging) return;
+      if (event.cancelable) event.preventDefault();
+      const now = performance.now();
+      const elapsed = Math.max(now - this.pointer.lastTime, 1);
+      const deltaX = event.clientX - this.pointer.lastX;
+      const deltaY = event.clientY - this.pointer.lastY;
+      this.camera.x = mod(this.camera.x - deltaX, this.tile.width);
+      this.camera.y = mod(this.camera.y - deltaY, this.tile.height);
+      this.velocity.x = -deltaX / elapsed * 16;
+      this.velocity.y = -deltaY / elapsed * 16;
+      this.pointer.lastX = event.clientX;
+      this.pointer.lastY = event.clientY;
+      this.pointer.lastTime = now;
+      this.requestDraw();
+    }
+
+    pointerUp(event) {
+      if (!this.pointer || this.pointer.id !== event.pointerId) return;
+      const bounds = this.canvas.getBoundingClientRect();
+      const localX = event.clientX - bounds.left;
+      const localY = event.clientY - bounds.top;
+      const wasDragging = this.pointer.dragging;
+      const wasPageGesture = this.pointer.verticalPageGesture;
+      this.canvas.classList.remove('is-dragging');
+      if (this.canvas.hasPointerCapture?.(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
+      this.pointer = null;
+      if (event.type !== 'pointercancel' && !wasDragging && !wasPageGesture && !this.dragged) {
+        const hit = this.hitTest(localX, localY);
+        if (hit) {
+          this.focusedIndex = hit.node.index;
+          openPhoto(hit.node.index);
+        }
+      }
+      if (reducedMotion) { this.velocity.x = 0; this.velocity.y = 0; }
+      this.requestDraw();
+    }
+
+    keyDown(event) {
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' ', 'Escape'].includes(event.key)) return;
+      if (event.key === 'Escape') { this.canvas.blur(); return; }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openPhoto(this.focusedIndex);
+        return;
+      }
+      event.preventDefault();
+      const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+      this.focusedIndex = mod(this.focusedIndex + direction, this.nodes.length);
+      const node = this.nodes[this.focusedIndex];
+      this.camera.x = mod(node.x, this.tile.width);
+      this.camera.y = mod(node.y, this.tile.height);
+      this.currentElement.textContent = pad(this.focusedIndex + 1);
+      this.live.textContent = `${node.work.title}，${categoryLabel(node.work.category)}，第 ${this.focusedIndex + 1} 张，共 ${this.nodes.length} 张`;
+      this.requestDraw();
+    }
+
+    go(offset) {
+      if (!this.nodes.length) return;
+      this.focusedIndex = mod(this.focusedIndex + offset, this.nodes.length);
+      const node = this.nodes[this.focusedIndex];
+      this.camera.x = mod(node.x, this.tile.width);
+      this.camera.y = mod(node.y, this.tile.height);
+      this.currentElement.textContent = pad(this.focusedIndex + 1);
+      this.requestDraw();
+    }
+  }
+
+  const canvasElement = $('[data-archive-canvas]');
+  if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas(canvasElement, allWorks);
+  $$('.gallery-filters [data-filter]').forEach(button => button.addEventListener('click', () => archiveCanvas?.setFilter(button.dataset.filter)));
+  $('.gallery-prev')?.addEventListener('click', () => archiveCanvas?.go(-1));
+  $('.gallery-next')?.addEventListener('click', () => archiveCanvas?.go(1));
+
+  /* Photo dialog */
+  const photoDialog = $('[data-photo-dialog]');
+  const photoImage = $('.photo-stage img', photoDialog);
+  let photoIndex = 0;
+  let photoReturnFocus = null;
+  let photoSwipeStart = null;
+
+  function detailValue(work, key) {
+    const value = work.details?.[key];
+    if (Array.isArray(value)) return value.filter(Boolean).join(' / ');
+    return value ? String(value) : '';
+  }
+
+  function setDetailRow(selector, value) {
+    const row = $(selector, photoDialog);
+    row.hidden = !value;
+    if (value) $('dd', row).textContent = value;
+    return Boolean(value);
+  }
+
+  function updatePhotoDialog(direction = 0) {
+    const work = archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
-    photoDialogImage.src = work.src;
-    photoDialogImage.alt = work.title;
-    $('p', photoDialog).textContent = `${pad(photoIndex + 1)} / ${pad(visibleWorks.length)}　${work.title}　${categoryLabels[work.category]}`;
+    if (direction) {
+      photoDialog.style.setProperty('--photo-direction', `${direction * 20}px`);
+      photoDialog.classList.add('is-switching');
+    }
+    const render = () => {
+      photoImage.src = work.src;
+      photoImage.alt = work.title;
+      $('[data-photo-current]').textContent = pad(photoIndex + 1);
+      $('[data-photo-total]').textContent = pad(archiveCanvas.visibleWorks.length);
+      $('[data-photo-title]').textContent = work.title;
+      $('[data-photo-category]').textContent = `${categoryLabel(work.category)} / ${categoryEnglish(work.category)}`;
+      $('[data-object-label]').textContent = work.category === 'earth' ? 'FRAME' : 'OBJECT';
+
+      const hasDate = setDetailRow('[data-detail-date]', detailValue(work, 'date'));
+      const hasLocation = setDetailRow('[data-detail-location]', detailValue(work, 'location'));
+      const hasCapture = hasDate || hasLocation;
+      $('[data-detail-capture]').hidden = !hasCapture;
+      const hasEquipment = setDetailRow('[data-detail-equipment]', detailValue(work, 'equipment'));
+      const hasParameters = setDetailRow('[data-detail-parameters]', detailValue(work, 'parameters'));
+      const hasSystem = hasEquipment || hasParameters;
+      $('[data-detail-system]').hidden = !hasSystem;
+      const process = detailValue(work, 'process');
+      $('[data-detail-process]').hidden = !process;
+      if (process) $('p', $('[data-detail-process]')).textContent = process;
+      const story = detailValue(work, 'story');
+      const notes = detailValue(work, 'notes');
+      $('[data-detail-story]').hidden = !story;
+      $('[data-detail-note]').hidden = !notes;
+      if (story) $('[data-detail-story]').textContent = story;
+      if (notes) $('[data-detail-note]').textContent = notes;
+      $('[data-detail-notes]').hidden = !(story || notes);
+      photoDialog.classList.remove('is-switching');
+    };
+    if (direction && !reducedMotion) setTimeout(render, 150);
+    else render();
   }
 
   function openPhoto(index) {
-    photoIndex = index;
+    if (!archiveCanvas?.visibleWorks.length) return;
+    photoIndex = mod(index, archiveCanvas.visibleWorks.length);
+    photoReturnFocus = document.activeElement;
     updatePhotoDialog();
     photoDialog.showModal();
     document.body.classList.add('dialog-open');
   }
 
   function movePhoto(offset) {
-    if (!visibleWorks.length) return;
-    photoIndex = (photoIndex + offset + visibleWorks.length) % visibleWorks.length;
-    updatePhotoDialog();
+    if (!archiveCanvas?.visibleWorks.length) return;
+    photoIndex = mod(photoIndex + offset, archiveCanvas.visibleWorks.length);
+    updatePhotoDialog(offset);
   }
 
-  track?.addEventListener('click', event => {
-    const card = event.target.closest('.work-card');
-    if (card && !dragged) openPhoto(Number(card.dataset.index));
-  });
-  track?.addEventListener('keydown', event => {
-    const card = event.target.closest('.work-card');
-    if (!card || !['Enter', ' '].includes(event.key)) return;
-    event.preventDefault();
-    openPhoto(Number(card.dataset.index));
-  });
   $('.dialog-prev', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(-1); });
   $('.dialog-next', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(1); });
   $('.dialog-close', photoDialog)?.addEventListener('click', () => photoDialog.close());
   photoDialog?.addEventListener('click', event => { if (event.target === photoDialog) photoDialog.close(); });
-  photoDialog?.addEventListener('close', () => document.body.classList.remove('dialog-open'));
+  photoDialog?.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') photoSwipeStart = event.clientX; });
+  photoDialog?.addEventListener('pointerup', event => {
+    if (photoSwipeStart === null) return;
+    const delta = event.clientX - photoSwipeStart;
+    photoSwipeStart = null;
+    if (Math.abs(delta) > 55) movePhoto(delta < 0 ? 1 : -1);
+  });
+  photoDialog?.addEventListener('close', () => {
+    document.body.classList.remove('dialog-open');
+    photoImage.removeAttribute('src');
+    photoReturnFocus?.focus?.();
+  });
 
   document.addEventListener('keydown', event => {
-    if (photoDialog?.open) {
-      if (event.key === 'ArrowLeft') movePhoto(-1);
-      if (event.key === 'ArrowRight') movePhoto(1);
-      return;
-    }
-    const worksBounds = $('#works')?.getBoundingClientRect();
-    if (!worksBounds || worksBounds.bottom < 0 || worksBounds.top > innerHeight) return;
-    if (event.key === 'ArrowLeft') goToWork(currentIndex - 1);
-    if (event.key === 'ArrowRight') goToWork(currentIndex + 1);
+    if (!photoDialog?.open) return;
+    if (event.key === 'ArrowLeft') movePhoto(-1);
+    if (event.key === 'ArrowRight') movePhoto(1);
   });
-  renderGallery();
 
+  /* Equipment tabs and strip */
   const equipmentTabs = $$('[data-equipment-tab]');
   const equipmentPanels = $$('[data-equipment-panel]');
-
   function showEquipment(name, moveFocus = false) {
     equipmentTabs.forEach(tab => {
       const active = tab.dataset.equipmentTab === name;
@@ -437,31 +913,58 @@
       panel.classList.toggle('active', active);
     });
   }
-
   equipmentTabs.forEach((tab, index) => {
     tab.addEventListener('click', () => showEquipment(tab.dataset.equipmentTab));
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
       event.preventDefault();
-      const next = (index + (event.key === 'ArrowRight' ? 1 : -1) + equipmentTabs.length) % equipmentTabs.length;
+      const next = mod(index + (event.key === 'ArrowRight' ? 1 : -1), equipmentTabs.length);
       showEquipment(equipmentTabs[next].dataset.equipmentTab, true);
     });
   });
 
-  const contact = $('#contact');
-  if (contact) {
-    if (reducedMotion || !('IntersectionObserver' in window)) contact.classList.add('is-in-view');
-    else {
-      const contactObserver = new IntersectionObserver(entries => {
-        entries.forEach(entry => contact.classList.toggle('is-in-view', entry.isIntersecting));
-      }, { threshold: .3 });
-      contactObserver.observe(contact);
-    }
-  }
+  const equipmentTrack = $('[data-equipment-track]');
+  let equipmentPointer = null;
+  equipmentTrack?.addEventListener('pointerdown', event => {
+    equipmentPointer = { id: event.pointerId, x: event.clientX, scroll: equipmentTrack.scrollLeft };
+    equipmentTrack.setPointerCapture?.(event.pointerId);
+  });
+  equipmentTrack?.addEventListener('pointermove', event => {
+    if (!equipmentPointer || equipmentPointer.id !== event.pointerId) return;
+    equipmentTrack.scrollLeft = equipmentPointer.scroll - (event.clientX - equipmentPointer.x);
+  });
+  ['pointerup', 'pointercancel'].forEach(type => equipmentTrack?.addEventListener(type, event => {
+    if (equipmentTrack.hasPointerCapture?.(event.pointerId)) equipmentTrack.releasePointerCapture(event.pointerId);
+    equipmentPointer = null;
+  }));
+  equipmentTrack?.addEventListener('wheel', event => {
+    if (!event.shiftKey && Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    event.preventDefault();
+    equipmentTrack.scrollLeft += event.deltaX || event.deltaY;
+  }, { passive: false });
 
+  /* Arrival and film visibility */
+  const arrival = $('#contact');
+  if ('IntersectionObserver' in window) {
+    const atmosphereObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.target === arrival) entry.target.classList.toggle('is-in-view', entry.isIntersecting);
+        if (entry.target.id === 'films') {
+          filmSectionVisible = entry.isIntersecting;
+          if (filmSectionVisible) { timecodeStart = performance.now(); requestMainFrame(); }
+          else stopAllFilmPreviews();
+        }
+      });
+    }, { threshold: .18 });
+    if (arrival) atmosphereObserver.observe(arrival);
+    atmosphereObserver.observe($('#films'));
+  } else arrival?.classList.add('is-in-view');
+
+  /* Video archive */
   const videoDialog = $('[data-video-dialog]');
   const videoPlayer = $('video', videoDialog);
   let loadedFilms = [];
+  let activeFilmPreview = null;
 
   function normalizeDate(value) {
     if (!value) return '';
@@ -470,12 +973,10 @@
     if (value instanceof Date) return value.toISOString().slice(0, 10);
     return String(value);
   }
-
   function formatDuration(seconds) {
     const total = Math.max(0, Math.round(Number(seconds) || 0));
     return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
   }
-
   async function loadCloudFilms() {
     const config = window.PLUTONOC_CLOUDBASE || {};
     if (!config.envId || !window.cloudbase) return [];
@@ -499,29 +1000,31 @@
       posterUrl: links.get(record.posterFileId) || record.posterUrl
     })).filter(record => record.videoUrl);
   }
-
-  function filmCard(film, index, featured = false) {
+  function filmCard(film, index) {
     return `<figure class="film-card" data-film-index="${index}">
-      <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="${featured ? 'eager' : 'lazy'}">
+      <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="${index === 0 ? 'eager' : 'lazy'}">
       <video class="film-preview" muted loop playsinline preload="none" aria-hidden="true"></video>
       <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
       <figcaption><h3>${escapeHtml(film.title)}</h3><p>${escapeHtml(film.date || '')}<br>${formatDuration(film.duration)}</p></figcaption>
     </figure>`;
   }
-
   function stopFilmPreview(card) {
+    if (!card) return;
     const preview = $('.film-preview', card);
-    if (!preview) return;
-    preview.pause();
-    preview.removeAttribute('src');
-    preview.load();
+    if (preview) {
+      preview.pause();
+      preview.removeAttribute('src');
+      preview.load();
+    }
     card.classList.remove('is-previewing');
+    if (activeFilmPreview === card) activeFilmPreview = null;
   }
-
+  function stopAllFilmPreviews() { $$('.film-card.is-previewing', $('#films')).forEach(stopFilmPreview); }
   function wireFilmPreviews() {
     if (!supportsHover || reducedMotion) return;
     $$('.film-card', $('#films')).forEach(card => {
       const start = async () => {
+        if (activeFilmPreview && activeFilmPreview !== card) stopFilmPreview(activeFilmPreview);
         const film = loadedFilms[Number(card.dataset.filmIndex)];
         const preview = $('.film-preview', card);
         if (!film || !preview || card.classList.contains('is-previewing')) return;
@@ -529,19 +1032,15 @@
         try {
           await preview.play();
           card.classList.add('is-previewing');
-        } catch (error) {
-          stopFilmPreview(card);
-        }
+          activeFilmPreview = card;
+        } catch (_) { stopFilmPreview(card); }
       };
       card.addEventListener('pointerenter', start);
       card.addEventListener('pointerleave', () => stopFilmPreview(card));
       card.addEventListener('focusin', start);
-      card.addEventListener('focusout', event => {
-        if (!card.contains(event.relatedTarget)) stopFilmPreview(card);
-      });
+      card.addEventListener('focusout', event => { if (!card.contains(event.relatedTarget)) stopFilmPreview(card); });
     });
   }
-
   function renderFilms(films) {
     loadedFilms = films;
     const feature = $('[data-film-feature]');
@@ -553,16 +1052,11 @@
       status.textContent = '';
       return;
     }
-    feature.innerHTML = filmCard(films[0], 0, true);
-    list.innerHTML = films.slice(1).map((film, offset) => filmCard(film, offset + 1)).join('');
-    status.textContent = `${pad(films.length)} / FILM`;
+    feature.innerHTML = filmCard(films[0], 0);
+    list.innerHTML = films.slice(1).map((film, index) => filmCard(film, index + 1)).join('');
+    status.textContent = `${pad(films.length)} / MOTION`;
     wireFilmPreviews();
   }
-
-  function stopAllFilmPreviews() {
-    $$('.film-card.is-previewing', $('#films')).forEach(stopFilmPreview);
-  }
-
   function openFilm(index) {
     const film = loadedFilms[index];
     if (!film) return;
@@ -574,7 +1068,6 @@
     videoDialog.showModal();
     document.body.classList.add('dialog-open');
   }
-
   $('#films')?.addEventListener('click', event => {
     const card = event.target.closest('.film-card');
     if (card) openFilm(Number(card.dataset.filmIndex));
@@ -588,7 +1081,6 @@
     videoPlayer.load();
     document.body.classList.remove('dialog-open');
   });
-
   (async () => {
     try {
       const cloudFilms = await loadCloudFilms();
@@ -598,4 +1090,8 @@
       renderFilms(window.localVideoData || []);
     }
   })();
+
+  setVisualStage('deepsky');
+  requestMainFrame();
+  rebuildLightPath();
 })();

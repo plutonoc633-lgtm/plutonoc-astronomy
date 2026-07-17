@@ -1,0 +1,655 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "source": "大地/DRIVE TO SURVIVE.jpg",
+      "destination": "assets/gallery/earth/earth-001.jpg",
+      "preview": "assets/gallery/previews/earth/earth-001.webp",
+      "sha256": "c2f6b75ba54b245e93cb13db6f77757f01f1eb5482744faef5231cb102af8e5f",
+      "width": 1324,
+      "height": 2211,
+      "category": "earth",
+      "title": "DRIVE TO SURVIVE"
+    },
+    {
+      "source": "大地/P1091181.jpg",
+      "destination": "assets/gallery/earth/earth-002.jpg",
+      "preview": "assets/gallery/previews/earth/earth-002.webp",
+      "sha256": "a1cb875b8b46a843f5c0e06273687012ebac40feb97069912a24e731a73c2000",
+      "width": 3368,
+      "height": 6000,
+      "category": "earth",
+      "title": "P1091181"
+    },
+    {
+      "source": "大地/cyber.jpg",
+      "destination": "assets/gallery/earth/earth-003.jpg",
+      "preview": "assets/gallery/previews/earth/earth-003.webp",
+      "sha256": "45a301067b77d8d90ddc83fa7418ff6917f7f2c958e8564fc7c71a95f07f8700",
+      "width": 3068,
+      "height": 5468,
+      "category": "earth",
+      "title": "cyber"
+    },
+    {
+      "source": "大地/三阳.jpg",
+      "destination": "assets/gallery/earth/earth-004.jpg",
+      "preview": "assets/gallery/previews/earth/earth-004.webp",
+      "sha256": "636a2eb7f78386a4fc6afc9aa6e92754101b0bca82873f64e8e13d4f793674d8",
+      "width": 5472,
+      "height": 3648,
+      "category": "earth",
+      "title": "三阳"
+    },
+    {
+      "source": "大地/丹阳路.jpg",
+      "destination": "assets/gallery/earth/earth-005.jpg",
+      "preview": "assets/gallery/previews/earth/earth-005.webp",
+      "sha256": "526e491abd0aa0c5e7b75d84f59dcc791b76773531e34ccf24d9b2fe731c9772",
+      "width": 6000,
+      "height": 4000,
+      "category": "earth",
+      "title": "丹阳路"
+    },
+    {
+      "source": "大地/云隐嵩山.jpg",
+      "destination": "assets/gallery/earth/earth-006.jpg",
+      "preview": "assets/gallery/previews/earth/earth-006.webp",
+      "sha256": "938f4be65b5bb221aa8a232e31f829457438f7f28aeb25c2733857f911d2ba9d",
+      "width": 6000,
+      "height": 4000,
+      "category": "earth",
+      "title": "云隐嵩山"
+    },
+    {
+      "source": "大地/云隐珠峰.jpg",
+      "destination": "assets/gallery/earth/earth-007.jpg",
+      "preview": "assets/gallery/previews/earth/earth-007.webp",
+      "sha256": "987b1b17538cc434c0281636b8afbad7888223aec27f33290cab5cd981bb45fe",
+      "width": 5405,
+      "height": 3545,
+      "category": "earth",
+      "title": "云隐珠峰"
+    },
+    {
+      "source": "大地/仰.jpg",
+      "destination": "assets/gallery/earth/earth-008.jpg",
+      "preview": "assets/gallery/previews/earth/earth-008.webp",
+      "sha256": "988d66147702ae61b1a5c06b1859eb7180fc17fe1a180c6424644c19c5470a36",
+      "width": 1920,
+      "height": 1080,
+      "category": "earth",
+      "title": "仰"
+    },
+    {
+      "source": "大地/保利其一.png",
+      "destination": "assets/gallery/earth/earth-009.png",
+      "preview": "assets/gallery/previews/earth/earth-009.webp",
+      "sha256": "98f8772cc70f3e340437dd2ee281be040fa8795f5ffe8071fb87566e051e55ce",
+      "width": 2560,
+      "height": 1440,
+      "category": "earth",
+      "title": "保利其一"
+    },
+    {
+      "source": "大地/保利其七.png",
+      "destination": "assets/gallery/earth/earth-010.png",
+      "preview": "assets/gallery/previews/earth/earth-010.webp",
+      "sha256": "adb66028312334815f127aa3bc66c874a5f2e0d2c29be300e03b0224a52d3da9",
+      "width": 948,
+      "height": 635,
+      "category": "earth",
+      "title": "保利其七"
+    },
+    {
+      "source": "大地/保利其三.png",
+      "destination": "assets/gallery/earth/earth-011.png",
+      "preview": "assets/gallery/previews/earth/earth-011.webp",
+      "sha256": "59f09a0b7e61474dc990367c380045de0d92c8445a47663497996a367b50bf90",
+      "width": 958,
+      "height": 634,
+      "category": "earth",
+      "title": "保利其三"
+    },
+    {
+      "source": "大地/保利其二.png",
+      "destination": "assets/gallery/earth/earth-012.png",
+      "preview": "assets/gallery/previews/earth/earth-012.webp",
+      "sha256": "f279acec95862c81ad96317db5f4142800cc110e81830abb5e482e0aa2439947",
+      "width": 2560,
+      "height": 1440,
+      "category": "earth",
+      "title": "保利其二"
+    },
+    {
+      "source": "大地/保利其五.png",
+      "destination": "assets/gallery/earth/earth-013.png",
+      "preview": "assets/gallery/previews/earth/earth-013.webp",
+      "sha256": "c3e97e8dc1a896e186faa380536a05cb86fcb10a333e4640080ecea418a1c2c7",
+      "width": 954,
+      "height": 634,
+      "category": "earth",
+      "title": "保利其五"
+    },
+    {
+      "source": "大地/保利其六.png",
+      "destination": "assets/gallery/earth/earth-014.png",
+      "preview": "assets/gallery/previews/earth/earth-014.webp",
+      "sha256": "4c32e442c3abdec234093368cc8879bd5ad6f8bde7c6a7afd2f8c721f93ba81e",
+      "width": 958,
+      "height": 1440,
+      "category": "earth",
+      "title": "保利其六"
+    },
+    {
+      "source": "大地/保利其四.png",
+      "destination": "assets/gallery/earth/earth-015.png",
+      "preview": "assets/gallery/previews/earth/earth-015.webp",
+      "sha256": "91ec30235d9d1ae4222a71ab12618b852636be976f0af70bb0ffc3226945a334",
+      "width": 958,
+      "height": 636,
+      "category": "earth",
+      "title": "保利其四"
+    },
+    {
+      "source": "大地/俯.jpg",
+      "destination": "assets/gallery/earth/earth-016.jpg",
+      "preview": "assets/gallery/previews/earth/earth-016.webp",
+      "sha256": "3cb7d7b85ecd2d79474531ebca1bb3cb56c5ad5d1050f02697b6b2b8ac60fd3f",
+      "width": 1920,
+      "height": 1078,
+      "category": "earth",
+      "title": "俯"
+    },
+    {
+      "source": "大地/冠宇.jpg",
+      "destination": "assets/gallery/earth/earth-017.jpg",
+      "preview": "assets/gallery/previews/earth/earth-017.webp",
+      "sha256": "490bdbc670c40d7ed0c5c30cedcc93f1dd04b4cad39801a40fd30f00161b526e",
+      "width": 1984,
+      "height": 1226,
+      "category": "earth",
+      "title": "冠宇"
+    },
+    {
+      "source": "大地/刀锋.jpg",
+      "destination": "assets/gallery/earth/earth-018.jpg",
+      "preview": "assets/gallery/previews/earth/earth-018.webp",
+      "sha256": "3a81ecabb00fd5ad597bdbf488ed83baf66f2af74e1bf1958409cc6134746a85",
+      "width": 1440,
+      "height": 1080,
+      "category": "earth",
+      "title": "刀锋"
+    },
+    {
+      "source": "大地/十万沙丘.jpg",
+      "destination": "assets/gallery/earth/earth-019.jpg",
+      "preview": "assets/gallery/previews/earth/earth-019.webp",
+      "sha256": "97936d13de74d3fc16f83d831d39d71d00dcc7a86ab8f4cdc2714074c7a0d1da",
+      "width": 1620,
+      "height": 1080,
+      "category": "earth",
+      "title": "十万沙丘"
+    },
+    {
+      "source": "大地/千厮门大桥.jpg",
+      "destination": "assets/gallery/earth/earth-020.jpg",
+      "preview": "assets/gallery/previews/earth/earth-020.webp",
+      "sha256": "715c8d7599f8702878976d33a73e1e4237fe78200aacb55fcb3775e29e9ccd06",
+      "width": 1080,
+      "height": 607,
+      "category": "earth",
+      "title": "千厮门大桥"
+    },
+    {
+      "source": "大地/外滩.jpg",
+      "destination": "assets/gallery/earth/earth-021.jpg",
+      "preview": "assets/gallery/previews/earth/earth-021.webp",
+      "sha256": "373811d41e13dd5c3275a61555994f197a8f8e56ed0cb8b4d79d860ba574f27f",
+      "width": 4000,
+      "height": 5428,
+      "category": "earth",
+      "title": "外滩"
+    },
+    {
+      "source": "大地/大地之树.jpg",
+      "destination": "assets/gallery/earth/earth-022.jpg",
+      "preview": "assets/gallery/previews/earth/earth-022.webp",
+      "sha256": "12a28d7dc9188fd6194104a1ac740e7e51dad2579c0869c4c089e0d4071424a6",
+      "width": 1920,
+      "height": 1079,
+      "category": "earth",
+      "title": "大地之树"
+    },
+    {
+      "source": "大地/大雁塔.jpg",
+      "destination": "assets/gallery/earth/earth-023.jpg",
+      "preview": "assets/gallery/previews/earth/earth-023.webp",
+      "sha256": "5b50ab082c15c56448d20922418c46839a427e5850ed8da9ef4b048ada6624fb",
+      "width": 11760,
+      "height": 8000,
+      "category": "earth",
+      "title": "大雁塔"
+    },
+    {
+      "source": "大地/巴丹吉林.jpg",
+      "destination": "assets/gallery/earth/earth-024.jpg",
+      "preview": "assets/gallery/previews/earth/earth-024.webp",
+      "sha256": "c49cb44fe630c14080208761b5ad57a4e1c21050b7a1a05d0ebcf8ac6c55ee17",
+      "width": 1397,
+      "height": 1080,
+      "category": "earth",
+      "title": "巴丹吉林"
+    },
+    {
+      "source": "大地/我在重庆.jpg",
+      "destination": "assets/gallery/earth/earth-025.jpg",
+      "preview": "assets/gallery/previews/earth/earth-025.webp",
+      "sha256": "7277613b6b1c2efba60d9ef7bb313b805479e4e3c6101166568ae2c3f53581af",
+      "width": 2147,
+      "height": 3565,
+      "category": "earth",
+      "title": "我在重庆"
+    },
+    {
+      "source": "大地/挖月亮.jpg",
+      "destination": "assets/gallery/earth/earth-026.jpg",
+      "preview": "assets/gallery/previews/earth/earth-026.webp",
+      "sha256": "7900c7dcb9d79f168c18313b8c109d44a22c9509d504f1df22b9443c301337f1",
+      "width": 4000,
+      "height": 6000,
+      "category": "earth",
+      "title": "挖月亮"
+    },
+    {
+      "source": "大地/新密雷暴.jpg",
+      "destination": "assets/gallery/earth/earth-027.jpg",
+      "preview": "assets/gallery/previews/earth/earth-027.webp",
+      "sha256": "864795b55a902f1b24839ce907a6a3f1d3f8f91f47dd56fa1e668410322ef046",
+      "width": 5623,
+      "height": 3640,
+      "category": "earth",
+      "title": "新密雷暴"
+    },
+    {
+      "source": "大地/明珠.jpg",
+      "destination": "assets/gallery/earth/earth-028.jpg",
+      "preview": "assets/gallery/previews/earth/earth-028.webp",
+      "sha256": "ef051f78c1505da5d84837604025c0ea0defa0cc10ee9be5e97dd061d5b0761f",
+      "width": 4000,
+      "height": 5171,
+      "category": "earth",
+      "title": "明珠"
+    },
+    {
+      "source": "大地/晨昏布宫.jpg",
+      "destination": "assets/gallery/earth/earth-029.jpg",
+      "preview": "assets/gallery/previews/earth/earth-029.webp",
+      "sha256": "ed1c954167d7c1a1e5c41ee960197af5af8157ed5c545e6cf35999aef8a665fe",
+      "width": 1620,
+      "height": 1080,
+      "category": "earth",
+      "title": "晨昏布宫"
+    },
+    {
+      "source": "大地/楼宇三阳.jpg",
+      "destination": "assets/gallery/earth/earth-030.jpg",
+      "preview": "assets/gallery/previews/earth/earth-030.webp",
+      "sha256": "fbe3bd3d86a06c431ecaf1665b83b7480e7456688fd03338755ea8ff451562da",
+      "width": 1080,
+      "height": 606,
+      "category": "earth",
+      "title": "楼宇三阳"
+    },
+    {
+      "source": "大地/江南晚樱.jpg",
+      "destination": "assets/gallery/earth/earth-031.jpg",
+      "preview": "assets/gallery/previews/earth/earth-031.webp",
+      "sha256": "f2b3d0fdd540df356b1d60177c8e6ad9e415c471fd930c1398a6c516e7ea4e79",
+      "width": 6000,
+      "height": 3368,
+      "category": "earth",
+      "title": "江南晚樱"
+    },
+    {
+      "source": "大地/洱海.jpg",
+      "destination": "assets/gallery/earth/earth-032.jpg",
+      "preview": "assets/gallery/previews/earth/earth-032.webp",
+      "sha256": "fef2e3aeeaaf26ddf4fd651cfb14c01b802677e649653b4dd9d2d2e18a764dbe",
+      "width": 5997,
+      "height": 2256,
+      "category": "earth",
+      "title": "洱海"
+    },
+    {
+      "source": "大地/洱海边.jpg",
+      "destination": "assets/gallery/earth/earth-033.jpg",
+      "preview": "assets/gallery/previews/earth/earth-033.webp",
+      "sha256": "03a5119f5a3392a17381dac52b4ea01d8c79b1e57e1840ec09ac5db5e9926e14",
+      "width": 6000,
+      "height": 3376,
+      "category": "earth",
+      "title": "洱海边"
+    },
+    {
+      "source": "大地/海棠溪.jpg",
+      "destination": "assets/gallery/earth/earth-034.jpg",
+      "preview": "assets/gallery/previews/earth/earth-034.webp",
+      "sha256": "4b0d4fc0709391f5f79976b765a9d6e4788733fe69a8fc9ac9df311bcd8a215a",
+      "width": 6000,
+      "height": 3368,
+      "category": "earth",
+      "title": "海棠溪"
+    },
+    {
+      "source": "大地/海鸥.jpg",
+      "destination": "assets/gallery/earth/earth-035.jpg",
+      "preview": "assets/gallery/previews/earth/earth-035.webp",
+      "sha256": "da808313fcb7ff1a2429767ca22be81a05833a3da18b67df7f7262e884aefebd",
+      "width": 6000,
+      "height": 3368,
+      "category": "earth",
+      "title": "海鸥"
+    },
+    {
+      "source": "大地/火壶其一.jpg",
+      "destination": "assets/gallery/earth/earth-036.jpg",
+      "preview": "assets/gallery/previews/earth/earth-036.webp",
+      "sha256": "8708921c2ad2499bb1fdecbe4764781165bc958c8ecef3318e4f3423f24c247c",
+      "width": 1440,
+      "height": 1080,
+      "category": "earth",
+      "title": "火壶其一"
+    },
+    {
+      "source": "大地/火壶其二.jpg",
+      "destination": "assets/gallery/earth/earth-037.jpg",
+      "preview": "assets/gallery/previews/earth/earth-037.webp",
+      "sha256": "76c671af6f3991ae3ab123cdf55ad8972b596f99b9dc20f31cd24ee26dae5783",
+      "width": 1160,
+      "height": 1080,
+      "category": "earth",
+      "title": "火壶其二"
+    },
+    {
+      "source": "大地/烟火.jpg",
+      "destination": "assets/gallery/earth/earth-038.jpg",
+      "preview": "assets/gallery/previews/earth/earth-038.webp",
+      "sha256": "9d40d6c73c726736be82b83cf3c6eb5878b1205b4dcec96e4385df6ba42eec32",
+      "width": 6000,
+      "height": 3376,
+      "category": "earth",
+      "title": "烟火"
+    },
+    {
+      "source": "大地/燎700水印.jpg",
+      "destination": "assets/gallery/earth/earth-039.jpg",
+      "preview": "assets/gallery/previews/earth/earth-039.webp",
+      "sha256": "430dc73031d0906c314a0366ae7e462e7ca56377e9455c2e44e261754f4470d7",
+      "width": 5701,
+      "height": 3556,
+      "category": "earth",
+      "title": "燎700水印"
+    },
+    {
+      "source": "大地/玉龙山脚.jpg",
+      "destination": "assets/gallery/earth/earth-040.jpg",
+      "preview": "assets/gallery/previews/earth/earth-040.webp",
+      "sha256": "a4329e44bbfc3fe58cbdeddb57d754dee2c7779878b34839ae16692a482ec758",
+      "width": 6000,
+      "height": 3376,
+      "category": "earth",
+      "title": "玉龙山脚"
+    },
+    {
+      "source": "大地/盐湖.jpg",
+      "destination": "assets/gallery/earth/earth-041.jpg",
+      "preview": "assets/gallery/previews/earth/earth-041.webp",
+      "sha256": "d34123e24eead24e571a67efefe260bdc8f24328e3a3fa6c8899a4ea541bf653",
+      "width": 1920,
+      "height": 1080,
+      "category": "earth",
+      "title": "盐湖"
+    },
+    {
+      "source": "大地/秋意.jpg",
+      "destination": "assets/gallery/earth/earth-042.jpg",
+      "preview": "assets/gallery/previews/earth/earth-042.webp",
+      "sha256": "9b054f6dbbd26ed340a3c32e6fad4551fd1656404882f92c26ffbd031c2a547d",
+      "width": 6000,
+      "height": 3368,
+      "category": "earth",
+      "title": "秋意"
+    },
+    {
+      "source": "大地/程子卿.jpg",
+      "destination": "assets/gallery/earth/earth-043.jpg",
+      "preview": "assets/gallery/previews/earth/earth-043.webp",
+      "sha256": "6784164717baec9065b48a50eb01507129888da1150b3666295d1641517a1760",
+      "width": 3266,
+      "height": 5818,
+      "category": "earth",
+      "title": "程子卿"
+    },
+    {
+      "source": "大地/红宝石.jpg",
+      "destination": "assets/gallery/earth/earth-044.jpg",
+      "preview": "assets/gallery/previews/earth/earth-044.webp",
+      "sha256": "1302044c36c27fd6f8f6204d5e3179931012c4884d6d55190df83b468455b5ca",
+      "width": 1920,
+      "height": 1080,
+      "category": "earth",
+      "title": "红宝石"
+    },
+    {
+      "source": "大地/绿洲.jpg",
+      "destination": "assets/gallery/earth/earth-045.jpg",
+      "preview": "assets/gallery/previews/earth/earth-045.webp",
+      "sha256": "bd0cc74e1834c54e0f3e0af88e818fcaeace1b59a39f0bd1d1c89ac9b4d1e0fa",
+      "width": 1440,
+      "height": 1080,
+      "category": "earth",
+      "title": "绿洲"
+    },
+    {
+      "source": "大地/荷1.jpg",
+      "destination": "assets/gallery/earth/earth-046.jpg",
+      "preview": "assets/gallery/previews/earth/earth-046.webp",
+      "sha256": "d4aa08e69ef71cd71afa9d40ae18ffed6f40f389e5d7ad57d201fa34d3eab06b",
+      "width": 2797,
+      "height": 1080,
+      "category": "earth",
+      "title": "荷1"
+    },
+    {
+      "source": "大地/荷2.jpg",
+      "destination": "assets/gallery/earth/earth-047.jpg",
+      "preview": "assets/gallery/previews/earth/earth-047.webp",
+      "sha256": "599330fc860d67dbcbdd93d93e0a2512fccee82b23d770f360e85914472845b5",
+      "width": 1865,
+      "height": 1080,
+      "category": "earth",
+      "title": "荷2"
+    },
+    {
+      "source": "大地/豫园站.jpg",
+      "destination": "assets/gallery/earth/earth-048.jpg",
+      "preview": "assets/gallery/previews/earth/earth-048.webp",
+      "sha256": "478cfda91e90fea5967b812edc45203f8811831e1545908d4afc65043b5fc56b",
+      "width": 6000,
+      "height": 3406,
+      "category": "earth",
+      "title": "豫园站"
+    },
+    {
+      "source": "大地/越.jpg",
+      "destination": "assets/gallery/earth/earth-049.jpg",
+      "preview": "assets/gallery/previews/earth/earth-049.webp",
+      "sha256": "b77685c6feb55074d7df7441874b20593837a708fecead0c5861c99b2a3b6423",
+      "width": 1620,
+      "height": 1080,
+      "category": "earth",
+      "title": "越"
+    },
+    {
+      "source": "大地/逆转.jpg",
+      "destination": "assets/gallery/earth/earth-050.jpg",
+      "preview": "assets/gallery/previews/earth/earth-050.webp",
+      "sha256": "9a69e19ae6c66148c1bf2b7427b6406b35df3fba63a6421a8ebb6f5ebd94bf11",
+      "width": 2826,
+      "height": 5503,
+      "category": "earth",
+      "title": "逆转"
+    },
+    {
+      "source": "大地/钟楼.jpg",
+      "destination": "assets/gallery/earth/earth-051.jpg",
+      "preview": "assets/gallery/previews/earth/earth-051.webp",
+      "sha256": "21dfcab0bc138c6d8c80922a60841277c6d02788ea0d1314c66931835a59fcfe",
+      "width": 5906,
+      "height": 3906,
+      "category": "earth",
+      "title": "钟楼"
+    },
+    {
+      "source": "大地/香格里拉.jpg",
+      "destination": "assets/gallery/earth/earth-052.jpg",
+      "preview": "assets/gallery/previews/earth/earth-052.webp",
+      "sha256": "6a4beabcf31c4d486eec71b9d6790fe54cba188a16252a989bb0a7742e321eb1",
+      "width": 5471,
+      "height": 3376,
+      "category": "earth",
+      "title": "香格里拉"
+    },
+    {
+      "source": "大地/驻.jpg",
+      "destination": "assets/gallery/earth/earth-053.jpg",
+      "preview": "assets/gallery/previews/earth/earth-053.webp",
+      "sha256": "d1ecb5deb505b6cf6190eb18015f4052ae396f96f147ff8b4b346d680d5bfd88",
+      "width": 4272,
+      "height": 2400,
+      "category": "earth",
+      "title": "驻"
+    },
+    {
+      "source": "大地/鼋头渚.jpg",
+      "destination": "assets/gallery/earth/earth-054.jpg",
+      "preview": "assets/gallery/previews/earth/earth-054.webp",
+      "sha256": "1efd91458bd7e29e0a4ad0e8f66537d4fe6b01f5c89e2ec3dd7e7a7b64be24f1",
+      "width": 2160,
+      "height": 1619,
+      "category": "earth",
+      "title": "鼋头渚"
+    },
+    {
+      "source": "大地/鼋渚一角.jpg",
+      "destination": "assets/gallery/earth/earth-055.jpg",
+      "preview": "assets/gallery/previews/earth/earth-055.webp",
+      "sha256": "d066f7b3698443b04de047baa2f91b6cb12beab54ca8858ea455bffadb714a55",
+      "width": 2160,
+      "height": 1619,
+      "category": "earth",
+      "title": "鼋渚一角"
+    },
+    {
+      "source": "大地/鼋渚日落.jpg",
+      "destination": "assets/gallery/earth/earth-056.jpg",
+      "preview": "assets/gallery/previews/earth/earth-056.webp",
+      "sha256": "1904d174965a3ebfed2afa5a24c5991e3b8f33654eb483ebc11c0dea28c3344b",
+      "width": 3368,
+      "height": 6000,
+      "category": "earth",
+      "title": "鼋渚日落"
+    },
+    {
+      "source": "大地/（根据画面自行起名1）.jpg",
+      "destination": "assets/gallery/earth/earth-057.jpg",
+      "preview": "assets/gallery/previews/earth/earth-057.webp",
+      "sha256": "1b6d6c72a30e6848482e68c1d45ed64735c1fbcf497f4b09394713796586045b",
+      "width": 6000,
+      "height": 3437,
+      "category": "earth",
+      "title": "大地 001"
+    },
+    {
+      "source": "大地/（根据画面自行起名2）.jpg",
+      "destination": "assets/gallery/earth/earth-058.jpg",
+      "preview": "assets/gallery/previews/earth/earth-058.webp",
+      "sha256": "4d777f4cb055e54abe7a2eadac4ac9d3ec7a6a85f99e0ea5879d5c1de301caec",
+      "width": 6000,
+      "height": 3376,
+      "category": "earth",
+      "title": "大地 002"
+    },
+    {
+      "source": "大地/（根据画面自行起名3）.jpg",
+      "destination": "assets/gallery/earth/earth-059.jpg",
+      "preview": "assets/gallery/previews/earth/earth-059.webp",
+      "sha256": "029f00186203271e842e6a0969ce747b16adf5f99ad0d8341f1dca2f4c2f562f",
+      "width": 2762,
+      "height": 5471,
+      "category": "earth",
+      "title": "大地 003"
+    },
+    {
+      "source": "大地/（根据画面自行起名4）.jpg",
+      "destination": "assets/gallery/earth/earth-060.jpg",
+      "preview": "assets/gallery/previews/earth/earth-060.webp",
+      "sha256": "8d9415b45269a1de5cd72075ef0c6cfc2bd4d2837b88f2615142d326032e84de",
+      "width": 3872,
+      "height": 5024,
+      "category": "earth",
+      "title": "大地 004"
+    },
+    {
+      "source": "星/土星.jpg",
+      "destination": "assets/gallery/planet/planet-saturn.jpg",
+      "preview": "assets/gallery/previews/planet/planet-saturn.webp",
+      "sha256": "5169a425615ac2139acf9d52c4da720e2384ed1d844d67d4933f34dad1dd1ffa",
+      "width": 640,
+      "height": 480,
+      "category": "planet",
+      "title": "土星"
+    },
+    {
+      "source": "星/盈凸月.jpg",
+      "destination": "assets/gallery/sunmoon/sunmoon-gibbous-moon.jpg",
+      "preview": "assets/gallery/previews/sunmoon/sunmoon-gibbous-moon.webp",
+      "sha256": "d86f0e120e7c98f15f6e52f595240dcf125a01a00186893ec422dcc171376a41",
+      "width": 4980,
+      "height": 3819,
+      "category": "sunmoon",
+      "title": "盈凸月"
+    },
+    {
+      "source": "设备/c925hd.jpg",
+      "destination": "assets/equipment/equipment-c925hd.jpg",
+      "preview": "assets/equipment/previews/equipment-c925hd.webp",
+      "sha256": "5107249c2a992451bb26c110c38dda60b615066a10cb3f7b2f25445acc95b4cc",
+      "width": 6000,
+      "height": 4000,
+      "category": "equipment",
+      "title": "C925HD"
+    },
+    {
+      "source": "设备/P2710393.jpg",
+      "destination": "assets/equipment/equipment-field-01.jpg",
+      "preview": "assets/equipment/previews/equipment-field-01.webp",
+      "sha256": "6f2d618785c492368785c0ebce3c90a6864b06aa1c303461e0f4fa5a8b5d6168",
+      "width": 6000,
+      "height": 3879,
+      "category": "equipment",
+      "title": "观测现场"
+    },
+    {
+      "source": "设备/P2710437.jpg",
+      "destination": "assets/equipment/equipment-field-02.jpg",
+      "preview": "assets/equipment/previews/equipment-field-02.webp",
+      "sha256": "acb9a0bca8028eb29f5b1e59aaaa7a1abff1d6b07519c30f3d71c0e9cc79bda1",
+      "width": 4000,
+      "height": 6000,
+      "category": "equipment",
+      "title": "观测现场"
+    }
+  ]
+}
