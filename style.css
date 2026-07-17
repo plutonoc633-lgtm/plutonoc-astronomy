@@ -1,9 +1,9 @@
 @font-face {
-  font-family: "Smiley Sans";
-  src: url("assets/fonts/smiley-sans.woff2") format("woff2");
+  font-family: "Source Han Sans CN";
+  src: url("assets/fonts/source-han-sans-cn-medium.woff2") format("woff2");
   font-display: swap;
-  font-style: oblique;
-  font-weight: 400;
+  font-style: normal;
+  font-weight: 500;
 }
 
 @font-face {
@@ -37,7 +37,7 @@
   --header-height: 68px;
   --page-pad: clamp(20px, 4vw, 72px);
   --sans: "IBM Plex Sans", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
-  --display: "Smiley Sans", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  --display: "Source Han Sans CN", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
   --mono: "IBM Plex Sans", "SFMono-Regular", Consolas, monospace;
 }
 
@@ -433,29 +433,6 @@ a {
   background: #060708;
 }
 
-.hero-signature {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--header-height) + 22px);
-  right: var(--page-pad);
-  left: var(--page-pad);
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  pointer-events: none;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, .65);
-}
-
-.hero-signature h1 {
-  max-width: 100%;
-  font-size: clamp(40px, 6vw, 88px);
-  font-family: var(--display);
-  font-weight: 400;
-  line-height: .92;
-  letter-spacing: -.065em;
-}
-
-.hero-signature span,
 .hero-foot {
   font-family: var(--mono);
   font-size: 9px;
@@ -464,9 +441,10 @@ a {
 
 .contact-sheet {
   display: flex;
-  gap: 5px;
-  height: calc(100svh - var(--header-height));
-  padding: 0 clamp(10px, 1.2vw, 20px) 42px;
+  gap: 1px;
+  height: calc(100svh - var(--header-height) - 36px);
+  padding: 0;
+  background: var(--line);
 }
 
 .contact-panel {
@@ -475,34 +453,38 @@ a {
   min-width: 0;
   overflow: hidden;
   background: #101214;
-  transition: flex .7s cubic-bezier(.18, .75, .2, 1), opacity .35s ease;
+  transition: flex .58s cubic-bezier(.2, .72, .2, 1), opacity .32s ease;
 }
 
 .contact-sheet:has(.contact-panel:hover) .contact-panel,
 .contact-sheet:has(.contact-panel:focus-visible) .contact-panel {
-  flex-grow: .7;
-  opacity: .7;
+  flex-grow: .88;
+  opacity: .62;
 }
 
 .contact-sheet .contact-panel:hover,
 .contact-sheet .contact-panel:focus-visible,
 .contact-sheet .contact-panel.is-active {
-  flex-grow: 2.7;
+  flex-grow: 1.48;
   opacity: 1;
 }
 
-.contact-panel img {
+.contact-panel img,
+.contact-panel video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(.72) brightness(.72);
-  transform: scale(1.025);
-  transition: filter .55s ease, transform 1s cubic-bezier(.2, .7, .2, 1);
+  filter: saturate(.68) brightness(.68);
+  transform: scale(1.018);
+  transition: filter .48s ease, transform .8s cubic-bezier(.2, .7, .2, 1);
 }
 
 .contact-panel:hover img,
+.contact-panel:hover video,
 .contact-panel:focus-visible img,
-.contact-panel.is-active img {
+.contact-panel:focus-visible video,
+.contact-panel.is-active img,
+.contact-panel.is-active video {
   filter: saturate(.92) brightness(.9);
   transform: scale(1);
 }
@@ -510,18 +492,22 @@ a {
 .contact-panel-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .25), transparent 45%, rgba(0, 0, 0, .84));
+  background: linear-gradient(180deg, rgba(0, 0, 0, .08), transparent 52%, rgba(0, 0, 0, .52));
 }
 
 .contact-panel-meta {
   position: absolute;
-  right: 18px;
-  bottom: 20px;
-  left: 18px;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: baseline;
-  gap: 14px;
+  min-height: 72px;
+  gap: 12px;
+  padding: 25px 16px 17px;
+  border-top: 1px solid rgba(255, 255, 255, .18);
+  background: linear-gradient(180deg, rgba(5, 6, 7, .12), rgba(5, 6, 7, .86));
   white-space: nowrap;
 }
 
@@ -536,10 +522,10 @@ a {
 
 .contact-panel-meta b {
   overflow: hidden;
-  font-size: clamp(21px, 2.2vw, 34px);
+  font-size: clamp(17px, 1.55vw, 24px);
   font-family: var(--display);
-  font-weight: 400;
-  letter-spacing: -.04em;
+  font-weight: 500;
+  letter-spacing: -.025em;
   text-overflow: ellipsis;
 }
 
@@ -547,7 +533,7 @@ a {
   position: absolute;
   z-index: 4;
   right: var(--page-pad);
-  bottom: 14px;
+  bottom: 13px;
   left: var(--page-pad);
   display: flex;
   justify-content: space-between;
@@ -557,25 +543,22 @@ a {
 /* About */
 .about {
   display: grid;
-  grid-template-columns: minmax(220px, .7fr) minmax(380px, 1.3fr);
-  gap: clamp(48px, 10vw, 180px);
-  min-height: 64svh;
+  grid-template-columns: minmax(180px, .7fr) minmax(420px, 1.3fr);
+  gap: clamp(36px, 8vw, 140px);
+  min-height: 42svh;
   align-items: center;
-  padding: clamp(120px, 15vh, 180px) var(--page-pad);
+  padding: clamp(80px, 11vh, 124px) var(--page-pad);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   background: #0d0f11;
 }
 
-.about-title {
-  align-self: start;
-}
-
-.about-title h2 {
-  font-family: var(--display);
-  font-size: clamp(48px, 7vw, 104px);
-  font-weight: 400;
-  line-height: .92;
-  letter-spacing: -.025em;
-  text-wrap: balance;
+.about-name {
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: clamp(24px, 2.5vw, 36px);
+  font-weight: 600;
+  letter-spacing: -.035em;
 }
 
 .about-facts {
@@ -583,23 +566,16 @@ a {
 }
 
 .about-facts p {
-  padding: 10px 0;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: clamp(17px, 1.5vw, 23px);
+  font-size: clamp(16px, 1.3vw, 19px);
   line-height: 1.5;
 }
 
 .about-facts p:first-child {
-  margin-bottom: 18px;
+  border-top: 1px solid var(--line);
   color: var(--text);
-  font-family: var(--display);
-  font-size: clamp(36px, 5vw, 74px);
-  line-height: .95;
-}
-
-.about-facts b {
-  color: var(--text);
-  font-weight: 550;
 }
 
 .works-header h2,
@@ -607,10 +583,10 @@ a {
 .records-header h2,
 .equipment-console h2 {
   font-family: var(--display);
-  font-size: clamp(46px, 7vw, 96px);
-  font-weight: 400;
-  line-height: .96;
-  letter-spacing: -.025em;
+  font-size: clamp(40px, 5.2vw, 74px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.04em;
   text-wrap: balance;
 }
 
@@ -645,79 +621,83 @@ a {
 
 .works-header > p b {
   color: var(--text);
-  font-size: clamp(44px, 6vw, 82px);
+  font-size: clamp(38px, 4.5vw, 56px);
   font-weight: 450;
   line-height: .8;
 }
 
 .featured-grid {
-  display: grid;
-  grid-template-columns: 1.2fr .8fr;
-  grid-template-rows: repeat(2, minmax(310px, 42vw));
-  gap: 6px;
+  display: block;
   padding: 0 var(--page-pad) clamp(72px, 9vw, 120px);
 }
 
 .featured-card {
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: center;
+  width: 100%;
+  min-height: clamp(520px, 76svh, 780px);
   min-width: 0;
-  overflow: hidden;
+  padding: clamp(36px, 5vw, 72px) 0;
+  border-top: 1px solid var(--line);
+  overflow: visible;
   cursor: pointer;
-  background: #050606;
+  background: transparent;
   text-align: left;
   isolation: isolate;
 }
 
-.featured-deepsky,
-.featured-planetary {
-  grid-column: 2;
-}
-
-.featured-deepsky {
-  grid-row: 1;
-}
-
-.featured-planetary {
-  grid-row: 2;
-}
-
-.featured-sunmoon {
-  grid-column: 1;
-}
-
 .featured-card img {
+  grid-column: 1 / 9;
+  grid-row: 1;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(.74) brightness(.78);
-  transform: scale(1.025);
-  transition: filter .5s ease, transform .8s cubic-bezier(.2, .7, .2, 1);
+  height: auto;
+  object-fit: contain;
+  filter: saturate(.82) brightness(.84);
+  transform: translateZ(0) scale(.985);
+  transform-origin: center;
+  clip-path: inset(0 100% 0 0);
+  transition: filter .55s ease, transform .9s cubic-bezier(.2, .7, .2, 1), clip-path .9s cubic-bezier(.2, .7, .2, 1);
 }
 
 .featured-planetary img {
+  aspect-ratio: 1800 / 1286;
   object-fit: contain;
-  padding: 6%;
+  background: #020303;
 }
 
-.featured-card::after {
-  position: absolute;
-  z-index: 1;
-  inset: 35% 0 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, .86));
-  content: "";
+.featured-deepsky img,
+.featured-sunmoon img {
+  grid-column: 5 / 13;
+  clip-path: inset(0 0 0 100%);
+}
+
+.featured-sunmoon img {
+  grid-column: 3 / 13;
 }
 
 .featured-card > span {
-  position: absolute;
-  z-index: 2;
-  right: clamp(16px, 2vw, 28px);
-  bottom: clamp(16px, 2vw, 26px);
-  left: clamp(16px, 2vw, 28px);
+  z-index: 1;
+  grid-column: 9 / 13;
+  grid-row: 1;
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 8px 20px;
+  grid-template-columns: auto 1fr;
+  align-self: center;
+  gap: 14px 18px;
+  padding: 0 0 clamp(12px, 2vw, 30px) clamp(24px, 4vw, 64px);
   color: var(--text);
+}
+
+.featured-deepsky > span,
+.featured-sunmoon > span {
+  grid-column: 1 / 5;
+  padding-right: clamp(24px, 4vw, 64px);
+  padding-left: 0;
+}
+
+.featured-sunmoon > span {
+  grid-column: 1 / 3;
 }
 
 .featured-card i,
@@ -729,27 +709,35 @@ a {
 }
 
 .featured-card i {
-  grid-column: 1 / -1;
-  color: var(--accent-light);
+  grid-column: 1;
+  color: var(--muted);
 }
 
 .featured-card b {
+  grid-column: 1 / -1;
   max-width: 16em;
   font-family: var(--display);
-  font-size: clamp(25px, 3.3vw, 52px);
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: -.02em;
+  font-size: clamp(28px, 3.2vw, 48px);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -.035em;
 }
 
 .featured-card em {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
   color: var(--muted);
 }
 
 .featured-card:hover img,
 .featured-card:focus-visible img {
-  filter: saturate(1) brightness(.96);
-  transform: scale(1);
+  filter: saturate(1) brightness(1);
+  transform: translateZ(0) scale(1);
+}
+
+.featured-card.is-visible img {
+  clip-path: inset(0);
 }
 
 .featured-card:active {
@@ -760,6 +748,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  scroll-margin-top: calc(var(--header-height) + 36px);
   padding: 18px var(--page-pad);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -1504,19 +1493,11 @@ dialog {
     min-height: 100svh;
   }
 
-  .hero-signature {
-    top: calc(var(--header-height) + 17px);
-  }
-
-  .hero-signature h1 {
-    font-size: clamp(38px, 13vw, 58px);
-  }
-
   .contact-sheet {
     gap: 10px;
-    height: calc(100svh - var(--header-height));
+    height: calc(100svh - var(--header-height) - 36px);
     overflow-x: auto;
-    padding: 86px 18px 54px;
+    padding: 0 18px;
     scroll-padding-inline: 18px;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
@@ -1537,12 +1518,13 @@ dialog {
     scroll-snap-align: center;
   }
 
-  .contact-panel img {
+  .contact-panel img,
+  .contact-panel video {
     filter: saturate(.9) brightness(.84);
   }
 
   .contact-panel-meta b {
-    font-size: 25px;
+    font-size: 21px;
   }
 
   .hero-foot {
@@ -1551,24 +1533,19 @@ dialog {
 
   .about {
     min-height: 0;
-    padding: 110px var(--page-pad) 80px;
-  }
-
-  .about-title h2 {
-    font-size: clamp(42px, 16vw, 68px);
-    letter-spacing: -.05em;
+    padding: 76px var(--page-pad);
   }
 
   .about-facts p {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .works-header h2,
   .films-header h2,
   .records-header h2,
   .equipment-console h2 {
-    font-size: clamp(42px, 15vw, 68px);
-    letter-spacing: -.02em;
+    font-size: clamp(38px, 12vw, 54px);
+    letter-spacing: -.04em;
   }
 
   .works {
@@ -1589,25 +1566,36 @@ dialog {
   }
 
   .featured-grid {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
+    display: block;
     padding-right: var(--page-pad);
     padding-bottom: 66px;
-    scroll-padding-inline: var(--page-pad);
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-
-  .featured-grid::-webkit-scrollbar {
-    display: none;
   }
 
   .featured-card {
-    flex: 0 0 84vw;
-    aspect-ratio: 16 / 10;
+    display: flex;
     min-height: 0;
-    scroll-snap-align: center;
+    padding: 34px 0 58px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .featured-card img,
+  .featured-deepsky img,
+  .featured-sunmoon img {
+    width: 100%;
+    clip-path: inset(0 100% 0 0);
+  }
+
+  .featured-card > span,
+  .featured-deepsky > span,
+  .featured-sunmoon > span {
+    display: grid;
+    width: 100%;
+    padding: 18px 0 0;
+  }
+
+  .featured-card b {
+    font-size: clamp(24px, 7vw, 34px);
   }
 
   .gallery-toolbar {

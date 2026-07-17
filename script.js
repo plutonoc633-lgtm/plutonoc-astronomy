@@ -189,6 +189,21 @@
   }
 
   const contactPanels = $$('.contact-panel');
+  const contactSheet = $('.contact-sheet');
+  const homePreviewVideos = $$('.contact-panel video');
+  const resetContactPanels = () => contactPanels.forEach(item => item.classList.remove('is-active'));
+  if (reducedMotion) {
+    homePreviewVideos.forEach(video => video.pause());
+  } else if ('IntersectionObserver' in window) {
+    const homeVideoObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const video = entry.target;
+        if (entry.isIntersecting) video.play().catch(() => {});
+        else video.pause();
+      });
+    }, { threshold: .35 });
+    homePreviewVideos.forEach(video => homeVideoObserver.observe(video));
+  }
   contactPanels.forEach(panel => {
     const activate = () => contactPanels.forEach(item => item.classList.toggle('is-active', item === panel));
     panel.addEventListener('pointerenter', activate);
@@ -197,6 +212,24 @@
       if (panel.dataset.homeFilter) setGalleryFilter(panel.dataset.homeFilter, true);
     });
   });
+  contactSheet?.addEventListener('pointerleave', resetContactPanels);
+  contactSheet?.addEventListener('focusout', event => {
+    if (!contactSheet.contains(event.relatedTarget)) resetContactPanels();
+  });
+
+  const featuredMotionImage = $('[data-motion-src]');
+  if (featuredMotionImage && !reducedMotion && 'IntersectionObserver' in window) {
+    const featuredMotionObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const image = entry.target;
+        const nextSource = image.dataset.motionSrc;
+        if (nextSource && image.getAttribute('src') !== nextSource) image.src = nextSource;
+        featuredMotionObserver.unobserve(image);
+      });
+    }, { threshold: .45 });
+    featuredMotionObserver.observe(featuredMotionImage);
+  }
 
   function restoreInitialHash() {
     if (!location.hash || !$(location.hash)) return;
@@ -253,8 +286,7 @@
     card.addEventListener('click', () => {
       setGalleryFilter(card.dataset.featureFilter);
       const toolbar = $('.gallery-toolbar');
-      const top = toolbar ? toolbar.getBoundingClientRect().top + scrollY - (header?.offsetHeight || 0) - 12 : 0;
-      window.scrollTo({ top, behavior: reducedMotion ? 'auto' : 'smooth' });
+      toolbar?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' });
     });
   });
 

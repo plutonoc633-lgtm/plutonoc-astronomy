@@ -6,7 +6,7 @@
   <meta name="description" content="PlutonoC 的个人摄影与观测页面">
   <meta name="theme-color" content="#090a0b">
   <title>PlutonoC</title>
-  <link rel="stylesheet" href="style.css?v=20260717-2">
+  <link rel="stylesheet" href="style.css?v=20260718-3">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -50,12 +50,8 @@
 
   <main id="content">
     <section class="hero" id="home" data-section="01" data-section-name="首页">
-      <div class="hero-signature">
-        <h1>PlutonoC</h1>
-        <span aria-hidden="true">01 / 07</span>
-      </div>
       <nav class="contact-sheet" aria-label="主要栏目">
-        <a class="contact-panel is-active" href="#works" data-transition-link data-home-filter="nightscape">
+        <a class="contact-panel" href="#works" data-transition-link data-home-filter="nightscape">
           <img src="assets/gallery/nightscape/nightscape-04.jpg" alt="冬季银河接片带星云标识">
           <span class="contact-panel-shade"></span>
           <span class="contact-panel-meta"><i>01</i><b>星野</b><em>14</em></span>
@@ -66,7 +62,7 @@
           <span class="contact-panel-meta"><i>02</i><b>深空</b><em>31</em></span>
         </a>
         <a class="contact-panel" href="#works" data-transition-link data-home-filter="planetary">
-          <img src="assets/gallery/planetary/jupiter-motion.gif" alt="木星自转四小时">
+          <img src="assets/gallery/planetary/planetary-02.jpg" alt="木星自转四小时">
           <span class="contact-panel-shade"></span>
           <span class="contact-panel-meta"><i>03</i><b>行星</b><em>03</em></span>
         </a>
@@ -76,7 +72,7 @@
           <span class="contact-panel-meta"><i>04</i><b>日月</b><em>06</em></span>
         </a>
         <a class="contact-panel" href="#films" data-transition-link>
-          <img src="assets/videos/jupiter-poster.jpg" alt="木星动态观测影像">
+          <video src="assets/videos/jupiter.mp4" poster="assets/videos/jupiter-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="木星动态观测影像"></video>
           <span class="contact-panel-shade"></span>
           <span class="contact-panel-meta"><i>05</i><b>动态影像</b><em>00:06</em></span>
         </a>
@@ -85,9 +81,8 @@
     </section>
 
     <section class="about" id="about" data-section="02" data-section-name="关于我">
-      <div class="about-title reveal"><h2>关于我</h2></div>
+      <div class="about-name reveal">PlutonoC</div>
       <div class="about-facts reveal">
-        <p><b>PlutonoC</b></p>
         <p>江南大学天见天文协会创始人</p>
         <p>星野 / 深空 / 行星 / 日月 / 自然</p>
       </div>
@@ -98,20 +93,20 @@
         <div><h2>摄影作品</h2></div>
         <p><b>54</b><span>星野 14 / 深空 31 / 行星 03 / 日月 06</span></p>
       </header>
-      <div class="featured-grid reveal" aria-label="分类代表作">
-        <button class="featured-card featured-nightscape" type="button" data-feature-filter="nightscape">
+      <div class="featured-grid" aria-label="分类代表作">
+        <button class="featured-card featured-nightscape reveal" type="button" data-feature-filter="nightscape">
           <img src="assets/gallery/nightscape/nightscape-04.jpg" alt="冬季银河接片带星云标识" loading="lazy">
           <span><i>星野</i><b>冬季银河接片带星云标识</b><em>14</em></span>
         </button>
-        <button class="featured-card featured-deepsky" type="button" data-feature-filter="deepsky">
+        <button class="featured-card featured-deepsky reveal" type="button" data-feature-filter="deepsky">
           <img src="assets/gallery/deepsky/deepsky-09.jpg" alt="猎户座星云和跑步者星云" loading="lazy">
           <span><i>深空</i><b>猎户座星云 + 跑步者星云</b><em>31</em></span>
         </button>
-        <button class="featured-card featured-planetary" type="button" data-feature-filter="planetary">
-          <img src="assets/gallery/planetary/jupiter-motion.gif" alt="木星自转四小时" loading="lazy">
+        <button class="featured-card featured-planetary reveal" type="button" data-feature-filter="planetary">
+          <img src="assets/gallery/planetary/planetary-02.jpg" data-static-src="assets/gallery/planetary/planetary-02.jpg" data-motion-src="assets/gallery/planetary/jupiter-motion.gif" alt="木星自转四小时" loading="lazy">
           <span><i>行星</i><b>木星自转 4 小时</b><em>03</em></span>
         </button>
-        <button class="featured-card featured-sunmoon" type="button" data-feature-filter="sunmoon">
+        <button class="featured-card featured-sunmoon reveal" type="button" data-feature-filter="sunmoon">
           <img src="assets/gallery/planetary/planetary-06.jpg" alt="月面部分地图" loading="lazy">
           <span><i>日月</i><b>月面部分地图</b><em>06</em></span>
         </button>
@@ -202,8 +197,8 @@
   <footer><span>© 2026 PLUTONOC</span><span>PER ASPERA AD ASTRA</span><a href="#home" data-transition-link>BACK TO TOP ↑</a></footer>
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js"></script>
-  <script src="video-data.js?v=20260717-2"></script>
-  <script src="gallery-data.js?v=20260717-2"></script>
-  <script src="script.js?v=20260717-2"></script>
+  <script src="video-data.js?v=20260718-3"></script>
+  <script src="gallery-data.js?v=20260718-3"></script>
+  <script src="script.js?v=20260718-3"></script>
 </body>
 </html>
