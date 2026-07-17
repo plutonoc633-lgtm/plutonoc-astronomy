@@ -13,6 +13,7 @@
     nightscape: '星野',
     deepsky: '深空',
     planetary: '行星',
+    sunmoon: '日月',
     nature: '自然',
     video: '动态影像'
   };
@@ -197,120 +198,6 @@
     });
   });
 
-  function mediaMarkup(media, className = '') {
-    if (!media) return '';
-    if (media.type === 'video') {
-      return `<video class="${className}" src="${escapeHtml(media.src)}" poster="${escapeHtml(media.poster || '')}" muted loop playsinline preload="metadata" aria-label="${escapeHtml(media.alt || '')}"></video>`;
-    }
-    return `<img class="${className}" src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt || '')}" loading="lazy" decoding="async">`;
-  }
-
-  const stories = [...(window.featuredStories || [])];
-  const storyRoot = $('[data-story-root]');
-  let activeStory = 0;
-  let activeStoryMedia = new Map();
-
-  function storyDetail(label, value, className) {
-    if (!value) return '';
-    return `<p class="${className}"><span class="story-detail-label">${escapeHtml(label)}</span>${escapeHtml(value)}</p>`;
-  }
-
-  function renderStories() {
-    if (!storyRoot) return;
-    $('[data-story-count]').textContent = pad(stories.length);
-    if (!stories.length) {
-      storyRoot.innerHTML = '<p class="story-empty">暂无作品手记</p>';
-      return;
-    }
-
-    const stageMedia = stories.map((story, storyIndex) => (story.media || []).map((media, mediaIndex) => `
-      <div class="story-stage-media${storyIndex === 0 && mediaIndex === 0 ? ' is-active' : ''}" data-story-stage="${storyIndex}" data-story-media="${mediaIndex}">
-        ${mediaMarkup(media)}
-      </div>`).join('')).join('');
-
-    const chapters = stories.map((story, storyIndex) => {
-      const media = story.media || [];
-      const meta = [story.date, story.location].filter(Boolean);
-      const parameters = (story.parameters || []).filter(item => item?.label && item?.value);
-      const selectors = media.length > 1 ? `<div class="story-media-selectors" aria-label="${escapeHtml(story.title)}媒体">
-        ${media.map((item, mediaIndex) => `<button type="button" class="${mediaIndex === 0 ? 'active' : ''}" data-story-media-select="${storyIndex}:${mediaIndex}">${pad(mediaIndex + 1)}</button>`).join('')}
-      </div>` : '';
-      return `<article class="story-chapter${storyIndex === 0 ? ' is-active' : ''}" data-story-chapter="${storyIndex}">
-        <div class="story-number"><span>${pad(storyIndex + 1)} / ${pad(stories.length)}</span><span>${escapeHtml(categoryLabels[story.category] || story.category || '')}</span></div>
-        <h3>${escapeHtml(story.title)}</h3>
-        ${meta.length ? `<p class="story-meta">${meta.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</p>` : ''}
-        <div class="story-mobile-media">${media.map(item => mediaMarkup(item)).join('')}</div>
-        ${selectors}
-        ${story.story ? `<p class="story-copy">${escapeHtml(story.story)}</p>` : ''}
-        ${parameters.length ? `<dl class="story-parameters">${parameters.map(item => `<div><dt>${escapeHtml(item.label)}</dt><dd>${escapeHtml(item.value)}</dd></div>`).join('')}</dl>` : ''}
-        ${storyDetail('处理方式', story.process, 'story-process')}
-        ${storyDetail('备注', story.notes, 'story-notes')}
-      </article>`;
-    }).join('');
-
-    storyRoot.innerHTML = `
-      <figure class="story-stage" aria-live="polite">
-        ${stageMedia}
-        <figcaption class="story-stage-caption"><span data-story-stage-count>01 / ${pad(stories.length)}</span><b data-story-stage-title>${escapeHtml(stories[0].title)}</b></figcaption>
-      </figure>
-      <div class="story-chapters">${chapters}</div>`;
-
-    activeStoryMedia = new Map(stories.map((story, index) => [index, 0]));
-    wireStoryInteractions();
-  }
-
-  function setStoryMedia(storyIndex, mediaIndex) {
-    activeStoryMedia.set(storyIndex, mediaIndex);
-    $$(`[data-story-stage="${storyIndex}"]`, storyRoot).forEach(element => {
-      const active = Number(element.dataset.storyMedia) === mediaIndex && storyIndex === activeStory;
-      element.classList.toggle('is-active', active);
-      const video = $('video', element);
-      if (video) {
-        if (active && supportsHover && !reducedMotion) video.play().catch(() => {});
-        else video.pause();
-      }
-    });
-    $$(`[data-story-media-select^="${storyIndex}:"]`, storyRoot).forEach(button => {
-      button.classList.toggle('active', Number(button.dataset.storyMediaSelect.split(':')[1]) === mediaIndex);
-    });
-  }
-
-  function activateStory(index) {
-    if (!stories[index]) return;
-    activeStory = index;
-    $$('[data-story-chapter]', storyRoot).forEach(chapter => chapter.classList.toggle('is-active', Number(chapter.dataset.storyChapter) === index));
-    $$('[data-story-stage]', storyRoot).forEach(element => {
-      const active = Number(element.dataset.storyStage) === index && Number(element.dataset.storyMedia) === (activeStoryMedia.get(index) || 0);
-      element.classList.toggle('is-active', active);
-      const video = $('video', element);
-      if (video) {
-        if (active && supportsHover && !reducedMotion) video.play().catch(() => {});
-        else video.pause();
-      }
-    });
-    $('[data-story-stage-count]', storyRoot).textContent = `${pad(index + 1)} / ${pad(stories.length)}`;
-    $('[data-story-stage-title]', storyRoot).textContent = stories[index].title;
-  }
-
-  function wireStoryInteractions() {
-    $$('[data-story-media-select]', storyRoot).forEach(button => {
-      button.addEventListener('click', () => {
-        const [storyIndex, mediaIndex] = button.dataset.storyMediaSelect.split(':').map(Number);
-        activateStory(storyIndex);
-        setStoryMedia(storyIndex, mediaIndex);
-      });
-    });
-    if (!('IntersectionObserver' in window)) return;
-    const chapters = $$('[data-story-chapter]', storyRoot);
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible) activateStory(Number(visible.target.dataset.storyChapter));
-    }, { threshold: [.28, .5, .7], rootMargin: '-24% 0px -30% 0px' });
-    chapters.forEach(chapter => observer.observe(chapter));
-  }
-
-  renderStories();
-
   function restoreInitialHash() {
     if (!location.hash || !$(location.hash)) return;
     requestAnimationFrame(() => requestAnimationFrame(() => finishNavigation(location.hash, false)));
@@ -337,7 +224,7 @@
     visibleWorks = filter === 'all' ? [...allWorks] : allWorks.filter(work => work.category === filter);
     currentIndex = 0;
     track.innerHTML = visibleWorks.map((work, index) => `
-      <figure class="work-card" data-index="${index}" tabindex="0">
+      <figure class="work-card" data-index="${index}" data-src="${escapeHtml(work.src)}" tabindex="0">
         <img src="${escapeHtml(work.src)}" alt="${escapeHtml(work.title)}" loading="${index < 2 ? 'eager' : 'lazy'}" decoding="async">
         <figcaption><b>${escapeHtml(work.title)}</b><span>${escapeHtml(categoryLabels[work.category])} / ${pad(index + 1)}</span></figcaption>
       </figure>`).join('');
@@ -361,6 +248,15 @@
       requestAnimationFrame(() => track.classList.remove('is-filtering'));
     }, 180);
   }
+
+  $$('[data-feature-filter]').forEach(card => {
+    card.addEventListener('click', () => {
+      setGalleryFilter(card.dataset.featureFilter);
+      const toolbar = $('.gallery-toolbar');
+      const top = toolbar ? toolbar.getBoundingClientRect().top + scrollY - (header?.offsetHeight || 0) - 12 : 0;
+      window.scrollTo({ top, behavior: reducedMotion ? 'auto' : 'smooth' });
+    });
+  });
 
   const galleryCards = () => $$('.work-card', track);
 
