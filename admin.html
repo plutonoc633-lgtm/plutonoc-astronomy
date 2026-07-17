@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>PlutonoC Studio</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="studio-header"><a href="index.html">PlutonoC</a><span>PRIVATE FILM STUDIO</span><button type="button" data-sign-out hidden>退出</button></header>
+  <main>
+    <section class="setup-panel" data-setup hidden>
+      <span>CONFIGURATION REQUIRED</span>
+      <h1>尚未连接 CloudBase</h1>
+      <p>先按 <a href="CLOUDBASE_SETUP.md">配置说明</a> 创建腾讯云环境，再将环境 ID 填入 <code>cloudbase-config.js</code>。页面不会保存腾讯云密钥。</p>
+    </section>
+
+    <section class="login-panel" data-login hidden>
+      <div><span>OWNER ACCESS</span><h1>私人影像管理</h1><p>此入口只用于 PlutonoC 上传、编辑和发布动态影像。</p></div>
+      <form data-login-form>
+        <label>账号<input name="username" autocomplete="username" required placeholder="邮箱或用户名"></label>
+        <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">登录 <span>→</span></button>
+        <p class="form-message" data-login-message role="status"></p>
+      </form>
+    </section>
+
+    <section class="dashboard" data-dashboard hidden>
+      <div class="dashboard-head"><div><span>VIDEO PUBLISHER</span><h1>动态影像</h1></div><p>上传 MP4，生成封面，保存为草稿或直接发布。</p></div>
+      <div class="dashboard-grid">
+        <form class="video-form" data-video-form>
+          <input type="hidden" name="recordId">
+          <input type="hidden" name="existingVideoFileId">
+          <input type="hidden" name="existingPosterFileId">
+          <div class="file-zone">
+            <label>视频文件 <small>MP4 / H.264 + AAC / 最大 1 GB</small><input name="video" type="file" accept="video/mp4,.mp4"></label>
+            <span data-video-file>尚未选择文件</span>
+          </div>
+          <div class="form-row"><label>标题<input name="title" required maxlength="80" placeholder="例如：木星自转四小时"></label><label>分类<select name="category"><option>行星观测</option><option>星野延时</option><option>天象记录</option><option>观测现场</option><option>其他</option></select></label></div>
+          <label>简介<textarea name="summary" rows="3" maxlength="300" placeholder="简要说明拍摄对象与过程"></textarea></label>
+          <div class="form-row"><label>日期<input name="date" type="date"></label><label>地点<input name="location" maxlength="60" placeholder="例如：江阴"></label><label>排序<input name="sortOrder" type="number" min="0" value="0"></label></div>
+          <label>自定义封面 <small>可不选，将从视频自动截取</small><input name="poster" type="file" accept="image/jpeg,image/png,image/webp"></label>
+          <figure class="poster-preview"><canvas data-poster-canvas width="1600" height="900"></canvas><figcaption data-poster-message>选择视频后生成封面预览</figcaption></figure>
+          <div class="progress" data-progress hidden><i></i><span>准备上传</span></div>
+          <p class="form-message" data-form-message role="status"></p>
+          <div class="form-actions"><button type="button" class="secondary" data-reset-form>清空</button><button type="submit" name="intent" value="draft">保存草稿</button><button type="submit" name="intent" value="published" class="primary">发布影像</button></div>
+        </form>
+        <aside class="video-manager"><div class="manager-head"><h2>影像资料</h2><button type="button" data-refresh>刷新</button></div><div class="manager-list" data-manager-list><p>正在读取</p></div></aside>
+      </div>
+    </section>
+  </main>
+  <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
+  <script src="cloudbase-config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

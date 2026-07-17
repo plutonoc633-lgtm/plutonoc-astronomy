@@ -1,126 +1,295 @@
-const cursor=document.querySelector('.cursor');
-document.addEventListener('mousemove',e=>{cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px'});
-const hero=document.querySelector('.astro-hero');
-const moon=document.querySelector('.moon-inner');
-const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-function setHeroPointer(clientX,clientY){
-  if(reducedMotion||!hero)return;
-  const rect=hero.getBoundingClientRect();
-  const x=(clientX-rect.left)/rect.width-.5;
-  const y=(clientY-rect.top)/rect.height-.5;
-  hero.style.setProperty('--hero-x',`${x*34}px`);
-  hero.style.setProperty('--hero-y',`${y*26}px`);
-  moon.style.setProperty('--light-x',`${50+x*34}%`);
-  moon.style.setProperty('--light-y',`${50+y*34}%`);
-}
-hero?.addEventListener('pointermove',event=>setHeroPointer(event.clientX,event.clientY));
-hero?.addEventListener('pointerleave',()=>{hero.style.setProperty('--hero-x','0px');hero.style.setProperty('--hero-y','0px');moon.style.setProperty('--light-x','35%');moon.style.setProperty('--light-y','35%')});
-hero?.addEventListener('touchmove',event=>{const touch=event.touches[0];if(touch)setHeroPointer(touch.clientX,touch.clientY)},{passive:true});
+(() => {
+  'use strict';
 
-const labels={nightscape:'星野',deepsky:'深空',planetary:'行星'};
-const track=document.querySelector('.work-track');
-const filters=document.querySelectorAll('.work-filters [data-filter]');
-const currentEl=document.querySelector('.gallery-current');
-const totalEl=document.querySelector('.gallery-total');
-const lightbox=document.querySelector('.lightbox');
-let visibleWorks=[...window.galleryData];
-let currentIndex=0;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const pad = number => String(number).padStart(2, '0');
+  const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  })[character]);
 
-function renderGallery(filter='all'){
-  visibleWorks=filter==='all'?[...window.galleryData]:window.galleryData.filter(work=>work.category===filter);
-  currentIndex=0;
-  track.innerHTML=visibleWorks.map((work,index)=>`<figure class="work-card" data-index="${index}"><img src="${work.src}" alt="${work.title}" loading="${index<2?'eager':'lazy'}"><figcaption><b>${work.title}</b><span>${labels[work.category]} · ${String(index+1).padStart(2,'0')}</span></figcaption></figure>`).join('');
-  totalEl.textContent=String(visibleWorks.length).padStart(2,'0');
-  currentEl.textContent='01';
-  track.scrollLeft=0;
-}
-function cards(){return [...track.querySelectorAll('.work-card')]}
-function goTo(index){
-  const items=cards();
-  currentIndex=(index+items.length)%items.length;
-  items[currentIndex]?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
-  currentEl.textContent=String(currentIndex+1).padStart(2,'0');
-}
-filters.forEach(button=>button.addEventListener('click',()=>{
-  filters.forEach(item=>item.classList.remove('active'));
-  button.classList.add('active');
-  renderGallery(button.dataset.filter);
-}));
-document.querySelector('.gallery-prev').addEventListener('click',()=>goTo(currentIndex-1));
-document.querySelector('.gallery-next').addEventListener('click',()=>goTo(currentIndex+1));
-track.addEventListener('scroll',()=>{
-  window.clearTimeout(track.scrollTimer);
-  track.scrollTimer=window.setTimeout(()=>{
-    const center=track.scrollLeft+track.clientWidth/2;
-    const items=cards();
-    let nearest=0,distance=Infinity;
-    items.forEach((item,index)=>{const d=Math.abs(item.offsetLeft+item.offsetWidth/2-center);if(d<distance){distance=d;nearest=index}});
-    currentIndex=nearest;
-    currentEl.textContent=String(currentIndex+1).padStart(2,'0');
-  },80);
-});
-let dragStart=0,scrollStart=0,dragged=false;
-track.addEventListener('pointerdown',event=>{dragStart=event.clientX;scrollStart=track.scrollLeft;dragged=false;track.classList.add('is-dragging');track.setPointerCapture(event.pointerId)});
-track.addEventListener('pointermove',event=>{if(!track.classList.contains('is-dragging'))return;const delta=event.clientX-dragStart;if(Math.abs(delta)>5)dragged=true;track.scrollLeft=scrollStart-delta});
-track.addEventListener('pointerup',()=>track.classList.remove('is-dragging'));
-track.addEventListener('click',event=>{
-  const card=event.target.closest('.work-card');
-  if(!card||dragged)return;
-  const work=visibleWorks[Number(card.dataset.index)];
-  lightbox.querySelector('img').src=work.src;
-  lightbox.querySelector('img').alt=work.title;
-  lightbox.querySelector('p').textContent=`${work.title} · ${labels[work.category]}`;
-  lightbox.showModal();
-});
-document.addEventListener('keydown',event=>{if(lightbox.open)return;if(event.key==='ArrowLeft')goTo(currentIndex-1);if(event.key==='ArrowRight')goTo(currentIndex+1)});
-lightbox.querySelector('button').addEventListener('click',()=>lightbox.close());
-lightbox.addEventListener('click',event=>{if(event.target===lightbox)lightbox.close()});
-renderGallery();
+  const header = $('[data-header]');
+  let previousScroll = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const currentScroll = window.scrollY;
+    header?.classList.toggle('is-hidden', currentScroll > previousScroll && currentScroll > 140);
+    previousScroll = currentScroll;
+  }, { passive: true });
 
-document.querySelectorAll('a,button,.work-card').forEach(el=>{
-  el.addEventListener('mouseenter',()=>{cursor.style.width='36px';cursor.style.height='36px';cursor.style.opacity='.45'});
-  el.addEventListener('mouseleave',()=>{cursor.style.width='12px';cursor.style.height='12px';cursor.style.opacity='1'});
-});
+  const reveals = $$('.reveal');
+  if (reducedMotion || !('IntersectionObserver' in window)) {
+    reveals.forEach(element => element.classList.add('is-visible'));
+  } else {
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    reveals.forEach(element => revealObserver.observe(element));
+  }
 
-const journeyStops=document.querySelectorAll('.journey-stop');
-const journeyViewer=document.querySelector('.journey-viewer');
-journeyStops.forEach(stop=>stop.addEventListener('click',()=>{
-  journeyStops.forEach(item=>item.classList.remove('active'));
-  stop.classList.add('active');
-  journeyViewer.classList.add('is-changing');
-  window.setTimeout(()=>{
-    const image=journeyViewer.querySelector('img');
-    image.src=stop.dataset.image;
-    image.alt=stop.dataset.title+'代表影像';
-    journeyViewer.querySelector('span').textContent=stop.dataset.kicker;
-    journeyViewer.querySelector('h2').textContent=stop.dataset.title;
-    journeyViewer.querySelector('p').textContent=stop.dataset.copy;
-    journeyViewer.classList.remove('is-changing');
-  },220);
-}));
+  const index = $('#site-index');
+  const indexPreview = $('.index-preview img', index);
+  const indexLinks = $$('[data-index-link]', index);
+  let indexReturnFocus = null;
 
-const quote=document.querySelector('.quote-instrument');
-const orbControl=document.querySelector('.orb-control');
-function setQuotePointer(clientX,clientY){
-  if(reducedMotion||!quote)return;
-  const rect=quote.getBoundingClientRect();
-  const x=(clientX-rect.left)/rect.width-.5;
-  const y=(clientY-rect.top)/rect.height-.5;
-  quote.style.setProperty('--quote-x',`${x*28}px`);
-  quote.style.setProperty('--quote-y',`${y*22}px`);
-  quote.style.setProperty('--phase-x',`${50+x*42}%`);
-  quote.style.setProperty('--phase-y',`${50+y*42}%`);
-}
-quote?.addEventListener('pointermove',event=>setQuotePointer(event.clientX,event.clientY));
-quote?.addEventListener('pointerleave',()=>{quote.style.setProperty('--quote-x','0px');quote.style.setProperty('--quote-y','0px');quote.style.setProperty('--phase-x','42%');quote.style.setProperty('--phase-y','38%')});
-quote?.addEventListener('touchmove',event=>{const touch=event.touches[0];if(touch)setQuotePointer(touch.clientX,touch.clientY)},{passive:true});
-orbControl?.addEventListener('click',()=>{
-  const stars=quote.dataset.mode!=='stars';
-  quote.dataset.mode=stars?'stars':'moon';
-  orbControl.setAttribute('aria-pressed',String(stars));
-  orbControl.setAttribute('aria-label',stars?'切换为月相模式':'切换为星图模式');
-});
-if(quote){
-  const quoteObserver=new IntersectionObserver(entries=>entries.forEach(entry=>quote.classList.toggle('is-visible',entry.isIntersecting)),{threshold:.35});
-  quoteObserver.observe(quote);
-}
+  function openIndex(event) {
+    indexReturnFocus = event?.currentTarget || document.activeElement;
+    index.classList.add('is-open');
+    index.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('index-open');
+    $('[data-index-close]', index)?.focus();
+  }
+
+  function closeIndex() {
+    index.classList.remove('is-open');
+    index.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('index-open');
+    indexReturnFocus?.focus?.();
+  }
+
+  $$('[data-index-open]').forEach(button => button.addEventListener('click', openIndex));
+  $('[data-index-close]', index)?.addEventListener('click', closeIndex);
+  indexLinks.forEach(link => {
+    link.addEventListener('click', closeIndex);
+    link.addEventListener('pointerenter', () => {
+      const nextSource = link.dataset.preview;
+      if (!nextSource || indexPreview.src.endsWith(nextSource)) return;
+      indexPreview.classList.add('is-changing');
+      window.setTimeout(() => {
+        indexPreview.src = nextSource;
+        indexPreview.classList.remove('is-changing');
+      }, 150);
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && index.classList.contains('is-open')) closeIndex();
+    if (event.key !== 'Tab' || !index.classList.contains('is-open')) return;
+    const focusable = $$('a[href],button:not([disabled])', index);
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  if ('IntersectionObserver' in window) {
+    const sectionObserver = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      indexLinks.forEach(link => link.classList.toggle('is-current', link.hash === `#${visible.target.id}`));
+    }, { threshold: [0.25, 0.5, 0.75] });
+    $$('main section[id]').forEach(section => sectionObserver.observe(section));
+  }
+
+  const journeyStops = $$('.journey-stop');
+  const journeyViewer = $('.journey-viewer');
+  journeyStops.forEach(stop => stop.addEventListener('click', () => {
+    journeyStops.forEach(item => {
+      item.classList.remove('active');
+      item.setAttribute('aria-selected', 'false');
+    });
+    stop.classList.add('active');
+    stop.setAttribute('aria-selected', 'true');
+    journeyViewer.classList.add('is-changing');
+    window.setTimeout(() => {
+      const image = $('img', journeyViewer);
+      image.src = stop.dataset.image;
+      image.alt = `${stop.dataset.title}代表影像`;
+      $('figcaption span', journeyViewer).textContent = stop.dataset.kicker;
+      $('figcaption h3', journeyViewer).textContent = stop.dataset.title;
+      $('figcaption p', journeyViewer).textContent = stop.dataset.copy;
+      journeyViewer.classList.remove('is-changing');
+    }, reducedMotion ? 0 : 260);
+  }));
+
+  const labels = { nightscape: '星野', deepsky: '深空', planetary: '行星' };
+  const track = $('.work-track');
+  const filters = $$('.gallery-filters [data-filter]');
+  const currentElement = $('.gallery-current');
+  const totalElement = $('.gallery-total');
+  const photoDialog = $('[data-photo-dialog]');
+  let visibleWorks = [...(window.galleryData || [])];
+  let currentIndex = 0;
+  let dragged = false;
+
+  function renderGallery(filter = 'all') {
+    visibleWorks = filter === 'all' ? [...window.galleryData] : window.galleryData.filter(work => work.category === filter);
+    currentIndex = 0;
+    track.innerHTML = visibleWorks.map((work, indexNumber) => `
+      <figure class="work-card" data-index="${indexNumber}">
+        <img src="${escapeHtml(work.src)}" alt="${escapeHtml(work.title)}" loading="${indexNumber < 2 ? 'eager' : 'lazy'}">
+        <figcaption><b>${escapeHtml(work.title)}</b><span>${escapeHtml(labels[work.category])} / ${pad(indexNumber + 1)}</span></figcaption>
+      </figure>`).join('');
+    totalElement.textContent = pad(visibleWorks.length);
+    currentElement.textContent = '01';
+    track.scrollLeft = 0;
+  }
+
+  const galleryCards = () => $$('.work-card', track);
+  function goToWork(indexNumber) {
+    const cards = galleryCards();
+    if (!cards.length) return;
+    currentIndex = (indexNumber + cards.length) % cards.length;
+    cards[currentIndex].scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
+    currentElement.textContent = pad(currentIndex + 1);
+  }
+
+  filters.forEach(button => button.addEventListener('click', () => {
+    filters.forEach(item => item.classList.remove('active'));
+    button.classList.add('active');
+    renderGallery(button.dataset.filter);
+  }));
+  $('.gallery-prev')?.addEventListener('click', () => goToWork(currentIndex - 1));
+  $('.gallery-next')?.addEventListener('click', () => goToWork(currentIndex + 1));
+  track?.addEventListener('scroll', () => {
+    window.clearTimeout(track.scrollTimer);
+    track.scrollTimer = window.setTimeout(() => {
+      const center = track.scrollLeft + track.clientWidth / 2;
+      let nearest = 0;
+      let distance = Infinity;
+      galleryCards().forEach((card, indexNumber) => {
+        const nextDistance = Math.abs(card.offsetLeft + card.offsetWidth / 2 - center);
+        if (nextDistance < distance) { distance = nextDistance; nearest = indexNumber; }
+      });
+      currentIndex = nearest;
+      currentElement.textContent = pad(currentIndex + 1);
+    }, 70);
+  }, { passive: true });
+
+  let dragStart = 0;
+  let scrollStart = 0;
+  track?.addEventListener('pointerdown', event => {
+    dragStart = event.clientX;
+    scrollStart = track.scrollLeft;
+    dragged = false;
+    track.classList.add('is-dragging');
+    track.setPointerCapture(event.pointerId);
+  });
+  track?.addEventListener('pointermove', event => {
+    if (!track.classList.contains('is-dragging')) return;
+    const delta = event.clientX - dragStart;
+    if (Math.abs(delta) > 5) dragged = true;
+    track.scrollLeft = scrollStart - delta;
+  });
+  ['pointerup', 'pointercancel'].forEach(type => track?.addEventListener(type, () => track.classList.remove('is-dragging')));
+  track?.addEventListener('click', event => {
+    const card = event.target.closest('.work-card');
+    if (!card || dragged) return;
+    const work = visibleWorks[Number(card.dataset.index)];
+    $('img', photoDialog).src = work.src;
+    $('img', photoDialog).alt = work.title;
+    $('p', photoDialog).textContent = `${work.title} / ${labels[work.category]}`;
+    photoDialog.showModal();
+  });
+  $('[data-photo-dialog] > button')?.addEventListener('click', () => photoDialog.close());
+  photoDialog?.addEventListener('click', event => { if (event.target === photoDialog) photoDialog.close(); });
+  document.addEventListener('keydown', event => {
+    const workSection = $('#works')?.getBoundingClientRect();
+    if (photoDialog?.open || !workSection || workSection.bottom < 0 || workSection.top > innerHeight) return;
+    if (event.key === 'ArrowLeft') goToWork(currentIndex - 1);
+    if (event.key === 'ArrowRight') goToWork(currentIndex + 1);
+  });
+  renderGallery();
+
+  const videoDialog = $('[data-video-dialog]');
+  const videoPlayer = $('video', videoDialog);
+  let loadedFilms = [];
+
+  function normalizeDate(value) {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (value.$date) return new Date(value.$date).toISOString().slice(0, 10);
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    return String(value);
+  }
+
+  async function loadCloudFilms() {
+    const config = window.PLUTONOC_CLOUDBASE || {};
+    if (!config.envId || !window.cloudbase) return [];
+    const options = { env: config.envId, region: config.region || 'ap-shanghai' };
+    if (config.clientId) options.clientId = config.clientId;
+    if (config.accessKey) options.accessKey = config.accessKey;
+    const app = window.cloudbase.init(options);
+    const result = await app.database().collection(config.collection || 'videos').where({ status: 'published' }).orderBy('sortOrder', 'asc').get();
+    const records = result.data || [];
+    const fileIds = [...new Set(records.flatMap(record => [record.videoFileId, record.posterFileId]).filter(Boolean))];
+    let links = new Map();
+    if (fileIds.length) {
+      const urlResult = await app.getTempFileURL({ fileList: fileIds });
+      links = new Map((urlResult.fileList || []).map(item => [item.fileID, item.tempFileURL || item.download_url]));
+    }
+    return records.map(record => ({
+      ...record,
+      id: record._id || record.id,
+      date: normalizeDate(record.date),
+      videoUrl: links.get(record.videoFileId),
+      posterUrl: links.get(record.posterFileId) || record.posterUrl
+    })).filter(record => record.videoUrl);
+  }
+
+  function filmCard(film, indexNumber, featured = false) {
+    return `<figure class="film-card" data-film-index="${indexNumber}">
+      <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="${featured ? 'eager' : 'lazy'}">
+      <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
+      <figcaption><h3>${escapeHtml(film.title)}</h3><p>${escapeHtml(film.category || '观测影像')} ${film.date ? `/ ${escapeHtml(film.date)}` : ''}</p></figcaption>
+    </figure>`;
+  }
+
+  function renderFilms(films, sourceLabel) {
+    loadedFilms = films;
+    const feature = $('[data-film-feature]');
+    const list = $('[data-film-list]');
+    const status = $('[data-film-status]');
+    if (!films.length) {
+      feature.innerHTML = '<div class="film-empty">暂无已发布影像</div>';
+      list.innerHTML = '';
+      status.textContent = '登录私人管理页后可上传并发布视频';
+      return;
+    }
+    feature.innerHTML = filmCard(films[0], 0, true);
+    list.innerHTML = films.map((film, indexNumber) => filmCard(film, indexNumber)).join('');
+    status.textContent = `${pad(films.length)} 条影像 / ${sourceLabel}`;
+  }
+
+  function openFilm(indexNumber) {
+    const film = loadedFilms[indexNumber];
+    if (!film) return;
+    videoPlayer.src = film.videoUrl;
+    videoPlayer.poster = film.posterUrl || '';
+    $('.video-caption h3', videoDialog).textContent = film.title;
+    $('.video-caption p', videoDialog).textContent = [film.summary, film.location, film.date].filter(Boolean).join(' / ');
+    videoDialog.showModal();
+  }
+
+  $('#films')?.addEventListener('click', event => {
+    const card = event.target.closest('.film-card');
+    if (card) openFilm(Number(card.dataset.filmIndex));
+  });
+  $('[data-video-dialog] > button')?.addEventListener('click', () => videoDialog.close());
+  videoDialog?.addEventListener('click', event => { if (event.target === videoDialog) videoDialog.close(); });
+  videoDialog?.addEventListener('close', () => {
+    videoPlayer.pause();
+    videoPlayer.removeAttribute('src');
+    videoPlayer.load();
+  });
+
+  (async () => {
+    try {
+      const cloudFilms = await loadCloudFilms();
+      renderFilms(cloudFilms.length ? cloudFilms : (window.localVideoData || []), cloudFilms.length ? 'CLOUDBASE' : 'LOCAL ARCHIVE');
+    } catch (error) {
+      console.warn('CloudBase videos unavailable; using local archive.', error);
+      renderFilms(window.localVideoData || [], 'LOCAL ARCHIVE');
+    }
+  })();
+})();
