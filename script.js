@@ -301,16 +301,27 @@
     homeVideoObserver.observe(homeMotion);
   }
 
-  /* Scroll progress astronaut and finale */
+  /* Scroll progress calibration and finale */
   const header = $('[data-header]');
   const progressBar = $('[data-reading-progress]');
-  const scrollAstronaut = $('[data-scroll-astronaut]');
+  const scrollCalibration = $('[data-scroll-calibration]');
+  const calibrationRoute = $('[data-calibration-route]', scrollCalibration);
+  const calibrationProgress = $('[data-calibration-progress]', scrollCalibration);
   const arrival = $('#contact');
-  let astronautTilt = 0;
-  let astronautMotion = 0;
-  let astronautThrust = 0;
+  const profileCopy = $('.profile-copy');
+  let calibrationInertia = 0;
   let previousScrollY = scrollY;
-  let astronautResetTimer = 0;
+  let calibrationResetTimer = 0;
+
+  if ('IntersectionObserver' in window && !reducedMotion) {
+    const textMotionObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => entry.target.classList.toggle('is-motion-active', entry.isIntersecting));
+    }, { threshold: .12 });
+    [profileCopy, arrival].filter(Boolean).forEach(element => textMotionObserver.observe(element));
+  } else {
+    profileCopy?.classList.add('is-motion-active');
+    arrival?.classList.add('is-motion-active');
+  }
 
   function updateArrivalProgress() {
     if (!arrival) return;
@@ -346,19 +357,22 @@
     const ratio = clamp(scrollY / scrollable, 0, 1);
     if (progressBar) progressBar.style.transform = `scaleX(${ratio})`;
     header.classList.toggle('is-scrolled', scrollY > 20);
-    if (scrollAstronaut) {
-      const height = scrollAstronaut.getBoundingClientRect().height || (isMobile ? 36 : 48);
+    if (scrollCalibration) {
+      const height = scrollCalibration.getBoundingClientRect().height || (isMobile ? 50 : 74);
       const top = header.offsetHeight + 18;
       const travel = Math.max(innerHeight - top - height - 18, 0);
-      scrollAstronaut.style.setProperty('--astronaut-y', `${(ratio * travel).toFixed(2)}px`);
-      scrollAstronaut.style.setProperty('--astronaut-tilt', reducedMotion ? '0deg' : `${astronautTilt.toFixed(2)}deg`);
-      scrollAstronaut.style.setProperty('--astronaut-arm-left', reducedMotion ? '0deg' : `${(-astronautMotion * .82).toFixed(2)}deg`);
-      scrollAstronaut.style.setProperty('--astronaut-arm-right', reducedMotion ? '0deg' : `${(astronautMotion * .82).toFixed(2)}deg`);
-      scrollAstronaut.style.setProperty('--astronaut-leg-left', reducedMotion ? '0deg' : `${(astronautMotion * .55).toFixed(2)}deg`);
-      scrollAstronaut.style.setProperty('--astronaut-leg-right', reducedMotion ? '0deg' : `${(-astronautMotion * .55).toFixed(2)}deg`);
-      scrollAstronaut.style.setProperty('--astronaut-tether-x', reducedMotion ? '0px' : `${clamp(-astronautMotion * .2, -4, 4).toFixed(2)}px`);
-      scrollAstronaut.style.setProperty('--astronaut-tether-rotate', reducedMotion ? '0deg' : `${(-astronautMotion * .34).toFixed(2)}deg`);
-      scrollAstronaut.style.setProperty('--astronaut-thrust', reducedMotion ? '0' : astronautThrust.toFixed(3));
+      const deviation = 1 - ratio * 2;
+      const inertia = reducedMotion ? 0 : calibrationInertia;
+      scrollCalibration.style.setProperty('--calibration-y', `${(ratio * travel).toFixed(2)}px`);
+      scrollCalibration.style.setProperty('--calibration-outer', `${(-18 * deviation + inertia * .22).toFixed(2)}deg`);
+      scrollCalibration.style.setProperty('--calibration-middle', `${(14 * deviation - inertia * .16).toFixed(2)}deg`);
+      scrollCalibration.style.setProperty('--calibration-inner', `${(-8 * deviation + inertia * .1).toFixed(2)}deg`);
+      if (calibrationRoute && calibrationProgress) {
+        const length = calibrationRoute.getTotalLength();
+        const point = calibrationRoute.getPointAtLength(length * ratio);
+        calibrationProgress.setAttribute('cx', point.x.toFixed(2));
+        calibrationProgress.setAttribute('cy', point.y.toFixed(2));
+      }
     }
     updateArrivalProgress();
 
@@ -375,19 +389,15 @@
   window.addEventListener('scroll', () => {
     const delta = scrollY - previousScrollY;
     previousScrollY = scrollY;
-    astronautTilt = reducedMotion ? 0 : clamp(delta * .16, -8, 8);
-    astronautMotion = reducedMotion ? 0 : clamp(delta * .34, -18, 18);
-    astronautThrust = reducedMotion ? 0 : clamp(Math.abs(delta) / 32, 0, 1);
-    scrollAstronaut?.classList.add('is-scrolling');
-    clearTimeout(astronautResetTimer);
-    astronautResetTimer = window.setTimeout(() => {
-      astronautTilt = 0;
-      astronautMotion = 0;
-      astronautThrust = 0;
-      scrollAstronaut?.classList.remove('is-scrolling');
+    calibrationInertia = reducedMotion ? 0 : clamp(delta * .36, -12, 12);
+    scrollCalibration?.classList.add('is-scrolling');
+    clearTimeout(calibrationResetTimer);
+    calibrationResetTimer = window.setTimeout(() => {
+      calibrationInertia = 0;
+      scrollCalibration?.classList.remove('is-scrolling');
       scrollDirty = true;
       requestMainFrame();
-    }, 120);
+    }, 250);
     scrollDirty = true;
     requestMainFrame();
   }, { passive: true });
@@ -1099,9 +1109,9 @@
   const equipmentItems = $$('figure', equipmentTrack);
   let equipmentIndex = equipmentOriginals.length > 1 ? equipmentOriginals.length : 0;
   let equipmentPointer = null;
-  let equipmentAnimating = false;
-  let equipmentPending = 0;
-  let equipmentFallbackTimer = 0;
+  let equipmentWheelAccumulator = 0;
+  let equipmentWheelIdleTimer = 0;
+  let equipmentNormalizeTimer = 0;
 
   function equipmentStep() {
     const mediaWidth = equipmentTrack?.parentElement?.clientWidth || innerWidth;
@@ -1127,40 +1137,33 @@
     if (instant) requestAnimationFrame(() => equipmentTrack?.classList.remove('is-jumping'));
   }
 
-  function finishEquipmentMove() {
-    if (!equipmentAnimating) return;
-    clearTimeout(equipmentFallbackTimer);
+  function normalizeEquipmentIndex(instant = true) {
     const count = equipmentOriginals.length;
-    if (equipmentIndex < count) equipmentIndex += count;
-    else if (equipmentIndex >= count * 2) equipmentIndex -= count;
-    updateEquipmentTrack(0, true);
-    equipmentAnimating = false;
-    if (equipmentPending) {
-      const direction = Math.sign(equipmentPending);
-      equipmentPending -= direction;
-      requestAnimationFrame(() => moveEquipment(direction));
-    }
+    if (!count) return;
+    let changed = false;
+    while (equipmentIndex < count) { equipmentIndex += count; changed = true; }
+    while (equipmentIndex >= count * 2) { equipmentIndex -= count; changed = true; }
+    if (changed) updateEquipmentTrack(0, instant);
   }
 
-  function moveEquipment(direction) {
+  function scheduleEquipmentNormalization() {
+    clearTimeout(equipmentNormalizeTimer);
+    equipmentNormalizeTimer = window.setTimeout(() => normalizeEquipmentIndex(true), reducedMotion ? 20 : 460);
+  }
+
+  function moveEquipment(offset) {
     if (!equipmentOriginals.length) return;
-    if (equipmentAnimating) {
-      equipmentPending = clamp(equipmentPending + direction, -equipmentOriginals.length, equipmentOriginals.length);
-      return;
-    }
-    equipmentAnimating = true;
-    equipmentIndex += direction;
+    normalizeEquipmentIndex(true);
+    const limit = Math.max(equipmentOriginals.length - 1, 1);
+    equipmentIndex += clamp(Math.trunc(offset), -limit, limit);
     updateEquipmentTrack();
-    equipmentFallbackTimer = window.setTimeout(finishEquipmentMove, reducedMotion ? 20 : 780);
+    scheduleEquipmentNormalization();
   }
-
-  equipmentTrack?.addEventListener('transitionend', event => {
-    if (event.propertyName !== 'transform' || !event.target.classList.contains('is-center')) return;
-    finishEquipmentMove();
-  });
 
   equipmentTrack?.addEventListener('pointerdown', event => {
-    if (equipmentAnimating) return;
+    clearTimeout(equipmentNormalizeTimer);
+    equipmentWheelAccumulator = 0;
+    normalizeEquipmentIndex(true);
     equipmentPointer = { id: event.pointerId, x: event.clientX, delta: 0, started: performance.now(), velocity: 0, lastX: event.clientX, lastTime: performance.now() };
     equipmentTrack.classList.add('is-dragging');
     equipmentTrack.setPointerCapture?.(event.pointerId);
@@ -1187,7 +1190,21 @@
   }));
   equipmentTrack?.addEventListener('wheel', event => {
     event.preventDefault();
-    moveEquipment((event.deltaX || event.deltaY) > 0 ? 1 : -1);
+    const rawDelta = event.deltaX || event.deltaY;
+    const normalizedDelta = event.deltaMode === 1 ? rawDelta * 24 : event.deltaMode === 2 ? rawDelta * innerWidth : rawDelta;
+    equipmentWheelAccumulator += clamp(normalizedDelta, -180, 180);
+    const threshold = 90;
+    const steps = Math.trunc(equipmentWheelAccumulator / threshold);
+    if (steps) {
+      equipmentWheelAccumulator -= steps * threshold;
+      moveEquipment(steps);
+    }
+    clearTimeout(equipmentWheelIdleTimer);
+    equipmentWheelIdleTimer = window.setTimeout(() => {
+      if (Math.abs(equipmentWheelAccumulator) >= threshold * .5) moveEquipment(Math.sign(equipmentWheelAccumulator));
+      else updateEquipmentTrack();
+      equipmentWheelAccumulator = 0;
+    }, 100);
   }, { passive: false });
   $('[data-equipment-prev]')?.addEventListener('click', () => moveEquipment(-1));
   $('[data-equipment-next]')?.addEventListener('click', () => moveEquipment(1));

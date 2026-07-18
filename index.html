@@ -8,7 +8,7 @@
   <title>PlutonoC</title>
   <link rel="preload" href="assets/fonts/source-han-sans-cn-medium.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/source-han-serif-cn-vf.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=20260718-stability-3">
+  <link rel="stylesheet" href="style.css?v=20260718-calibration-1">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -50,59 +50,20 @@
     </svg>
   </div>
 
-  <div class="scroll-astronaut" data-scroll-astronaut aria-hidden="true">
-    <svg viewBox="0 0 96 128" role="img">
-      <defs>
-        <linearGradient id="eva-suit" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#fffdf4"/>
-          <stop offset=".55" stop-color="#d9dee3"/>
-          <stop offset="1" stop-color="#9aa4af"/>
-        </linearGradient>
-        <linearGradient id="eva-visor" x1=".2" y1="0" x2=".8" y2="1">
-          <stop offset="0" stop-color="#d8a868"/>
-          <stop offset=".3" stop-color="#526477"/>
-          <stop offset="1" stop-color="#07101a"/>
-        </linearGradient>
-      </defs>
-      <g class="astronaut-tether">
-        <path d="M24 62C4 69 8 93 29 96s15 22-2 27"/>
+  <div class="scroll-calibration" data-scroll-calibration aria-hidden="true">
+    <svg viewBox="0 0 120 120">
+      <g class="calibration-ring calibration-ring-outer">
+        <circle cx="60" cy="60" r="43" pathLength="100"/>
       </g>
-      <g class="astronaut-thrust">
-        <path d="m31 91-8 24 13-16ZM57 94l3 25 7-22Z"/>
+      <g class="calibration-ring calibration-ring-middle">
+        <circle cx="60" cy="60" r="31" pathLength="100"/>
       </g>
-      <g class="astronaut-pack">
-        <path class="astronaut-pack-shell" d="M17 45c0-7 4-11 10-11h15v58H27c-6 0-10-4-10-11Z"/>
-        <path class="astronaut-pack-panel" d="M20 45h18v13H20zm0 18h18v21H20z"/>
+      <g class="calibration-ring calibration-ring-inner">
+        <circle cx="60" cy="60" r="19" pathLength="100"/>
       </g>
-      <g class="astronaut-body">
-        <path class="astronaut-suit" d="M35 43c5-5 19-5 25 1 5 9 7 25 4 43-8 8-24 8-32 0-3-18-1-34 3-44Z"/>
-        <path class="astronaut-shadow" d="M53 42c8 9 8 33 3 50 4-1 7-3 9-6 3-17 1-34-5-42-2-2-4-2-7-2Z"/>
-        <path class="astronaut-panel" d="M38 58h20v17H38z"/>
-        <path class="astronaut-detail" d="M41 62h5m3 0h6M41 67h14M47 75v13"/>
-        <path class="astronaut-accent" d="M58 51h5v11h-5z"/>
-      </g>
-      <g class="astronaut-helmet">
-        <path class="astronaut-suit" d="M28 27C28 12 37 3 49 3s21 9 21 24c0 9-4 16-9 21H37c-6-5-9-12-9-21Z"/>
-        <path class="astronaut-visor" d="M34 25c1-10 7-16 16-16 8 0 14 6 15 16 0 8-4 13-8 17H42c-5-4-8-9-8-17Z"/>
-        <path class="astronaut-visor-glint" d="M40 17c5-5 12-5 17-1"/>
-        <path class="astronaut-detail" d="M34 45h31"/>
-      </g>
-      <g class="astronaut-arm astronaut-arm-left">
-        <path class="astronaut-suit" d="M36 49c-7-1-11 2-14 8L10 74c-3 5-2 10 2 12 5 2 8 0 11-4l14-18Z"/>
-        <path class="astronaut-shadow" d="m15 72 9 6-3 6c-3 4-7 5-10 2-3-2-3-6 0-11Z"/>
-      </g>
-      <g class="astronaut-arm astronaut-arm-right">
-        <path class="astronaut-suit" d="M59 49c7-2 12 1 15 7l10 17c3 5 2 10-2 12-5 2-8 0-10-5L59 63Z"/>
-        <path class="astronaut-shadow" d="m73 75 10-5 3 6c2 5 0 9-4 10-4 1-7-1-9-5Z"/>
-      </g>
-      <g class="astronaut-leg astronaut-leg-left">
-        <path class="astronaut-suit" d="M34 84c-2 7-5 16-9 24-3 6-1 12 4 14 5 2 9-1 12-6l9-22-4-9Z"/>
-        <path class="astronaut-boot" d="M23 112c-3 6 0 12 6 13 5 1 9-2 11-8l-8-5Z"/>
-      </g>
-      <g class="astronaut-leg astronaut-leg-right">
-        <path class="astronaut-suit" d="M51 87c2 7 7 16 12 23 4 6 3 12-2 15-5 3-10 0-13-5L39 97l4-11Z"/>
-        <path class="astronaut-boot" d="M56 115c1 7 5 11 11 10 6-1 8-7 5-13l-9-2Z"/>
-      </g>
+      <path class="calibration-route" data-calibration-route d="M15 101L45 68L67 68L104 18"/>
+      <circle class="calibration-origin" cx="15" cy="101" r="2.2"/>
+      <circle class="calibration-progress" data-calibration-progress cx="15" cy="101" r="4"/>
     </svg>
   </div>
 
@@ -311,6 +272,6 @@
   <script src="cloudbase-config.js"></script>
   <script src="video-data.js?v=20260718-beam-2"></script>
   <script src="gallery-data.js?v=20260718-beam-2"></script>
-  <script src="script.js?v=20260718-stability-3"></script>
+  <script src="script.js?v=20260718-calibration-1"></script>
 </body>
 </html>
