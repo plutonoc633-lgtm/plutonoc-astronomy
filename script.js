@@ -22,7 +22,7 @@
 
   let frameRequested = false;
   let scrollDirty = true;
-  let lightDirty = true;
+  let layoutDirty = true;
   let filmSectionVisible = false;
   let archiveCanvas = null;
   let timecodeStart = performance.now();
@@ -36,10 +36,10 @@
   function runMainFrame(time) {
     frameRequested = false;
     let needsNext = false;
-    if (scrollDirty || lightDirty) {
-      updateScrollAndLight();
+    if (scrollDirty || layoutDirty) {
+      updateScrollExperience();
       scrollDirty = false;
-      lightDirty = false;
+      layoutDirty = false;
     }
     if (archiveCanvas?.frame(time)) needsNext = true;
     if (filmSectionVisible && !reducedMotion) {
@@ -180,8 +180,9 @@
     const config = categoryConfig[category];
     const destinations = {
       '#home': ['PLUTONOC', 'HOME', ''],
+      '#profile': ['PLUTONOC', '择日成星', ''],
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
-      '#records': ['ARCHIVE', 'PUBLIC RECORDS', ''],
+      '#records': ['DECLASSIFIED', '可公开的情报', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
       '#contact': ['PER ASPERA AD ASTRA', '循此苦旅 以达天际', '']
     };
@@ -250,13 +251,13 @@
       descentPanels.forEach(item => item.classList.toggle('is-active', item === panel));
       visualStageOverride = category;
       setVisualStage(category);
-      lightDirty = true;
       requestMainFrame();
     };
     panel.addEventListener('pointerenter', activate);
     panel.addEventListener('focus', activate);
     if (supportsHover && !reducedMotion) {
       panel.addEventListener('pointermove', event => {
+        activate();
         const bounds = panel.getBoundingClientRect();
         const x = clamp((event.clientX - bounds.left) / bounds.width * 100, 8, 92);
         const y = clamp((event.clientY - bounds.top) / bounds.height * 100, 8, 92);
@@ -290,73 +291,48 @@
     homeVideoObserver.observe(homeMotion);
   }
 
-  /* Broad viewport beam */
+  /* Scroll progress astronaut and finale */
   const header = $('[data-header]');
   const progressBar = $('[data-reading-progress]');
-  const lightSystem = $('[data-light-system]');
-  const lightBeams = [
-    $('[data-light-beam-wide]'),
-    $('[data-light-beam-inner]')
-  ];
-  let beamAnchors = [];
+  const scrollAstronaut = $('[data-scroll-astronaut]');
+  const arrival = $('#contact');
+  let astronautTilt = 0;
+  let previousScrollY = scrollY;
+  let astronautResetTimer = 0;
 
-  function rebuildLightPath() {
-    if (!lightSystem) return;
-    const width = innerWidth;
-    const height = innerHeight;
-    lightSystem.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    beamAnchors = [
-      descentSheet,
-      $('.gallery-toolbar'),
-      $('[data-canvas-stage]'),
-      $('#films .section-heading'),
-      $('#records .section-heading'),
-      $('#equipment .equipment-console'),
-      $('#contact .arrival-copy')
-    ].filter(Boolean).map(anchor => {
-      const rect = anchor.getBoundingClientRect();
-      return {
-        x: clamp(rect.left + rect.width / 2, width * .08, width * .92),
-        y: rect.top + scrollY + rect.height / 2
-      };
-    });
-    lightDirty = true;
-    requestMainFrame();
+  function updateArrivalProgress() {
+    if (!arrival) return;
+    if (reducedMotion) {
+      arrival.style.setProperty('--arrival-left', '0px');
+      arrival.style.setProperty('--arrival-right', '0px');
+      arrival.style.setProperty('--arrival-opacity', '1');
+      arrival.style.setProperty('--arrival-blur', '0px');
+      arrival.style.setProperty('--arrival-spacing', '-.045em');
+      return;
+    }
+    const bounds = arrival.getBoundingClientRect();
+    const progress = clamp((innerHeight * .86 - bounds.top) / Math.max(bounds.height * .72, 1), 0, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    arrival.style.setProperty('--arrival-left', `${(-42 * (1 - eased)).toFixed(2)}vw`);
+    arrival.style.setProperty('--arrival-right', `${(42 * (1 - eased)).toFixed(2)}vw`);
+    arrival.style.setProperty('--arrival-opacity', `${(.12 + eased * .88).toFixed(3)}`);
+    arrival.style.setProperty('--arrival-blur', `${(14 * (1 - eased)).toFixed(2)}px`);
+    arrival.style.setProperty('--arrival-spacing', `${(.02 - eased * .065).toFixed(3)}em`);
   }
 
-  function updateBeamGeometry(ratio) {
-    if (!lightSystem || !beamAnchors.length) return;
-    const width = innerWidth;
-    const height = innerHeight;
-    const documentFocus = scrollY + height * .52;
-    let before = beamAnchors[0];
-    let after = beamAnchors.at(-1);
-    for (let index = 0; index < beamAnchors.length; index += 1) {
-      if (beamAnchors[index].y <= documentFocus) before = beamAnchors[index];
-      if (beamAnchors[index].y >= documentFocus) { after = beamAnchors[index]; break; }
-    }
-    const span = Math.max(after.y - before.y, 1);
-    const local = clamp((documentFocus - before.y) / span, 0, 1);
-    const center = before.x + (after.x - before.x) * local;
-    let d;
-    if (ratio > .9) {
-      const horizonY = height * (.58 + (ratio - .9) * .35);
-      d = `M${(-width * .08).toFixed(1)} ${horizonY.toFixed(1)} C${(width * .26).toFixed(1)} ${(horizonY - 14).toFixed(1)} ${(width * .74).toFixed(1)} ${(horizonY + 14).toFixed(1)} ${(width * 1.08).toFixed(1)} ${horizonY.toFixed(1)}`;
-    } else {
-      const drift = (local - .5) * width * .12;
-      const topX = clamp(center - width * .15 + drift, -width * .05, width * 1.05);
-      const bottomX = clamp(center + width * .12 - drift, -width * .05, width * 1.05);
-      d = `M${topX.toFixed(1)} ${(-height * .18).toFixed(1)} C${(center - width * .08).toFixed(1)} ${(height * .22).toFixed(1)} ${(center + width * .08).toFixed(1)} ${(height * .72).toFixed(1)} ${bottomX.toFixed(1)} ${(height * 1.18).toFixed(1)}`;
-    }
-    lightBeams.forEach(beam => beam?.setAttribute('d', d));
-  }
-
-  function updateScrollAndLight() {
+  function updateScrollExperience() {
     const scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
     const ratio = clamp(scrollY / scrollable, 0, 1);
     if (progressBar) progressBar.style.transform = `scaleX(${ratio})`;
     header.classList.toggle('is-scrolled', scrollY > 20);
-    updateBeamGeometry(ratio);
+    if (scrollAstronaut) {
+      const height = scrollAstronaut.getBoundingClientRect().height || (isMobile ? 36 : 48);
+      const top = header.offsetHeight + 18;
+      const travel = Math.max(innerHeight - top - height - 18, 0);
+      scrollAstronaut.style.setProperty('--astronaut-y', `${(ratio * travel).toFixed(2)}px`);
+      scrollAstronaut.style.setProperty('--astronaut-tilt', reducedMotion ? '0deg' : `${astronautTilt.toFixed(2)}deg`);
+    }
+    updateArrivalProgress();
 
     let fallbackStage = 'deepsky';
     if (ratio >= .2) fallbackStage = 'sunmoon';
@@ -368,12 +344,21 @@
     setVisualStage(visualStageOverride || (worksVisible && archiveCanvas?.filter !== 'all' ? archiveCanvas.filter : fallbackStage));
   }
 
-  window.addEventListener('scroll', () => { scrollDirty = true; requestMainFrame(); }, { passive: true });
-  const layoutObserver = 'ResizeObserver' in window ? new ResizeObserver(() => { lightDirty = true; rebuildLightPath(); }) : null;
-  $$('[data-light-anchor], .gallery-toolbar').forEach(anchor => layoutObserver?.observe(anchor));
-  window.addEventListener('resize', () => { lightDirty = true; rebuildLightPath(); archiveCanvas?.resize(); }, { passive: true });
-  window.addEventListener('load', rebuildLightPath, { once: true });
-  document.fonts?.ready?.then(rebuildLightPath);
+  window.addEventListener('scroll', () => {
+    const delta = scrollY - previousScrollY;
+    previousScrollY = scrollY;
+    astronautTilt = reducedMotion ? 0 : clamp(delta * .12, -5, 5);
+    clearTimeout(astronautResetTimer);
+    astronautResetTimer = window.setTimeout(() => {
+      astronautTilt = 0;
+      scrollDirty = true;
+      requestMainFrame();
+    }, 120);
+    scrollDirty = true;
+    requestMainFrame();
+  }, { passive: true });
+  window.addEventListener('resize', () => { layoutDirty = true; archiveCanvas?.resize(); requestMainFrame(); }, { passive: true });
+  window.addEventListener('load', () => { layoutDirty = true; requestMainFrame(); }, { once: true });
 
   /* ImageBitmap LRU */
   class BitmapCache {
@@ -456,7 +441,8 @@
       this.opening = null;
       this.needsDraw = true;
       this.lastFrame = performance.now();
-      this.cache = new BitmapCache((isMobile ? 72 : 160) * 1024 * 1024);
+      this.cache = new BitmapCache((isMobile ? 48 : 160) * 1024 * 1024);
+      this.initialCamera = { x: 0, y: 0 };
       this.live = $('[data-canvas-live]');
       this.status = $('[data-canvas-status]');
       this.currentElement = $('.gallery-current');
@@ -479,7 +465,7 @@
     resize() {
       const bounds = this.canvas.getBoundingClientRect();
       if (!bounds.width || !bounds.height) return;
-      const dpr = Math.min(devicePixelRatio || 1, isMobile ? 1.35 : 1.75);
+      const dpr = Math.min(devicePixelRatio || 1, isMobile ? 1.2 : 1.75);
       this.width = bounds.width;
       this.height = bounds.height;
       this.dpr = dpr;
@@ -501,8 +487,8 @@
       this.velocity.y = 0;
       const apply = () => {
         this.layout();
-        this.camera.x = this.tile.width / 2;
-        this.camera.y = this.tile.height / 2;
+        this.camera.x = this.initialCamera.x;
+        this.camera.y = this.initialCamera.y;
         this.totalElement.textContent = pad(this.visibleWorks.length);
         this.currentElement.textContent = this.visibleWorks.length ? '01' : '00';
         this.status.textContent = `${normalized === 'all' ? '全部' : categoryLabel(normalized)} / ${this.visibleWorks.length}`;
@@ -521,20 +507,25 @@
 
     layout() {
       const realCount = Math.max(this.visibleWorks.length, 1);
-      const columns = 6;
+      const columns = isMobile ? 4 : 6;
       const gap = isMobile ? 18 : 32;
-      const columnWidth = clamp(this.width / (isMobile ? 2.55 : 6.9), isMobile ? 118 : 176, isMobile ? 154 : 238);
+      const columnWidth = clamp(
+        (this.width - gap * (columns + 1)) / columns,
+        isMobile ? 104 : 150,
+        isMobile ? 170 : 290
+      );
       const displayCount = Math.max(24, Math.ceil(realCount / columns) * columns);
       const skyline = Array(columns).fill(gap);
-      const slots = Array.from({ length: displayCount }, (_, slotIndex) => ({
-        work: this.visibleWorks[slotIndex % realCount],
-        index: slotIndex % realCount,
-        slotIndex,
-        clone: slotIndex >= realCount
-      }));
-
       this.tile.width = gap * (columns + 1) + columnWidth * columns;
-      this.nodes = slots.map(slot => {
+      this.nodes = [];
+
+      const addSlot = slotIndex => {
+        const slot = {
+          work: this.visibleWorks[slotIndex % realCount],
+          index: slotIndex % realCount,
+          slotIndex,
+          clone: slotIndex >= realCount
+        };
         const aspect = clamp(slot.work.width / Math.max(slot.work.height, 1), .38, 3.4);
         const span = aspect >= 2.15 ? 3 : aspect >= .92 ? 2 : 1;
         let bestColumn = 0;
@@ -551,9 +542,24 @@
         const y = bestTop + height / 2;
         const nextTop = bestTop + height + gap;
         for (let column = bestColumn; column < bestColumn + span; column += 1) skyline[column] = nextTop;
-        return { ...slot, x, y, width, height, featured: false };
-      });
-      this.tile.height = Math.max(this.height * 1.45, Math.max(...skyline) + gap);
+        this.nodes.push({ ...slot, x, y, width, height, featured: false });
+      };
+
+      let slotIndex = 0;
+      const minimumFillHeight = this.height + gap * 2;
+      const safetyLimit = displayCount + columns * 24;
+      while ((slotIndex < displayCount || Math.min(...skyline) < minimumFillHeight) && slotIndex < safetyLimit) {
+        addSlot(slotIndex);
+        slotIndex += 1;
+      }
+
+      const left = Math.min(...this.nodes.map(node => node.x - node.width / 2));
+      const right = Math.max(...this.nodes.map(node => node.x + node.width / 2));
+      const top = Math.min(...this.nodes.map(node => node.y - node.height / 2));
+      const bottom = Math.max(...this.nodes.map(node => node.y + node.height / 2));
+      this.tile.height = bottom + gap;
+      this.initialCamera.x = mod((left + right) / 2, this.tile.width);
+      this.initialCamera.y = mod((top + bottom) / 2, this.tile.height);
     }
 
     requestDraw() {
@@ -579,8 +585,9 @@
       if (!this.opening && !this.pointer?.dragging && moving && !reducedMotion) {
         this.camera.x = mod(this.camera.x + this.velocity.x * delta, this.tile.width);
         this.camera.y = mod(this.camera.y + this.velocity.y * delta, this.tile.height);
-        this.velocity.x *= Math.pow(.925, delta);
-        this.velocity.y *= Math.pow(.925, delta);
+        const damping = isMobile ? .875 : .925;
+        this.velocity.x *= Math.pow(damping, delta);
+        this.velocity.y *= Math.pow(damping, delta);
         this.needsDraw = true;
       } else if (reducedMotion || !moving) {
         this.velocity.x = 0;
@@ -599,9 +606,11 @@
       const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
       const openingProgress = this.opening ? 1 - Math.pow(1 - (this.opening.progress || 0), 3) : 0;
 
+      const repeatX = Math.ceil(this.width / Math.max(this.tile.width, 1)) + 1;
+      const repeatY = Math.ceil(this.height / Math.max(this.tile.height, 1)) + 1;
       for (const node of this.nodes) {
-        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
-          for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+        for (let offsetX = -repeatX; offsetX <= repeatX; offsetX += 1) {
+          for (let offsetY = -repeatY; offsetY <= repeatY; offsetY += 1) {
             let x = node.x - this.camera.x + this.width / 2 + offsetX * this.tile.width;
             let y = node.y - this.camera.y + this.height / 2 + offsetY * this.tile.height;
             if (x + node.width / 2 < -80 || x - node.width / 2 > this.width + 80 || y + node.height / 2 < -80 || y - node.height / 2 > this.height + 80) continue;
@@ -754,8 +763,8 @@
       }
       const totalX = event.clientX - this.pointer.startX;
       const totalY = event.clientY - this.pointer.startY;
-      if (!this.pointer.dragging && !this.pointer.verticalPageGesture && Math.hypot(totalX, totalY) > 8) {
-        if (event.pointerType === 'touch' && Math.abs(totalY) > Math.abs(totalX) * 1.2) {
+      if (!this.pointer.dragging && !this.pointer.verticalPageGesture && Math.hypot(totalX, totalY) > 10) {
+        if (event.pointerType === 'touch' && Math.abs(totalY) > Math.abs(totalX) * 1.25) {
           this.pointer.verticalPageGesture = true;
           return;
         }
@@ -966,9 +975,20 @@
   });
 
   const equipmentTrack = $('[data-equipment-track]');
-  const equipmentItems = $$('figure', equipmentTrack);
+  const equipmentOriginals = $$('figure', equipmentTrack);
   const equipmentPosition = $('[data-equipment-position]');
-  let equipmentIndex = 0;
+  if (equipmentTrack && equipmentOriginals.length > 1) {
+    const beforeClone = equipmentOriginals.at(-1).cloneNode(true);
+    const afterClone = equipmentOriginals[0].cloneNode(true);
+    beforeClone.setAttribute('aria-hidden', 'true');
+    afterClone.setAttribute('aria-hidden', 'true');
+    beforeClone.dataset.equipmentClone = 'before';
+    afterClone.dataset.equipmentClone = 'after';
+    equipmentTrack.prepend(beforeClone);
+    equipmentTrack.append(afterClone);
+  }
+  const equipmentItems = $$('figure', equipmentTrack);
+  let equipmentIndex = equipmentOriginals.length > 1 ? 1 : 0;
   let equipmentPointer = null;
   let equipmentWheelLocked = false;
 
@@ -978,17 +998,43 @@
     return equipmentItems[0].getBoundingClientRect().width + (parseFloat(style.gap) || 0);
   }
 
-  function updateEquipmentTrack(extra = 0) {
-    const offset = -equipmentIndex * equipmentStep() + extra;
+  function equipmentLogicalIndex() {
+    if (equipmentOriginals.length <= 1) return 0;
+    return mod(equipmentIndex - 1, equipmentOriginals.length);
+  }
+
+  function updateEquipmentTrack(extra = 0, instant = false) {
+    const media = equipmentTrack?.parentElement;
+    const itemWidth = equipmentItems[0]?.getBoundingClientRect().width || 0;
+    const paddingLeft = media ? (parseFloat(getComputedStyle(media).paddingLeft) || 0) : 0;
+    const centerOffset = (media?.clientWidth || 0) / 2 - paddingLeft - itemWidth / 2;
+    const offset = centerOffset - equipmentIndex * equipmentStep() + extra;
+    equipmentTrack?.classList.toggle('is-jumping', instant);
     equipmentTrack?.style.setProperty('--equipment-offset', `${offset}px`);
-    if (equipmentPosition) equipmentPosition.textContent = `${pad(equipmentIndex + 1)} / ${pad(equipmentItems.length)}`;
+    equipmentItems.forEach((item, index) => {
+      item.classList.toggle('is-center', index === equipmentIndex);
+      item.classList.toggle('is-neighbor', Math.abs(index - equipmentIndex) === 1);
+    });
+    if (equipmentPosition) equipmentPosition.textContent = `${pad(equipmentLogicalIndex() + 1)} / ${pad(equipmentOriginals.length)}`;
+    if (instant) requestAnimationFrame(() => equipmentTrack?.classList.remove('is-jumping'));
   }
 
   function moveEquipment(direction) {
-    if (!equipmentItems.length) return;
-    equipmentIndex = clamp(equipmentIndex + direction, 0, equipmentItems.length - 1);
+    if (!equipmentOriginals.length) return;
+    equipmentIndex += direction;
     updateEquipmentTrack();
   }
+
+  equipmentTrack?.addEventListener('transitionend', event => {
+    if (event.propertyName !== 'transform' || equipmentOriginals.length <= 1) return;
+    if (equipmentIndex === 0) {
+      equipmentIndex = equipmentOriginals.length;
+      updateEquipmentTrack(0, true);
+    } else if (equipmentIndex === equipmentOriginals.length + 1) {
+      equipmentIndex = 1;
+      updateEquipmentTrack(0, true);
+    }
+  });
 
   equipmentTrack?.addEventListener('pointerdown', event => {
     equipmentPointer = { id: event.pointerId, x: event.clientX, delta: 0 };
@@ -1018,15 +1064,13 @@
   }, { passive: false });
   $('[data-equipment-prev]')?.addEventListener('click', () => moveEquipment(-1));
   $('[data-equipment-next]')?.addEventListener('click', () => moveEquipment(1));
-  window.addEventListener('resize', updateEquipmentTrack, { passive: true });
-  updateEquipmentTrack();
+  window.addEventListener('resize', () => updateEquipmentTrack(0, true), { passive: true });
+  updateEquipmentTrack(0, true);
 
-  /* Arrival and film visibility */
-  const arrival = $('#contact');
+  /* Film visibility */
   if ('IntersectionObserver' in window) {
     const atmosphereObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
-        if (entry.target === arrival) entry.target.classList.toggle('is-in-view', entry.isIntersecting);
         if (entry.target.id === 'films') {
           filmSectionVisible = entry.isIntersecting;
           if (filmSectionVisible) { timecodeStart = performance.now(); requestMainFrame(); }
@@ -1034,9 +1078,8 @@
         }
       });
     }, { threshold: .18 });
-    if (arrival) atmosphereObserver.observe(arrival);
     atmosphereObserver.observe($('#films'));
-  } else arrival?.classList.add('is-in-view');
+  }
 
   /* Video archive */
   const videoDialog = $('[data-video-dialog]');
@@ -1171,5 +1214,4 @@
 
   setVisualStage('deepsky');
   requestMainFrame();
-  rebuildLightPath();
 })();
