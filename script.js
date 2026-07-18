@@ -179,15 +179,15 @@
   function updateCurtain(category, hash) {
     const config = categoryConfig[category];
     const destinations = {
-      '#home': ['THE DESCENT OF LIGHT', 'HOME', 'BEGIN'],
-      '#films': ['LIGHT ENTERS TIME', 'MOTION', '00:06'],
-      '#records': ['LIGHT BECOMES RECORD', 'ARCHIVE', 'PUBLIC RECORDS'],
-      '#equipment': ['LIGHT MEETS OPTICS', 'EQUIPMENT', 'SYSTEMS'],
-      '#contact': ['THE LIGHT ARRIVED HERE', 'ARRIVAL', 'PER ASPERA AD ASTRA']
+      '#home': ['PLUTONOC', 'HOME', ''],
+      '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
+      '#records': ['ARCHIVE', 'PUBLIC RECORDS', ''],
+      '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
+      '#contact': ['PER ASPERA AD ASTRA', '循此苦旅 以达天际', '']
     };
     const copy = category
       ? ['ARCHIVE OPENED', config?.english || 'ARCHIVE', `${categoryCounts[category] || allWorks.length} OBSERVATIONS`]
-      : destinations[hash] || ['THE DESCENT OF LIGHT', 'PLUTONOC', ''];
+      : destinations[hash] || ['PLUTONOC', 'ARCHIVE', ''];
     $('[data-curtain-kicker]').textContent = copy[0];
     $('[data-curtain-category]').textContent = copy[1];
     $('[data-curtain-count]').textContent = copy[2];
@@ -258,10 +258,10 @@
     if (supportsHover && !reducedMotion) {
       panel.addEventListener('pointermove', event => {
         const bounds = panel.getBoundingClientRect();
-        const x = ((event.clientX - bounds.left) / bounds.width - .5) * -10;
-        const y = ((event.clientY - bounds.top) / bounds.height - .5) * -7;
-        panel.style.setProperty('--parallax-x', `${x}px`);
-        panel.style.setProperty('--parallax-y', `${y}px`);
+        const x = clamp((event.clientX - bounds.left) / bounds.width * 100, 8, 92);
+        const y = clamp((event.clientY - bounds.top) / bounds.height * 100, 8, 92);
+        panel.style.setProperty('--zoom-x', `${x}%`);
+        panel.style.setProperty('--zoom-y', `${y}%`);
       });
     }
   });
@@ -290,71 +290,73 @@
     homeVideoObserver.observe(homeMotion);
   }
 
-  /* Main light path */
+  /* Broad viewport beam */
   const header = $('[data-header]');
   const progressBar = $('[data-reading-progress]');
   const lightSystem = $('[data-light-system]');
-  const lightPaths = [
-    $('[data-light-path-outer]'),
-    $('[data-light-path-glow]'),
-    $('[data-light-path-core]')
+  const lightBeams = [
+    $('[data-light-beam-wide]'),
+    $('[data-light-beam-inner]')
   ];
-  const lightTraveller = $('[data-light-traveller]');
-  let lightLength = 1;
+  let beamAnchors = [];
 
   function rebuildLightPath() {
     if (!lightSystem) return;
     const width = innerWidth;
     const height = innerHeight;
-    const docHeight = Math.max(document.documentElement.scrollHeight, height + 1);
     lightSystem.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    const anchors = [
-      $('.hero-title'),
-      ...descentPanels,
-      ...$$('.gallery-filters [data-filter]:not([data-filter="all"])'),
+    beamAnchors = [
+      descentSheet,
+      $('.gallery-toolbar'),
+      $('[data-canvas-stage]'),
       $('#films .section-heading'),
       $('#records .section-heading'),
       $('#equipment .equipment-console'),
       $('#contact .arrival-copy')
     ].filter(Boolean).map(anchor => {
       const rect = anchor.getBoundingClientRect();
-      const documentTop = rect.top + scrollY + rect.height / 2;
       return {
         x: clamp(rect.left + rect.width / 2, width * .08, width * .92),
-        y: 38 + (documentTop / docHeight) * (height - 88)
+        y: rect.top + scrollY + rect.height / 2
       };
-    });
-    if (!anchors.length) return;
-    const points = [{ x: width * .5, y: -20 }, ...anchors, { x: width * .08, y: height - 32 }, { x: width * .92, y: height - 32 }];
-    let d = `M${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
-    for (let index = 1; index < points.length; index += 1) {
-      const previous = points[index - 1];
-      const point = points[index];
-      const midpoint = (previous.y + point.y) / 2;
-      d += ` C${previous.x.toFixed(1)} ${midpoint.toFixed(1)} ${point.x.toFixed(1)} ${midpoint.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
-    }
-    lightPaths.forEach(path => path?.setAttribute('d', d));
-    lightLength = lightPaths[2]?.getTotalLength?.() || 1;
-    lightPaths.forEach(path => {
-      path.style.strokeDasharray = `${lightLength}`;
-      path.style.strokeDashoffset = `${lightLength}`;
     });
     lightDirty = true;
     requestMainFrame();
   }
 
+  function updateBeamGeometry(ratio) {
+    if (!lightSystem || !beamAnchors.length) return;
+    const width = innerWidth;
+    const height = innerHeight;
+    const documentFocus = scrollY + height * .52;
+    let before = beamAnchors[0];
+    let after = beamAnchors.at(-1);
+    for (let index = 0; index < beamAnchors.length; index += 1) {
+      if (beamAnchors[index].y <= documentFocus) before = beamAnchors[index];
+      if (beamAnchors[index].y >= documentFocus) { after = beamAnchors[index]; break; }
+    }
+    const span = Math.max(after.y - before.y, 1);
+    const local = clamp((documentFocus - before.y) / span, 0, 1);
+    const center = before.x + (after.x - before.x) * local;
+    let d;
+    if (ratio > .9) {
+      const horizonY = height * (.58 + (ratio - .9) * .35);
+      d = `M${(-width * .08).toFixed(1)} ${horizonY.toFixed(1)} C${(width * .26).toFixed(1)} ${(horizonY - 14).toFixed(1)} ${(width * .74).toFixed(1)} ${(horizonY + 14).toFixed(1)} ${(width * 1.08).toFixed(1)} ${horizonY.toFixed(1)}`;
+    } else {
+      const drift = (local - .5) * width * .12;
+      const topX = clamp(center - width * .15 + drift, -width * .05, width * 1.05);
+      const bottomX = clamp(center + width * .12 - drift, -width * .05, width * 1.05);
+      d = `M${topX.toFixed(1)} ${(-height * .18).toFixed(1)} C${(center - width * .08).toFixed(1)} ${(height * .22).toFixed(1)} ${(center + width * .08).toFixed(1)} ${(height * .72).toFixed(1)} ${bottomX.toFixed(1)} ${(height * 1.18).toFixed(1)}`;
+    }
+    lightBeams.forEach(beam => beam?.setAttribute('d', d));
+  }
+
   function updateScrollAndLight() {
     const scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
     const ratio = clamp(scrollY / scrollable, 0, 1);
-    progressBar.style.transform = `scaleX(${ratio})`;
+    if (progressBar) progressBar.style.transform = `scaleX(${ratio})`;
     header.classList.toggle('is-scrolled', scrollY > 20);
-    const drawn = lightLength * ratio;
-    lightPaths.forEach(path => { path.style.strokeDashoffset = String(lightLength - drawn); });
-    if (!reducedMotion && lightPaths[2] && lightTraveller) {
-      const point = lightPaths[2].getPointAtLength(clamp(drawn, 0, lightLength));
-      lightTraveller.setAttribute('cx', point.x);
-      lightTraveller.setAttribute('cy', point.y);
-    }
+    updateBeamGeometry(ratio);
 
     let fallbackStage = 'deepsky';
     if (ratio >= .2) fallbackStage = 'sunmoon';
@@ -438,7 +440,7 @@
   class InfiniteArchiveCanvas {
     constructor(canvas, works) {
       this.canvas = canvas;
-      this.context = canvas.getContext('2d', { alpha: false, desynchronized: true });
+      this.context = canvas.getContext('2d', { alpha: true, desynchronized: true });
       this.allWorks = works;
       this.visibleWorks = works;
       this.filter = 'all';
@@ -451,6 +453,7 @@
       this.hovered = null;
       this.focusedIndex = 0;
       this.dragged = false;
+      this.opening = null;
       this.needsDraw = true;
       this.lastFrame = performance.now();
       this.cache = new BitmapCache((isMobile ? 72 : 160) * 1024 * 1024);
@@ -493,6 +496,7 @@
       this.filter = normalized;
       this.visibleWorks = normalized === 'all' ? [...this.allWorks] : this.allWorks.filter(work => work.category === normalized);
       this.focusedIndex = 0;
+      this.opening = null;
       this.velocity.x = 0;
       this.velocity.y = 0;
       const apply = () => {
@@ -516,45 +520,40 @@
     }
 
     layout() {
-      const count = Math.max(this.visibleWorks.length, 1);
-      const preset = {
-        all: { spacingX: 350, spacingY: 285, jitter: 130, density: 1 },
-        deepsky: { spacingX: 430, spacingY: 350, jitter: 170, density: 1.22 },
-        sunmoon: { spacingX: 390, spacingY: 315, jitter: 95, density: 1.08 },
-        planet: { spacingX: 520, spacingY: 390, jitter: 80, density: 1.3 },
-        nightscape: { spacingX: 430, spacingY: 300, jitter: 100, density: 1.08 },
-        earth: { spacingX: 330, spacingY: 260, jitter: 105, density: .92 }
-      }[this.filter] || null;
-      const columns = Math.max(3, Math.ceil(Math.sqrt(count * 1.45)));
-      const rows = Math.max(2, Math.ceil(count / columns));
-      this.tile.width = Math.max(this.width * 2.2, columns * preset.spacingX * preset.density);
-      this.tile.height = Math.max(this.height * 2.2, rows * preset.spacingY * preset.density);
-      this.nodes = this.visibleWorks.map((work, index) => {
-        const column = index % columns;
-        const row = Math.floor(index / columns);
-        const randomX = hashNumber(`${work.id}-x`) - .5;
-        const randomY = hashNumber(`${work.id}-y`) - .5;
-        let x = (column + .5) * this.tile.width / columns + randomX * preset.jitter;
-        let y = (row + .5) * this.tile.height / rows + randomY * preset.jitter;
-        if (this.filter === 'sunmoon') y += Math.sin((x / this.tile.width) * Math.PI * 2) * 110;
-        if (this.filter === 'planet') {
-          const angle = index / count * Math.PI * 2 + randomX;
-          x = this.tile.width / 2 + Math.cos(angle) * this.tile.width * .31;
-          y = this.tile.height / 2 + Math.sin(angle) * this.tile.height * .28;
+      const realCount = Math.max(this.visibleWorks.length, 1);
+      const columns = 6;
+      const gap = isMobile ? 18 : 32;
+      const columnWidth = clamp(this.width / (isMobile ? 2.55 : 6.9), isMobile ? 118 : 176, isMobile ? 154 : 238);
+      const displayCount = Math.max(24, Math.ceil(realCount / columns) * columns);
+      const skyline = Array(columns).fill(gap);
+      const slots = Array.from({ length: displayCount }, (_, slotIndex) => ({
+        work: this.visibleWorks[slotIndex % realCount],
+        index: slotIndex % realCount,
+        slotIndex,
+        clone: slotIndex >= realCount
+      }));
+
+      this.tile.width = gap * (columns + 1) + columnWidth * columns;
+      this.nodes = slots.map(slot => {
+        const aspect = clamp(slot.work.width / Math.max(slot.work.height, 1), .38, 3.4);
+        const span = aspect >= 2.15 ? 3 : aspect >= .92 ? 2 : 1;
+        let bestColumn = 0;
+        let bestTop = Infinity;
+        const startOffset = slot.slotIndex % columns;
+        for (let offset = 0; offset <= columns - span; offset += 1) {
+          const column = (offset + startOffset) % (columns - span + 1);
+          const top = Math.max(...skyline.slice(column, column + span));
+          if (top < bestTop) { bestTop = top; bestColumn = column; }
         }
-        if (this.filter === 'nightscape') y = (row + .58) * this.tile.height / rows + randomY * 45;
-        const rotated = Math.abs(work.previewRotation || 0) % 180 === 90;
-        const sourceWidth = rotated ? work.height : work.width;
-        const sourceHeight = rotated ? work.width : work.height;
-        const aspect = clamp(sourceWidth / Math.max(sourceHeight, 1), .45, 2.8);
-        const featured = Boolean(work.featured);
-        let width = featured ? clamp(this.width * .39, 340, 570) : 190 + hashNumber(`${work.id}-size`) * 115;
-        if (this.filter === 'earth') width *= .93;
-        let height = width / aspect;
-        if (height > 430) { height = 430; width = height * aspect; }
-        if (height < 135) { height = 135; width = height * aspect; }
-        return { work, index, x: mod(x, this.tile.width), y: mod(y, this.tile.height), width, height, featured };
+        const width = columnWidth * span + gap * (span - 1);
+        const height = width / aspect;
+        const x = gap + bestColumn * (columnWidth + gap) + width / 2;
+        const y = bestTop + height / 2;
+        const nextTop = bestTop + height + gap;
+        for (let column = bestColumn; column < bestColumn + span; column += 1) skyline[column] = nextTop;
+        return { ...slot, x, y, width, height, featured: false };
       });
+      this.tile.height = Math.max(this.height * 1.45, Math.max(...skyline) + gap);
     }
 
     requestDraw() {
@@ -566,7 +565,18 @@
       const delta = Math.min((time - this.lastFrame) / 16.667, 2);
       this.lastFrame = time;
       const moving = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04;
-      if (!this.pointer?.dragging && moving && !reducedMotion) {
+      let openingActive = false;
+      if (this.opening && !this.opening.dialogOpened) {
+        const progress = clamp((time - this.opening.started) / this.opening.duration, 0, 1);
+        this.opening.progress = progress;
+        this.needsDraw = true;
+        openingActive = progress < 1;
+        if (progress >= 1) {
+          this.opening.dialogOpened = true;
+          openPhoto(this.opening.node.index);
+        }
+      }
+      if (!this.opening && !this.pointer?.dragging && moving && !reducedMotion) {
         this.camera.x = mod(this.camera.x + this.velocity.x * delta, this.tile.width);
         this.camera.y = mod(this.camera.y + this.velocity.y * delta, this.tile.height);
         this.velocity.x *= Math.pow(.925, delta);
@@ -577,58 +587,62 @@
         this.velocity.y = 0;
       }
       if (this.needsDraw) this.draw();
-      return !this.pointer?.dragging && (Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04);
+      return openingActive || (!this.pointer?.dragging && (Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04));
     }
 
     draw() {
       this.needsDraw = false;
       const context = this.context;
       context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      context.fillStyle = '#020305';
-      context.fillRect(0, 0, this.width, this.height);
+      context.clearRect(0, 0, this.width, this.height);
       this.rendered = [];
       const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
+      const openingProgress = this.opening ? 1 - Math.pow(1 - (this.opening.progress || 0), 3) : 0;
 
-      if (slow && this.nodes.length < 70) this.drawConnections(context);
       for (const node of this.nodes) {
         for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
           for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
-            const x = node.x - this.camera.x + this.width / 2 + offsetX * this.tile.width;
-            const y = node.y - this.camera.y + this.height / 2 + offsetY * this.tile.height;
+            let x = node.x - this.camera.x + this.width / 2 + offsetX * this.tile.width;
+            let y = node.y - this.camera.y + this.height / 2 + offsetY * this.tile.height;
             if (x + node.width / 2 < -80 || x - node.width / 2 > this.width + 80 || y + node.height / 2 < -80 || y - node.height / 2 > this.height + 80) continue;
-            this.drawNode(context, node, x, y, slow);
+            let opacity = 1;
+            let emphasis = 1;
+            if (this.opening) {
+              const selected = node === this.opening.node
+                && Math.abs(x - this.opening.originX) < 2
+                && Math.abs(y - this.opening.originY) < 2;
+              if (!selected) opacity = 1 - openingProgress;
+              else {
+                const targetScale = clamp(Math.min(this.width * .68 / node.width, this.height * .68 / node.height), 1.08, 1.7);
+                x += (this.width / 2 - x) * openingProgress;
+                y += (this.height / 2 - y) * openingProgress;
+                emphasis = 1 + (targetScale - 1) * openingProgress;
+              }
+            }
+            if (opacity > .01) this.drawNode(context, node, x, y, slow, opacity, emphasis);
           }
         }
       }
     }
 
-    drawConnections(context) {
-      context.save();
-      context.strokeStyle = 'rgba(238,234,224,.055)';
-      context.lineWidth = 1;
-      context.setLineDash([2, 12]);
-      const visibleNodes = this.nodes.slice(0, Math.min(this.nodes.length, 32));
-      for (let index = 1; index < visibleNodes.length; index += 1) {
-        const previous = visibleNodes[index - 1];
-        const node = visibleNodes[index];
-        let x1 = previous.x - this.camera.x + this.width / 2;
-        let y1 = previous.y - this.camera.y + this.height / 2;
-        let x2 = node.x - this.camera.x + this.width / 2;
-        let y2 = node.y - this.camera.y + this.height / 2;
-        if (Math.abs(x2 - x1) > this.tile.width / 2) x2 += x2 < x1 ? this.tile.width : -this.tile.width;
-        if (Math.abs(y2 - y1) > this.tile.height / 2) y2 += y2 < y1 ? this.tile.height : -this.tile.height;
-        context.beginPath();
-        context.moveTo(x1, y1);
-        context.lineTo(x2, y2);
-        context.stroke();
+    roundedRect(context, x, y, width, height, radius) {
+      const safeRadius = Math.min(radius, width / 2, height / 2);
+      context.beginPath();
+      if (context.roundRect) context.roundRect(x, y, width, height, safeRadius);
+      else {
+        context.moveTo(x + safeRadius, y);
+        context.arcTo(x + width, y, x + width, y + height, safeRadius);
+        context.arcTo(x + width, y + height, x, y + height, safeRadius);
+        context.arcTo(x, y + height, x, y, safeRadius);
+        context.arcTo(x, y, x + width, y, safeRadius);
+        context.closePath();
       }
-      context.restore();
     }
 
-    drawNode(context, node, x, y, slow) {
+    drawNode(context, node, x, y, slow, opacity = 1, emphasis = 1) {
       const hovered = this.hovered?.node === node && Math.abs(this.hovered.x - x) < 2 && Math.abs(this.hovered.y - y) < 2;
       const focused = node.index === this.focusedIndex && document.activeElement === this.canvas;
-      const scale = hovered || focused ? 1.035 : 1;
+      const scale = (hovered || focused ? 1.035 : 1) * emphasis;
       const width = node.width * scale;
       const height = node.height * scale;
       const source = node.work.previewSrc || node.work.src;
@@ -637,19 +651,24 @@
 
       context.save();
       context.translate(x, y);
+      context.globalAlpha = opacity;
       if (hovered || focused) {
-        context.shadowColor = categoryConfig[node.work.category]?.color || '#eeeae0';
-        context.shadowBlur = 18;
+        context.shadowColor = 'rgba(0,0,0,.82)';
+        context.shadowBlur = 28;
+        context.shadowOffsetY = 12;
       }
       context.fillStyle = '#0a0c10';
-      context.fillRect(-width / 2, -height / 2, width, height);
+      this.roundedRect(context, -width / 2, -height / 2, width, height, 12);
+      context.fill();
+      context.shadowBlur = 0;
+      context.shadowOffsetY = 0;
+      context.save();
+      this.roundedRect(context, -width / 2, -height / 2, width, height, 12);
+      context.clip();
       if (bitmap) {
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = 'high';
-        if (node.work.previewRotation === 90) {
-          context.rotate(Math.PI / 2);
-          context.drawImage(bitmap, -height / 2, -width / 2, height, width);
-        } else context.drawImage(bitmap, -width / 2, -height / 2, width, height);
+        context.drawImage(bitmap, -width / 2, -height / 2, width, height);
       } else {
         const gradient = context.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
         gradient.addColorStop(0, '#0b0d11');
@@ -657,16 +676,14 @@
         context.fillStyle = gradient;
         context.fillRect(-width / 2, -height / 2, width, height);
       }
-      context.shadowBlur = 0;
-      context.strokeStyle = hovered || focused ? 'rgba(238,234,224,.58)' : 'rgba(238,234,224,.12)';
-      context.lineWidth = 1;
-      context.strokeRect(-width / 2, -height / 2, width, height);
+      context.restore();
       context.restore();
 
-      if (slow && (hovered || focused || node.featured)) {
+      if (!this.opening && slow && (hovered || focused)) {
         context.save();
+        context.globalAlpha = opacity;
         context.fillStyle = 'rgba(238,234,224,.92)';
-        context.font = `${node.featured ? 18 : 14}px "Source Han Sans CN", sans-serif`;
+        context.font = '14px "Source Han Sans CN", sans-serif';
         context.fillText(node.work.title, x - width / 2, y + height / 2 + 24);
         context.fillStyle = categoryConfig[node.work.category]?.color || '#8d9097';
         context.font = '9px "IBM Plex Sans", monospace';
@@ -682,6 +699,28 @@
         if (x >= item.x - item.width / 2 && x <= item.x + item.width / 2 && y >= item.y - item.height / 2 && y <= item.y + item.height / 2) return item;
       }
       return null;
+    }
+
+    startOpening(item) {
+      if (!item || this.opening) return;
+      this.focusedIndex = item.node.index;
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      this.hovered = null;
+      if (reducedMotion) {
+        openPhoto(item.node.index);
+        return;
+      }
+      this.opening = {
+        node: item.node,
+        originX: item.x,
+        originY: item.y,
+        started: performance.now(),
+        duration: 420,
+        progress: 0,
+        dialogOpened: false
+      };
+      this.requestDraw();
     }
 
     pointerDown(event) {
@@ -753,10 +792,7 @@
       this.pointer = null;
       if (event.type !== 'pointercancel' && !wasDragging && !wasPageGesture && !this.dragged) {
         const hit = this.hitTest(localX, localY);
-        if (hit) {
-          this.focusedIndex = hit.node.index;
-          openPhoto(hit.node.index);
-        }
+        if (hit) this.startOpening(hit);
       }
       if (reducedMotion) { this.velocity.x = 0; this.velocity.y = 0; }
       this.requestDraw();
@@ -767,23 +803,25 @@
       if (event.key === 'Escape') { this.canvas.blur(); return; }
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        openPhoto(this.focusedIndex);
+        const item = this.rendered.find(rendered => rendered.node.index === this.focusedIndex);
+        if (item) this.startOpening(item);
+        else openPhoto(this.focusedIndex);
         return;
       }
       event.preventDefault();
       const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
-      this.focusedIndex = mod(this.focusedIndex + direction, this.nodes.length);
+      this.focusedIndex = mod(this.focusedIndex + direction, this.visibleWorks.length);
       const node = this.nodes[this.focusedIndex];
       this.camera.x = mod(node.x, this.tile.width);
       this.camera.y = mod(node.y, this.tile.height);
       this.currentElement.textContent = pad(this.focusedIndex + 1);
-      this.live.textContent = `${node.work.title}，${categoryLabel(node.work.category)}，第 ${this.focusedIndex + 1} 张，共 ${this.nodes.length} 张`;
+      this.live.textContent = `${node.work.title}，${categoryLabel(node.work.category)}，第 ${this.focusedIndex + 1} 张，共 ${this.visibleWorks.length} 张`;
       this.requestDraw();
     }
 
     go(offset) {
       if (!this.nodes.length) return;
-      this.focusedIndex = mod(this.focusedIndex + offset, this.nodes.length);
+      this.focusedIndex = mod(this.focusedIndex + offset, this.visibleWorks.length);
       const node = this.nodes[this.focusedIndex];
       this.camera.x = mod(node.x, this.tile.width);
       this.camera.y = mod(node.y, this.tile.height);
@@ -887,6 +925,10 @@
   photoDialog?.addEventListener('close', () => {
     document.body.classList.remove('dialog-open');
     photoImage.removeAttribute('src');
+    if (archiveCanvas) {
+      archiveCanvas.opening = null;
+      archiveCanvas.requestDraw();
+    }
     photoReturnFocus?.focus?.();
   });
 
@@ -924,24 +966,60 @@
   });
 
   const equipmentTrack = $('[data-equipment-track]');
+  const equipmentItems = $$('figure', equipmentTrack);
+  const equipmentPosition = $('[data-equipment-position]');
+  let equipmentIndex = 0;
   let equipmentPointer = null;
+  let equipmentWheelLocked = false;
+
+  function equipmentStep() {
+    if (!equipmentItems.length) return 0;
+    const style = getComputedStyle(equipmentTrack);
+    return equipmentItems[0].getBoundingClientRect().width + (parseFloat(style.gap) || 0);
+  }
+
+  function updateEquipmentTrack(extra = 0) {
+    const offset = -equipmentIndex * equipmentStep() + extra;
+    equipmentTrack?.style.setProperty('--equipment-offset', `${offset}px`);
+    if (equipmentPosition) equipmentPosition.textContent = `${pad(equipmentIndex + 1)} / ${pad(equipmentItems.length)}`;
+  }
+
+  function moveEquipment(direction) {
+    if (!equipmentItems.length) return;
+    equipmentIndex = clamp(equipmentIndex + direction, 0, equipmentItems.length - 1);
+    updateEquipmentTrack();
+  }
+
   equipmentTrack?.addEventListener('pointerdown', event => {
-    equipmentPointer = { id: event.pointerId, x: event.clientX, scroll: equipmentTrack.scrollLeft };
+    equipmentPointer = { id: event.pointerId, x: event.clientX, delta: 0 };
+    equipmentTrack.classList.add('is-dragging');
     equipmentTrack.setPointerCapture?.(event.pointerId);
   });
   equipmentTrack?.addEventListener('pointermove', event => {
     if (!equipmentPointer || equipmentPointer.id !== event.pointerId) return;
-    equipmentTrack.scrollLeft = equipmentPointer.scroll - (event.clientX - equipmentPointer.x);
+    equipmentPointer.delta = event.clientX - equipmentPointer.x;
+    updateEquipmentTrack(equipmentPointer.delta);
   });
   ['pointerup', 'pointercancel'].forEach(type => equipmentTrack?.addEventListener(type, event => {
+    if (!equipmentPointer || equipmentPointer.id !== event.pointerId) return;
+    const delta = equipmentPointer.delta;
     if (equipmentTrack.hasPointerCapture?.(event.pointerId)) equipmentTrack.releasePointerCapture(event.pointerId);
+    equipmentTrack.classList.remove('is-dragging');
     equipmentPointer = null;
+    if (type !== 'pointercancel' && Math.abs(delta) > 45) moveEquipment(delta < 0 ? 1 : -1);
+    else updateEquipmentTrack();
   }));
   equipmentTrack?.addEventListener('wheel', event => {
-    if (!event.shiftKey && Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
     event.preventDefault();
-    equipmentTrack.scrollLeft += event.deltaX || event.deltaY;
+    if (equipmentWheelLocked) return;
+    equipmentWheelLocked = true;
+    moveEquipment((event.deltaX || event.deltaY) > 0 ? 1 : -1);
+    window.setTimeout(() => { equipmentWheelLocked = false; }, 280);
   }, { passive: false });
+  $('[data-equipment-prev]')?.addEventListener('click', () => moveEquipment(-1));
+  $('[data-equipment-next]')?.addEventListener('click', () => moveEquipment(1));
+  window.addEventListener('resize', updateEquipmentTrack, { passive: true });
+  updateEquipmentTrack();
 
   /* Arrival and film visibility */
   const arrival = $('#contact');

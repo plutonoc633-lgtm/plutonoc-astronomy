@@ -8,7 +8,7 @@
   <title>PlutonoC</title>
   <link rel="preload" href="assets/fonts/source-han-sans-cn-medium.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/source-han-serif-cn-vf.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=20260718-light-1">
+  <link rel="stylesheet" href="style.css?v=20260718-beam-5">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -20,9 +20,33 @@
     <div class="background-stage background-nightscape"></div>
     <div class="background-stage background-earth"></div>
     <svg class="background-drawing" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
-      <path class="celestial-grid" d="M-80 300C300 80 710 80 1120 270S1740 600 1650 850M-40 520C340 310 760 320 1190 540S1670 780 1720 930"/>
-      <path class="planet-limb" d="M1140-120A610 610 0 0 1 1740 520"/>
-      <path class="horizon-shape" d="M-100 860C170 760 350 830 560 770S920 720 1110 805 1420 790 1700 700V1100H-100Z"/>
+      <g class="background-art background-art-deepsky">
+        <path class="nebula-ribbon" d="M-120 790C210 520 280 130 650 165s410 380 690 270 320-40 450 90"/>
+        <path class="celestial-grid" d="M-80 250C310 40 720 70 1110 270s600 330 650 530M-40 520C350 290 760 320 1190 540s450 280 540 390"/>
+        <circle class="star star-a" cx="230" cy="210" r="3"/><circle class="star star-b" cx="510" cy="370" r="2"/><circle class="star star-c" cx="890" cy="150" r="4"/><circle class="star star-d" cx="1280" cy="360" r="2.5"/>
+      </g>
+      <g class="background-art background-art-sunmoon">
+        <circle class="lunar-disc" cx="1320" cy="420" r="390"/>
+        <path class="lunar-phase" d="M1320 30a390 390 0 0 0 0 780c-205-92-205-688 0-780Z"/>
+        <circle class="orbit orbit-a" cx="1320" cy="420" r="470"/><circle class="orbit orbit-b" cx="1320" cy="420" r="530"/>
+        <path class="observation-ticks" d="M805 420h110m810 0h110M1320-140V-30m0 900v110"/>
+      </g>
+      <g class="background-art background-art-planet">
+        <circle class="planet-disc" cx="310" cy="520" r="430"/>
+        <ellipse class="planet-ring" cx="310" cy="520" rx="690" ry="190" transform="rotate(-12 310 520)"/>
+        <path class="planet-atmosphere" d="M-80 840A430 430 0 0 0 620 150"/>
+        <path class="instrument-cross" d="M1190 170v300m-150-150h300M1160 510h60m-30-30v60"/>
+      </g>
+      <g class="background-art background-art-nightscape">
+        <path class="milky-way" d="M-120 50C260 90 420 350 650 510s500 250 1070 300"/>
+        <path class="ridge ridge-back" d="M-80 810l210-110 160 58 190-150 190 122 210-76 170 112 210-180 190 135 250-80v380H-80Z"/>
+        <path class="ridge ridge-front" d="M-80 900l240-95 190 65 230-110 270 150 210-90 170 55 250-125 250 100v170H-80Z"/>
+      </g>
+      <g class="background-art background-art-earth">
+        <path class="contour" d="M-90 260C190 90 480 160 690 320s420 180 650 10 390-70 500 80M-60 390c290-150 550-60 760 100s420 150 650 20 360-60 470 40M-30 520c260-110 500-10 700 120s430 130 680 30 320-40 450 20"/>
+        <path class="earth-road" d="M860 1040C820 850 910 720 1060 590s190-260 165-470"/>
+        <path class="horizon-shape" d="M-100 850C170 750 350 830 560 770s360-50 550 35 310-15 590-105v400H-100Z"/>
+      </g>
     </svg>
   </div>
 
@@ -35,17 +59,14 @@
         <stop offset=".74" stop-color="#f4f1e9"/>
         <stop offset="1" stop-color="#ddb477"/>
       </linearGradient>
-      <filter id="light-blur" x="-80%" y="-20%" width="260%" height="140%">
-        <feGaussianBlur stdDeviation="7"/>
+      <filter id="beam-blur-wide" x="-80%" y="-30%" width="260%" height="160%">
+        <feGaussianBlur stdDeviation="34"/>
       </filter>
+      <filter id="beam-blur-inner" x="-80%" y="-30%" width="260%" height="160%"><feGaussianBlur stdDeviation="13"/></filter>
     </defs>
-    <path class="light-path light-path-outer" data-light-path-outer/>
-    <path class="light-path light-path-glow" data-light-path-glow/>
-    <path class="light-path light-path-core" data-light-path-core/>
-    <circle class="light-traveller" data-light-traveller r="3.5"/>
+    <path class="light-beam light-beam-wide" data-light-beam-wide/>
+    <path class="light-beam light-beam-inner" data-light-beam-inner/>
   </svg>
-
-  <div class="reading-progress" aria-hidden="true"><i data-reading-progress></i></div>
 
   <header class="site-header" data-header data-light-anchor>
     <a class="brand" href="#home" data-transition-link aria-label="返回首页">PlutonoC</a>
@@ -58,7 +79,7 @@
   <aside class="site-index" id="site-index" role="dialog" aria-modal="true" aria-label="网站索引" aria-hidden="true">
     <button class="index-backdrop" type="button" data-index-close tabindex="-1" aria-label="关闭索引"></button>
     <div class="index-panel">
-      <div class="index-top"><span>THE DESCENT OF LIGHT</span><button type="button" data-index-close aria-label="关闭索引">关闭 <b>×</b></button></div>
+      <div class="index-top"><span>PLUTONOC / INDEX</span><button type="button" data-index-close aria-label="关闭索引">关闭 <b>×</b></button></div>
       <div class="index-body">
         <nav class="index-nav" aria-label="栏目索引">
           <a href="#home" data-index-link data-preview="assets/gallery/nightscape/nightscape-03.jpg"><span>01</span><b>首页</b><em>HOME</em></a>
@@ -70,7 +91,7 @@
           <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>07</span><b>动态影像</b><em>MOTION</em></a>
           <a href="#records" data-index-link data-preview="assets/gallery/planetary/planetary-04.jpg"><span>08</span><b>公开记录</b><em>ARCHIVE</em></a>
           <a href="#equipment" data-index-link data-preview="assets/equipment/previews/equipment-c925hd.webp"><span>09</span><b>设备</b><em>EQUIPMENT</em></a>
-          <a href="#contact" data-index-link data-preview="assets/gallery/earth/earth-007.jpg"><span>10</span><b>抵达</b><em>CONTACT</em></a>
+          <a href="#contact" data-index-link data-preview="assets/gallery/earth/earth-007.jpg"><span>10</span><b>结尾</b><em>FINALE</em></a>
         </nav>
         <figure class="index-preview" aria-hidden="true">
           <img src="assets/gallery/nightscape/nightscape-03.jpg" alt="">
@@ -87,49 +108,42 @@
 
   <main id="content">
     <section class="hero" id="home" data-section="01" data-section-name="首页" data-light-anchor>
-      <header class="hero-title">
-        <p>THE DESCENT OF LIGHT</p>
-        <h1>光的降落</h1>
-      </header>
       <nav class="descent-sheet" aria-label="摄影分类">
         <a class="descent-panel" href="#works" data-home-filter="deepsky" data-transition-link style="--panel-color:#9ec8ff">
           <img src="assets/gallery/hero/deepsky.webp" alt="猎户座星云与跑步者星云">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">01</span>
-          <span class="descent-panel-meta"><b>深空</b><i>DEEP SPACE</i><em data-category-count="deepsky">31</em><small>遥远天体与星云</small></span>
+          <span class="descent-panel-meta"><b>深空</b><i>DEEP SPACE</i><em data-category-count="deepsky">31</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="sunmoon" data-transition-link style="--panel-color:#e5edf4">
           <img src="assets/gallery/hero/sunmoon.webp" alt="月面部分地图">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">02</span>
-          <span class="descent-panel-meta"><b>日月</b><i>SUN &amp; MOON</i><em data-category-count="sunmoon">7</em><small>日光 月相与食象</small></span>
+          <span class="descent-panel-meta"><b>日月</b><i>SUN &amp; MOON</i><em data-category-count="sunmoon">7</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="planet" data-transition-link style="--panel-color:#edf0f2">
           <img src="assets/gallery/hero/planet.webp" alt="木星自转四小时">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">03</span>
-          <span class="descent-panel-meta"><b>行星</b><i>PLANETS</i><em data-category-count="planet">4</em><small>行星表面与运动</small></span>
+          <span class="descent-panel-meta"><b>行星</b><i>PLANETS</i><em data-category-count="planet">4</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="nightscape" data-transition-link style="--panel-color:#f4f1e9">
           <img src="assets/gallery/hero/nightscape.webp" alt="冬季银河接片带星云标识">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">04</span>
-          <span class="descent-panel-meta"><b>星野</b><i>NIGHTSCAPE</i><em data-category-count="nightscape">14</em><small>银河 流星与地平线</small></span>
+          <span class="descent-panel-meta"><b>星野</b><i>NIGHTSCAPE</i><em data-category-count="nightscape">14</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="earth" data-transition-link style="--panel-color:#ddb477">
           <img src="assets/gallery/hero/earth.webp" alt="云隐珠峰">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">05</span>
-          <span class="descent-panel-meta"><b>大地</b><i>EARTH</i><em data-category-count="earth">60</em><small>山川 城市与地面光影</small></span>
+          <span class="descent-panel-meta"><b>大地</b><i>EARTH</i><em data-category-count="earth">60</em></span>
         </a>
       </nav>
       <a class="motion-gateway" href="#films" data-transition-link>
         <video src="assets/videos/jupiter.mp4" poster="assets/videos/jupiter-poster.jpg" muted loop playsinline preload="metadata" data-home-motion aria-label="木星动态观测影像"></video>
-        <span><i>06</i><b>动态影像</b><em>MOTION / 光进入时间</em><small>00:06</small></span>
+        <span><i>06</i><b>动态影像</b><em>MOTION</em><small>00:06</small></span>
       </a>
-      <div class="identity-rail" aria-label="个人身份与拍摄方向">
-        <div><span>PlutonoC / 江南大学天见天文协会创始人</span><i>深空 / 日月 / 行星 / 星野 / 大地 / 动态影像</i><span aria-hidden="true">PlutonoC / 江南大学天见天文协会创始人</span><i aria-hidden="true">深空 / 日月 / 行星 / 星野 / 大地 / 动态影像</i></div>
-      </div>
     </section>
 
     <section class="works" id="works" data-section="02" data-section-name="摄影作品" data-light-anchor>
@@ -162,7 +176,7 @@
     </section>
 
     <section class="films" id="films" data-section="03" data-section-name="动态影像" data-light-anchor>
-      <header class="section-heading reveal"><p>MOTION / LIGHT ENTERS TIME</p><h2>动态影像</h2></header>
+      <header class="section-heading reveal"><p>MOTION / 00:06</p><h2>动态影像</h2></header>
       <div class="timecode" aria-hidden="true" data-timecode>00:00:00:00</div>
       <div class="film-feature reveal" data-film-feature aria-live="polite"></div>
       <div class="film-list" data-film-list aria-label="更多视频作品"></div>
@@ -170,7 +184,7 @@
     </section>
 
     <section class="records" id="records" data-section="04" data-section-name="公开记录" data-light-anchor>
-      <header class="section-heading reveal"><p>ARCHIVE / LIGHT BECOMES RECORD</p><h2>公开记录</h2></header>
+      <header class="section-heading reveal"><p>ARCHIVE</p><h2>公开记录</h2></header>
       <div class="archive-list reveal">
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>A1 星野相机赛道优秀奖《坠入地球的银河子民》</b><em>星耀山河 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B1 天体·日月行星赛道三等奖《月与血月》</b><em>星耀山河 ↗</em></a>
@@ -191,6 +205,11 @@
           <figure><img src="assets/equipment/previews/equipment-field-01.webp" alt="夜间观测现场" loading="lazy"><figcaption>观测现场</figcaption></figure>
           <figure><img src="assets/equipment/previews/equipment-field-02.webp" alt="观测现场与风机" loading="lazy"><figcaption>观测现场</figcaption></figure>
         </div>
+        <div class="equipment-controls">
+          <button type="button" data-equipment-prev aria-label="上一张设备照片">←</button>
+          <span data-equipment-position>01 / 04</span>
+          <button type="button" data-equipment-next aria-label="下一张设备照片">→</button>
+        </div>
       </div>
       <div class="equipment-console reveal">
         <header><p>EQUIPMENT</p><h2>设备</h2></header>
@@ -207,19 +226,17 @@
       </div>
     </section>
 
-    <section class="arrival" id="contact" data-section="06" data-section-name="抵达" data-light-anchor>
+    <section class="arrival" id="contact" data-section="06" data-section-name="结尾" data-light-anchor>
       <div class="arrival-horizon" aria-hidden="true"></div>
       <div class="arrival-copy reveal">
-        <p>THE LIGHT ARRIVED HERE.</p>
-        <h2>光最终抵达这里。</h2>
-        <strong>PLUTONOC</strong>
-        <span>ASTROPHOTOGRAPHY<br>PHOTOGRAPHY<br>MOTION</span>
+        <h2><span>循此苦旅</span><span>以达天际</span></h2>
+        <p>PER ASPERA AD ASTRA</p>
       </div>
       <div class="social-links reveal">
         <a href="https://space.bilibili.com/86671281" target="_blank" rel="noopener"><span>BILIBILI</span><b>PlutonoC ↗</b></a>
         <a href="https://v.douyin.com/pswzeVgv1D0/" target="_blank" rel="noopener"><span>抖音</span><b>PlutonoC ↗</b></a>
       </div>
-      <footer><span>© 2026 PLUTONOC</span><span>PER ASPERA AD ASTRA</span><a href="#home" data-transition-link>BACK TO TOP ↑</a></footer>
+      <footer><span>© 2026 PLUTONOC</span><span>ASTROPHOTOGRAPHY / PHOTOGRAPHY / MOTION</span><a href="#home" data-transition-link>BACK TO TOP ↑</a></footer>
     </section>
   </main>
 
@@ -246,8 +263,8 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js"></script>
-  <script src="video-data.js?v=20260718-light-1"></script>
-  <script src="gallery-data.js?v=20260718-light-1"></script>
-  <script src="script.js?v=20260718-light-1"></script>
+  <script src="video-data.js?v=20260718-beam-2"></script>
+  <script src="gallery-data.js?v=20260718-beam-2"></script>
+  <script src="script.js?v=20260718-beam-2"></script>
 </body>
 </html>
