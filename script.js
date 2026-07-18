@@ -180,7 +180,7 @@
     const config = categoryConfig[category];
     const destinations = {
       '#home': ['PLUTONOC', 'HOME', ''],
-      '#profile': ['PLUTONOC', '晓看天色暮看云', ''],
+      '#profile': ['PLUTONOC', '择日成星', ''],
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
       '#records': ['DECLASSIFIED', '可公开的情报', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
@@ -400,6 +400,7 @@
       this.budget = budget;
       this.bytes = 0;
       this.entries = new Map();
+      this.protectedSources = new Set();
     }
 
     get(source) {
@@ -435,9 +436,16 @@
       } else fallback();
     }
 
+    protect(sources) {
+      this.protectedSources = new Set(sources);
+      this.prune();
+    }
+
     prune() {
       if (this.bytes <= this.budget) return;
-      const removable = [...this.entries.entries()].filter(([, entry]) => entry.bitmap && !entry.pending).sort((a, b) => a[1].used - b[1].used);
+      const removable = [...this.entries.entries()]
+        .filter(([source, entry]) => entry.bitmap && !entry.pending && !this.protectedSources.has(source))
+        .sort((a, b) => a[1].used - b[1].used);
       for (const [source, entry] of removable) {
         if (this.bytes <= this.budget) break;
         entry.bitmap.close?.();
@@ -459,7 +467,7 @@
   class InfiniteArchiveCanvas {
     constructor(canvas, works) {
       this.canvas = canvas;
-      this.context = canvas.getContext('2d', { alpha: true, desynchronized: true });
+      this.context = canvas.getContext('2d', { alpha: true });
       this.allWorks = works;
       this.visibleWorks = works;
       this.filter = 'all';
@@ -475,7 +483,7 @@
       this.opening = null;
       this.needsDraw = true;
       this.lastFrame = performance.now();
-      this.cache = new BitmapCache((isMobile ? 48 : 160) * 1024 * 1024);
+      this.cache = new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024);
       this.initialCamera = { x: 0, y: 0 };
       this.live = $('[data-canvas-live]');
       this.status = $('[data-canvas-status]');
@@ -693,6 +701,7 @@
       context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       context.clearRect(0, 0, this.width, this.height);
       this.rendered = [];
+      this.frameSources = new Set();
       const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
       const openingProgress = this.opening ? 1 - Math.pow(1 - (this.opening.progress || 0), 3) : 0;
 
@@ -722,6 +731,7 @@
           }
         }
       }
+      this.cache.protect(this.frameSources);
     }
 
     roundedRect(context, x, y, width, height, radius) {
@@ -745,6 +755,7 @@
       const width = node.width * scale;
       const height = node.height * scale;
       const source = node.work.previewSrc || node.work.src;
+      this.frameSources.add(source);
       const bitmap = this.cache.get(source);
       if (!bitmap) this.cache.request(source);
 
