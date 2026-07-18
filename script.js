@@ -180,7 +180,7 @@
     const config = categoryConfig[category];
     const destinations = {
       '#home': ['PLUTONOC', 'HOME', ''],
-      '#profile': ['PLUTONOC', '择日成星', ''],
+      '#profile': ['PLUTONOC', '晓看天色暮看云', ''],
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
       '#records': ['DECLASSIFIED', '可公开的情报', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
@@ -249,6 +249,7 @@
     const category = panel.dataset.homeFilter;
     const activate = () => {
       descentPanels.forEach(item => item.classList.toggle('is-active', item === panel));
+      descentSheet?.classList.add('has-active');
       visualStageOverride = category;
       setVisualStage(category);
       requestMainFrame();
@@ -268,6 +269,15 @@
   });
   descentSheet?.addEventListener('pointerleave', () => {
     descentPanels.forEach(panel => panel.classList.remove('is-active'));
+    descentSheet.classList.remove('has-active');
+    visualStageOverride = null;
+    scrollDirty = true;
+    requestMainFrame();
+  });
+  descentSheet?.addEventListener('focusout', event => {
+    if (descentSheet.contains(event.relatedTarget)) return;
+    descentPanels.forEach(panel => panel.classList.remove('is-active'));
+    descentSheet.classList.remove('has-active');
     visualStageOverride = null;
     scrollDirty = true;
     requestMainFrame();
@@ -297,27 +307,38 @@
   const scrollAstronaut = $('[data-scroll-astronaut]');
   const arrival = $('#contact');
   let astronautTilt = 0;
+  let astronautMotion = 0;
+  let astronautThrust = 0;
   let previousScrollY = scrollY;
   let astronautResetTimer = 0;
 
   function updateArrivalProgress() {
     if (!arrival) return;
     if (reducedMotion) {
-      arrival.style.setProperty('--arrival-left', '0px');
-      arrival.style.setProperty('--arrival-right', '0px');
+      arrival.style.setProperty('--arrival-left-x', '12vw');
+      arrival.style.setProperty('--arrival-right-x', '-10vw');
+      arrival.style.setProperty('--arrival-left-y', '-3vh');
+      arrival.style.setProperty('--arrival-right-y', '6vh');
+      arrival.style.setProperty('--arrival-left-rotate', '1.2deg');
+      arrival.style.setProperty('--arrival-right-rotate', '-1deg');
       arrival.style.setProperty('--arrival-opacity', '1');
       arrival.style.setProperty('--arrival-blur', '0px');
       arrival.style.setProperty('--arrival-spacing', '-.045em');
+      arrival.classList.add('is-complete');
       return;
     }
     const bounds = arrival.getBoundingClientRect();
-    const progress = clamp((innerHeight * .86 - bounds.top) / Math.max(bounds.height * .72, 1), 0, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    arrival.style.setProperty('--arrival-left', `${(-42 * (1 - eased)).toFixed(2)}vw`);
-    arrival.style.setProperty('--arrival-right', `${(42 * (1 - eased)).toFixed(2)}vw`);
-    arrival.style.setProperty('--arrival-opacity', `${(.12 + eased * .88).toFixed(3)}`);
-    arrival.style.setProperty('--arrival-blur', `${(14 * (1 - eased)).toFixed(2)}px`);
-    arrival.style.setProperty('--arrival-spacing', `${(.02 - eased * .065).toFixed(3)}em`);
+    const progress = clamp((innerHeight * .9 - bounds.top) / Math.max(bounds.height * .84, 1), 0, 1);
+    arrival.style.setProperty('--arrival-left-x', `${(-54 + progress * 70).toFixed(2)}vw`);
+    arrival.style.setProperty('--arrival-right-x', `${(54 - progress * 66).toFixed(2)}vw`);
+    arrival.style.setProperty('--arrival-left-y', `${(-8 + progress * 5).toFixed(2)}vh`);
+    arrival.style.setProperty('--arrival-right-y', `${(8 - progress * 2).toFixed(2)}vh`);
+    arrival.style.setProperty('--arrival-left-rotate', `${(-4 + progress * 5.2).toFixed(2)}deg`);
+    arrival.style.setProperty('--arrival-right-rotate', `${(4 - progress * 5).toFixed(2)}deg`);
+    arrival.style.setProperty('--arrival-opacity', `${(.1 + progress * .9).toFixed(3)}`);
+    arrival.style.setProperty('--arrival-blur', `${(14 * (1 - progress)).toFixed(2)}px`);
+    arrival.style.setProperty('--arrival-spacing', `${(.02 - progress * .065).toFixed(3)}em`);
+    arrival.classList.toggle('is-complete', progress > .985);
   }
 
   function updateScrollExperience() {
@@ -331,6 +352,13 @@
       const travel = Math.max(innerHeight - top - height - 18, 0);
       scrollAstronaut.style.setProperty('--astronaut-y', `${(ratio * travel).toFixed(2)}px`);
       scrollAstronaut.style.setProperty('--astronaut-tilt', reducedMotion ? '0deg' : `${astronautTilt.toFixed(2)}deg`);
+      scrollAstronaut.style.setProperty('--astronaut-arm-left', reducedMotion ? '0deg' : `${(-astronautMotion * .82).toFixed(2)}deg`);
+      scrollAstronaut.style.setProperty('--astronaut-arm-right', reducedMotion ? '0deg' : `${(astronautMotion * .82).toFixed(2)}deg`);
+      scrollAstronaut.style.setProperty('--astronaut-leg-left', reducedMotion ? '0deg' : `${(astronautMotion * .55).toFixed(2)}deg`);
+      scrollAstronaut.style.setProperty('--astronaut-leg-right', reducedMotion ? '0deg' : `${(-astronautMotion * .55).toFixed(2)}deg`);
+      scrollAstronaut.style.setProperty('--astronaut-tether-x', reducedMotion ? '0px' : `${clamp(-astronautMotion * .2, -4, 4).toFixed(2)}px`);
+      scrollAstronaut.style.setProperty('--astronaut-tether-rotate', reducedMotion ? '0deg' : `${(-astronautMotion * .34).toFixed(2)}deg`);
+      scrollAstronaut.style.setProperty('--astronaut-thrust', reducedMotion ? '0' : astronautThrust.toFixed(3));
     }
     updateArrivalProgress();
 
@@ -347,10 +375,16 @@
   window.addEventListener('scroll', () => {
     const delta = scrollY - previousScrollY;
     previousScrollY = scrollY;
-    astronautTilt = reducedMotion ? 0 : clamp(delta * .12, -5, 5);
+    astronautTilt = reducedMotion ? 0 : clamp(delta * .16, -8, 8);
+    astronautMotion = reducedMotion ? 0 : clamp(delta * .34, -18, 18);
+    astronautThrust = reducedMotion ? 0 : clamp(Math.abs(delta) / 32, 0, 1);
+    scrollAstronaut?.classList.add('is-scrolling');
     clearTimeout(astronautResetTimer);
     astronautResetTimer = window.setTimeout(() => {
       astronautTilt = 0;
+      astronautMotion = 0;
+      astronautThrust = 0;
+      scrollAstronaut?.classList.remove('is-scrolling');
       scrollDirty = true;
       requestMainFrame();
     }, 120);
@@ -505,61 +539,117 @@
       }
     }
 
+    orderedWorks() {
+      const buckets = { landscape: [], portrait: [], square: [] };
+      this.visibleWorks.forEach((work, index) => {
+        const aspect = Number(work.width) > 0 && Number(work.height) > 0 ? work.width / work.height : 1;
+        const bucket = aspect > 1.28 ? 'landscape' : aspect < .78 ? 'portrait' : 'square';
+        buckets[bucket].push({ work, index, aspect });
+      });
+      Object.values(buckets).forEach(bucket => bucket.sort((a, b) => hashNumber(String(a.work.id)) - hashNumber(String(b.work.id))));
+      const pattern = ['landscape', 'portrait', 'square', 'landscape', 'square', 'portrait'];
+      const ordered = [];
+      while (ordered.length < this.visibleWorks.length) {
+        let added = false;
+        pattern.forEach(name => {
+          const item = buckets[name].shift();
+          if (!item) return;
+          ordered.push(item);
+          added = true;
+        });
+        if (!added) break;
+      }
+      return ordered;
+    }
+
     layout() {
-      const realCount = Math.max(this.visibleWorks.length, 1);
-      const columns = isMobile ? 4 : 6;
-      const gap = isMobile ? 18 : 32;
-      const columnWidth = clamp(
-        (this.width - gap * (columns + 1)) / columns,
-        isMobile ? 104 : 150,
-        isMobile ? 170 : 290
-      );
-      const displayCount = Math.max(24, Math.ceil(realCount / columns) * columns);
-      const skyline = Array(columns).fill(gap);
-      this.tile.width = gap * (columns + 1) + columnWidth * columns;
-      this.nodes = [];
-
-      const addSlot = slotIndex => {
-        const slot = {
-          work: this.visibleWorks[slotIndex % realCount],
-          index: slotIndex % realCount,
-          slotIndex,
-          clone: slotIndex >= realCount
-        };
-        const aspect = clamp(slot.work.width / Math.max(slot.work.height, 1), .38, 3.4);
-        const span = aspect >= 2.15 ? 3 : aspect >= .92 ? 2 : 1;
-        let bestColumn = 0;
-        let bestTop = Infinity;
-        const startOffset = slot.slotIndex % columns;
-        for (let offset = 0; offset <= columns - span; offset += 1) {
-          const column = (offset + startOffset) % (columns - span + 1);
-          const top = Math.max(...skyline.slice(column, column + span));
-          if (top < bestTop) { bestTop = top; bestColumn = column; }
-        }
-        const width = columnWidth * span + gap * (span - 1);
-        const height = width / aspect;
-        const x = gap + bestColumn * (columnWidth + gap) + width / 2;
-        const y = bestTop + height / 2;
-        const nextTop = bestTop + height + gap;
-        for (let column = bestColumn; column < bestColumn + span; column += 1) skyline[column] = nextTop;
-        this.nodes.push({ ...slot, x, y, width, height, featured: false });
-      };
-
-      let slotIndex = 0;
-      const minimumFillHeight = this.height + gap * 2;
-      const safetyLimit = displayCount + columns * 24;
-      while ((slotIndex < displayCount || Math.min(...skyline) < minimumFillHeight) && slotIndex < safetyLimit) {
-        addSlot(slotIndex);
-        slotIndex += 1;
+      const realCount = this.visibleWorks.length;
+      if (!realCount || !this.width || !this.height) {
+        this.nodes = [];
+        this.tile = { width: Math.max(this.width, 1), height: Math.max(this.height, 1) };
+        this.initialCamera = { x: 0, y: 0 };
+        return;
       }
 
-      const left = Math.min(...this.nodes.map(node => node.x - node.width / 2));
-      const right = Math.max(...this.nodes.map(node => node.x + node.width / 2));
-      const top = Math.min(...this.nodes.map(node => node.y - node.height / 2));
-      const bottom = Math.max(...this.nodes.map(node => node.y + node.height / 2));
-      this.tile.height = bottom + gap;
+      const gap = isMobile ? 18 : 30;
+      const targetRowHeight = clamp(this.height * (isMobile ? .23 : .255), isMobile ? 145 : 190, isMobile ? 205 : 285);
+      const minimumTileWidth = Math.max(this.width * 3, isMobile ? 1240 : 3200);
+      const minimumTileHeight = Math.max(this.height * 2.15, isMobile ? 1240 : 1840);
+      const contentWidth = minimumTileWidth - gap * 2;
+      const ordered = this.orderedWorks();
+      let slotIndex = 0;
+      let previousIndex = -1;
+      this.nodes = [];
+      this.tile.width = minimumTileWidth;
+
+      const nextSlot = () => {
+        const clone = slotIndex >= realCount;
+        let orderedIndex = slotIndex;
+        if (clone) {
+          const clonePosition = slotIndex - realCount;
+          const cycle = Math.floor(clonePosition / realCount) + 1;
+          const position = clonePosition % realCount;
+          const offset = mod(Math.max(1, Math.floor(realCount * .37)) * cycle, realCount);
+          orderedIndex = cycle % 2
+            ? mod(position + offset, realCount)
+            : mod(realCount - 1 - position + offset, realCount);
+          if (realCount > 1 && ordered[orderedIndex].index === previousIndex) orderedIndex = mod(orderedIndex + 1, realCount);
+        }
+        const entry = ordered[orderedIndex];
+        previousIndex = entry.index;
+        const slot = { ...entry, slotIndex, clone };
+        slotIndex += 1;
+        return slot;
+      };
+
+      let rowTop = gap;
+      let safety = 0;
+      while ((slotIndex < realCount || rowTop < minimumTileHeight) && safety < 1200) {
+        const row = [];
+        let aspectTotal = 0;
+        let projectedWidth = 0;
+        do {
+          const slot = nextSlot();
+          row.push(slot);
+          aspectTotal += Math.max(slot.aspect, .08);
+          projectedWidth = aspectTotal * targetRowHeight + gap * (row.length - 1);
+          safety += 1;
+        } while (projectedWidth < contentWidth && safety < 1200);
+
+        const rowHeight = Math.max((contentWidth - gap * (row.length - 1)) / Math.max(aspectTotal, .08), 72);
+        let left = gap;
+        row.forEach(slot => {
+          const width = rowHeight * slot.aspect;
+          this.nodes.push({
+            work: slot.work,
+            index: slot.index,
+            slotIndex: slot.slotIndex,
+            clone: slot.clone,
+            x: left + width / 2,
+            y: rowTop + rowHeight / 2,
+            width,
+            height: rowHeight,
+            featured: false
+          });
+          left += width + gap;
+        });
+        rowTop += rowHeight + gap;
+      }
+
+      this.tile.height = Math.max(rowTop, minimumTileHeight);
+      const originals = this.nodes.filter(node => !node.clone);
+      const left = Math.min(...originals.map(node => node.x - node.width / 2));
+      const right = Math.max(...originals.map(node => node.x + node.width / 2));
+      const top = Math.min(...originals.map(node => node.y - node.height / 2));
+      const bottom = Math.max(...originals.map(node => node.y + node.height / 2));
       this.initialCamera.x = mod((left + right) / 2, this.tile.width);
-      this.initialCamera.y = mod((top + bottom) / 2, this.tile.height);
+      this.initialCamera.y = mod(top + this.height / 2, this.tile.height);
+    }
+
+    primaryNodeForIndex(index) {
+      return this.nodes.find(node => !node.clone && node.index === index)
+        || this.nodes.find(node => node.index === index)
+        || null;
     }
 
     requestDraw() {
@@ -820,7 +910,8 @@
       event.preventDefault();
       const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
       this.focusedIndex = mod(this.focusedIndex + direction, this.visibleWorks.length);
-      const node = this.nodes[this.focusedIndex];
+      const node = this.primaryNodeForIndex(this.focusedIndex);
+      if (!node) return;
       this.camera.x = mod(node.x, this.tile.width);
       this.camera.y = mod(node.y, this.tile.height);
       this.currentElement.textContent = pad(this.focusedIndex + 1);
@@ -831,7 +922,8 @@
     go(offset) {
       if (!this.nodes.length) return;
       this.focusedIndex = mod(this.focusedIndex + offset, this.visibleWorks.length);
-      const node = this.nodes[this.focusedIndex];
+      const node = this.primaryNodeForIndex(this.focusedIndex);
+      if (!node) return;
       this.camera.x = mod(node.x, this.tile.width);
       this.camera.y = mod(node.y, this.tile.height);
       this.currentElement.textContent = pad(this.focusedIndex + 1);
@@ -978,89 +1070,113 @@
   const equipmentOriginals = $$('figure', equipmentTrack);
   const equipmentPosition = $('[data-equipment-position]');
   if (equipmentTrack && equipmentOriginals.length > 1) {
-    const beforeClone = equipmentOriginals.at(-1).cloneNode(true);
-    const afterClone = equipmentOriginals[0].cloneNode(true);
-    beforeClone.setAttribute('aria-hidden', 'true');
-    afterClone.setAttribute('aria-hidden', 'true');
-    beforeClone.dataset.equipmentClone = 'before';
-    afterClone.dataset.equipmentClone = 'after';
-    equipmentTrack.prepend(beforeClone);
-    equipmentTrack.append(afterClone);
+    const before = document.createDocumentFragment();
+    const after = document.createDocumentFragment();
+    equipmentOriginals.forEach(item => {
+      const beforeClone = item.cloneNode(true);
+      const afterClone = item.cloneNode(true);
+      beforeClone.setAttribute('aria-hidden', 'true');
+      afterClone.setAttribute('aria-hidden', 'true');
+      beforeClone.dataset.equipmentClone = 'before';
+      afterClone.dataset.equipmentClone = 'after';
+      before.append(beforeClone);
+      after.append(afterClone);
+    });
+    equipmentTrack.prepend(before);
+    equipmentTrack.append(after);
   }
   const equipmentItems = $$('figure', equipmentTrack);
-  let equipmentIndex = equipmentOriginals.length > 1 ? 1 : 0;
+  let equipmentIndex = equipmentOriginals.length > 1 ? equipmentOriginals.length : 0;
   let equipmentPointer = null;
-  let equipmentWheelLocked = false;
+  let equipmentAnimating = false;
+  let equipmentPending = 0;
+  let equipmentFallbackTimer = 0;
 
   function equipmentStep() {
-    if (!equipmentItems.length) return 0;
-    const style = getComputedStyle(equipmentTrack);
-    return equipmentItems[0].getBoundingClientRect().width + (parseFloat(style.gap) || 0);
+    const mediaWidth = equipmentTrack?.parentElement?.clientWidth || innerWidth;
+    return mediaWidth * (isMobile ? .69 : .55);
   }
 
   function equipmentLogicalIndex() {
-    if (equipmentOriginals.length <= 1) return 0;
-    return mod(equipmentIndex - 1, equipmentOriginals.length);
+    return equipmentOriginals.length ? mod(equipmentIndex, equipmentOriginals.length) : 0;
   }
 
   function updateEquipmentTrack(extra = 0, instant = false) {
-    const media = equipmentTrack?.parentElement;
-    const itemWidth = equipmentItems[0]?.getBoundingClientRect().width || 0;
-    const paddingLeft = media ? (parseFloat(getComputedStyle(media).paddingLeft) || 0) : 0;
-    const centerOffset = (media?.clientWidth || 0) / 2 - paddingLeft - itemWidth / 2;
-    const offset = centerOffset - equipmentIndex * equipmentStep() + extra;
     equipmentTrack?.classList.toggle('is-jumping', instant);
-    equipmentTrack?.style.setProperty('--equipment-offset', `${offset}px`);
+    equipmentTrack?.style.setProperty('--equipment-drag', `${extra}px`);
+    const step = equipmentStep();
     equipmentItems.forEach((item, index) => {
-      item.classList.toggle('is-center', index === equipmentIndex);
-      item.classList.toggle('is-neighbor', Math.abs(index - equipmentIndex) === 1);
+      const distance = index - equipmentIndex;
+      item.style.setProperty('--equipment-x', `${distance * step}px`);
+      item.classList.toggle('is-center', distance === 0);
+      item.classList.toggle('is-neighbor', Math.abs(distance) === 1);
+      item.classList.toggle('is-hidden', Math.abs(distance) > 1);
     });
     if (equipmentPosition) equipmentPosition.textContent = `${pad(equipmentLogicalIndex() + 1)} / ${pad(equipmentOriginals.length)}`;
     if (instant) requestAnimationFrame(() => equipmentTrack?.classList.remove('is-jumping'));
   }
 
+  function finishEquipmentMove() {
+    if (!equipmentAnimating) return;
+    clearTimeout(equipmentFallbackTimer);
+    const count = equipmentOriginals.length;
+    if (equipmentIndex < count) equipmentIndex += count;
+    else if (equipmentIndex >= count * 2) equipmentIndex -= count;
+    updateEquipmentTrack(0, true);
+    equipmentAnimating = false;
+    if (equipmentPending) {
+      const direction = Math.sign(equipmentPending);
+      equipmentPending -= direction;
+      requestAnimationFrame(() => moveEquipment(direction));
+    }
+  }
+
   function moveEquipment(direction) {
     if (!equipmentOriginals.length) return;
+    if (equipmentAnimating) {
+      equipmentPending = clamp(equipmentPending + direction, -equipmentOriginals.length, equipmentOriginals.length);
+      return;
+    }
+    equipmentAnimating = true;
     equipmentIndex += direction;
     updateEquipmentTrack();
+    equipmentFallbackTimer = window.setTimeout(finishEquipmentMove, reducedMotion ? 20 : 780);
   }
 
   equipmentTrack?.addEventListener('transitionend', event => {
-    if (event.propertyName !== 'transform' || equipmentOriginals.length <= 1) return;
-    if (equipmentIndex === 0) {
-      equipmentIndex = equipmentOriginals.length;
-      updateEquipmentTrack(0, true);
-    } else if (equipmentIndex === equipmentOriginals.length + 1) {
-      equipmentIndex = 1;
-      updateEquipmentTrack(0, true);
-    }
+    if (event.propertyName !== 'transform' || !event.target.classList.contains('is-center')) return;
+    finishEquipmentMove();
   });
 
   equipmentTrack?.addEventListener('pointerdown', event => {
-    equipmentPointer = { id: event.pointerId, x: event.clientX, delta: 0 };
+    if (equipmentAnimating) return;
+    equipmentPointer = { id: event.pointerId, x: event.clientX, delta: 0, started: performance.now(), velocity: 0, lastX: event.clientX, lastTime: performance.now() };
     equipmentTrack.classList.add('is-dragging');
     equipmentTrack.setPointerCapture?.(event.pointerId);
   });
   equipmentTrack?.addEventListener('pointermove', event => {
     if (!equipmentPointer || equipmentPointer.id !== event.pointerId) return;
+    const now = performance.now();
+    const elapsed = Math.max(now - equipmentPointer.lastTime, 1);
+    equipmentPointer.velocity = (event.clientX - equipmentPointer.lastX) / elapsed;
+    equipmentPointer.lastX = event.clientX;
+    equipmentPointer.lastTime = now;
     equipmentPointer.delta = event.clientX - equipmentPointer.x;
     updateEquipmentTrack(equipmentPointer.delta);
   });
   ['pointerup', 'pointercancel'].forEach(type => equipmentTrack?.addEventListener(type, event => {
     if (!equipmentPointer || equipmentPointer.id !== event.pointerId) return;
     const delta = equipmentPointer.delta;
+    const velocity = equipmentPointer.velocity;
     if (equipmentTrack.hasPointerCapture?.(event.pointerId)) equipmentTrack.releasePointerCapture(event.pointerId);
     equipmentTrack.classList.remove('is-dragging');
     equipmentPointer = null;
-    if (type !== 'pointercancel' && Math.abs(delta) > 45) moveEquipment(delta < 0 ? 1 : -1);
+    if (type !== 'pointercancel' && (Math.abs(delta) > equipmentStep() * .16 || Math.abs(velocity) > .38)) moveEquipment((delta || velocity) < 0 ? 1 : -1);
     else updateEquipmentTrack();
   }));
   equipmentTrack?.addEventListener('wheel', event => {
     event.preventDefault();
-    if (equipmentWheelLocked) return;
-    equipmentWheelLocked = true;
     moveEquipment((event.deltaX || event.deltaY) > 0 ? 1 : -1);
-    window.setTimeout(() => { equipmentWheelLocked = false; }, 280);
   }, { passive: false });
   $('[data-equipment-prev]')?.addEventListener('click', () => moveEquipment(-1));
   $('[data-equipment-next]')?.addEventListener('click', () => moveEquipment(1));

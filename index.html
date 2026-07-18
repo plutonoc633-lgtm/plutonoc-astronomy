@@ -8,7 +8,7 @@
   <title>PlutonoC</title>
   <link rel="preload" href="assets/fonts/source-han-sans-cn-medium.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/source-han-serif-cn-vf.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=20260718-astronaut-1">
+  <link rel="stylesheet" href="style.css?v=20260718-interaction-2">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -51,13 +51,44 @@
   </div>
 
   <div class="scroll-astronaut" data-scroll-astronaut aria-hidden="true">
-    <svg viewBox="0 0 40 60" role="img">
-      <path d="M13.5 17.5c0-6 3-10 6.5-10s6.5 4 6.5 10v7H13.5Z"/>
-      <path d="M16.5 14.5c2.3-1.5 4.7-1.5 7 0v5.8h-7Z"/>
-      <path d="M14 25h12l2 14.5-5.5 4.5h-5L12 39.5Z"/>
-      <path d="M17.5 44 16 54M22.5 44 24 54M12.5 28 7 37l3 3M27.5 28 33 37l-3 3"/>
-      <path d="M9.5 24.5h4v10h-4zM26.5 24.5h4v10h-4z"/>
-      <circle cx="18" cy="32" r="1"/><circle cx="22" cy="32" r="1"/>
+    <svg viewBox="0 0 76 116" role="img">
+      <g class="astronaut-tether">
+        <path d="M22 53C5 59 7 78 21 84S22 103 9 108"/>
+        <circle cx="8.5" cy="108" r="1.8"/>
+      </g>
+      <g class="astronaut-thrust">
+        <path d="M29 91 25 105M47 91l4 14"/>
+        <path d="M31 94 29 111M45 94l2 17"/>
+      </g>
+      <g class="astronaut-pack">
+        <rect x="19" y="39" width="38" height="42" rx="8"/>
+        <path d="M19 48h-6v25h7M57 48h6v25h-7M25 43h26M26 76h24"/>
+      </g>
+      <g class="astronaut-body">
+        <path d="M26 43c2-7 7-10 12-10s10 3 12 10l4 35-9 10H31l-9-10Z"/>
+        <path d="M29 55h18v18H29zM32 59h4m4 0h4M32 65h12"/>
+        <path d="M31 83h14M38 73v10"/>
+      </g>
+      <g class="astronaut-helmet">
+        <path d="M22 28C22 13 28 5 38 5s16 8 16 23l-5 9H27Z"/>
+        <path d="M27 20c7-6 15-6 22 0v11H27Z"/>
+        <path class="astronaut-visor" d="M29 21c6-4 12-4 18 0v7H29Z"/>
+        <path d="M25 33h26M32 8l-3-5m15 5 3-5"/>
+      </g>
+      <g class="astronaut-arm astronaut-arm-left">
+        <path d="M25 48 13 57 8 74l6 3 9-13"/>
+        <path d="m8 74-4 5 7 5 5-7"/>
+      </g>
+      <g class="astronaut-arm astronaut-arm-right">
+        <path d="m51 48 12 9 5 17-6 3-9-13"/>
+        <path d="m68 74 4 5-7 5-5-7"/>
+      </g>
+      <g class="astronaut-leg astronaut-leg-left">
+        <path d="m33 86-3 15-7 9 7 3 10-12 1-14"/>
+      </g>
+      <g class="astronaut-leg astronaut-leg-right">
+        <path d="m43 86 3 15 7 9-7 3-10-12-1-14"/>
+      </g>
     </svg>
   </div>
 
@@ -146,9 +177,7 @@
       </figure>
       <div class="profile-copy reveal">
         <p>PlutonoC</p>
-        <h2>择日成星</h2>
-        <div class="profile-verse"><span>晓看天色</span><i>/</i><span>暮看云</span></div>
-        <small>江南大学天见天文协会</small>
+        <h2>晓看天色暮看云</h2>
       </div>
     </section>
 
@@ -234,7 +263,7 @@
 
     <section class="arrival" id="contact" data-section="07" data-section-name="结尾">
       <div class="arrival-copy">
-        <h2><span>循此苦旅</span><span>以达天际</span></h2>
+        <h2><span><i>循此苦旅</i></span><span><i>以达天际</i></span></h2>
         <p>PER ASPERA AD ASTRA</p>
       </div>
       <div class="social-links reveal">
@@ -270,6 +299,6 @@
   <script src="cloudbase-config.js"></script>
   <script src="video-data.js?v=20260718-beam-2"></script>
   <script src="gallery-data.js?v=20260718-beam-2"></script>
-  <script src="script.js?v=20260718-astronaut-1"></script>
+  <script src="script.js?v=20260718-interaction-2"></script>
 </body>
 </html>
