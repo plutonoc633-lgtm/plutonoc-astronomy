@@ -82,7 +82,8 @@
   const sections = $$('[data-section]');
   const currentNumber = $('[data-current-number]');
   const currentSection = $('[data-current-section]');
-  let activeSection = sections[0];
+  const header = $('[data-header]');
+  let activeSection = null;
 
   function setActiveSection(section) {
     if (!section || activeSection === section) return;
@@ -98,12 +99,20 @@
     });
   }
 
+  function updateActiveSectionFromScroll() {
+    const detectionLine = scrollY + (header?.offsetHeight || 0) + innerHeight * .32;
+    let nextSection = sections[0];
+    for (const section of sections) {
+      if (section.offsetTop <= detectionLine) nextSection = section;
+      else break;
+    }
+    setActiveSection(nextSection);
+  }
+
   if ('IntersectionObserver' in window) {
     const sectionObserver = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-      if (visible[0]) setActiveSection(visible[0].target);
       entries.forEach(entry => entry.target.classList.toggle('is-lit', entry.isIntersecting));
-    }, { threshold: [0, .2, .45, .7], rootMargin: '-18% 0px -46% 0px' });
+    }, { threshold: [0, .08], rootMargin: '-12% 0px -12% 0px' });
     sections.forEach(section => sectionObserver.observe(section));
   }
 
@@ -175,14 +184,14 @@
   const curtain = $('[data-page-curtain]');
   let transitionActive = false;
   let pendingGalleryFilter = null;
+  const normalizeHash = hash => hash === '#profile' ? '#home' : (hash || '#home');
 
   function updateCurtain(category, hash) {
     const config = categoryConfig[category];
     const destinations = {
       '#home': ['PLUTONOC', 'HOME', ''],
-      '#profile': ['PLUTONOC', '择日成星', ''],
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
-      '#records': ['DECLASSIFIED', '可公开的情报', ''],
+      '#records': ['ARCHIVE OPENED', 'DECLASSIFIED', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
       '#contact': ['PER ASPERA AD ASTRA', '循此苦旅 以达天际', '']
     };
@@ -195,26 +204,30 @@
   }
 
   function finishNavigation(hash, category, pushHistory = true) {
-    const target = $(hash);
+    const normalizedHash = normalizeHash(hash);
+    const target = $(normalizedHash);
     if (!target) return;
     if (category && archiveCanvas) archiveCanvas.setFilter(category, true);
     target.scrollIntoView({ block: 'start', behavior: 'auto' });
-    if (pushHistory && location.hash !== hash) history.pushState({ category }, '', hash);
+    if (pushHistory && location.hash !== normalizedHash) history.pushState({ category }, '', normalizedHash);
+    scrollDirty = true;
+    requestMainFrame();
   }
 
   function transitionTo(hash, category = null) {
-    if (transitionActive || !$(hash)) return;
+    const normalizedHash = normalizeHash(hash);
+    if (transitionActive || !$(normalizedHash)) return;
     pendingGalleryFilter = category;
-    updateCurtain(category, hash);
+    updateCurtain(category, normalizedHash);
     if (reducedMotion) {
       closeIndex({ restoreFocus: false });
-      finishNavigation(hash, category);
+      finishNavigation(normalizedHash, category);
       return;
     }
     transitionActive = true;
     document.body.classList.add('is-transitioning');
     closeIndex({ restoreFocus: false });
-    setTimeout(() => finishNavigation(hash, category), category ? 520 : 320);
+    setTimeout(() => finishNavigation(normalizedHash, category), category ? 520 : 320);
     setTimeout(() => document.body.classList.remove('is-transitioning'), category ? 960 : 650);
     setTimeout(() => { transitionActive = false; pendingGalleryFilter = null; }, category ? 1180 : 760);
   }
@@ -230,8 +243,13 @@
 
   window.addEventListener('popstate', event => {
     const category = event.state?.category || null;
-    finishNavigation(location.hash || '#home', category, false);
+    finishNavigation(normalizeHash(location.hash), category, false);
   });
+
+  if (location.hash === '#profile') {
+    history.replaceState(history.state, '', '#home');
+    requestAnimationFrame(() => finishNavigation('#home', null, false));
+  }
 
   /* Hero interaction */
   const descentSheet = $('.descent-sheet');
@@ -302,7 +320,6 @@
   }
 
   /* Scroll progress calibration and finale */
-  const header = $('[data-header]');
   const progressBar = $('[data-reading-progress]');
   const scrollCalibration = $('[data-scroll-calibration]');
   const calibrationRoute = $('[data-calibration-route]', scrollCalibration);
@@ -357,16 +374,18 @@
     const ratio = clamp(scrollY / scrollable, 0, 1);
     if (progressBar) progressBar.style.transform = `scaleX(${ratio})`;
     header.classList.toggle('is-scrolled', scrollY > 20);
+    updateActiveSectionFromScroll();
     if (scrollCalibration) {
       const height = scrollCalibration.getBoundingClientRect().height || (isMobile ? 50 : 74);
       const top = header.offsetHeight + 18;
       const travel = Math.max(innerHeight - top - height - 18, 0);
-      const deviation = 1 - ratio * 2;
+      const remaining = 1 - ratio;
       const inertia = reducedMotion ? 0 : calibrationInertia;
       scrollCalibration.style.setProperty('--calibration-y', `${(ratio * travel).toFixed(2)}px`);
-      scrollCalibration.style.setProperty('--calibration-outer', `${(-18 * deviation + inertia * .22).toFixed(2)}deg`);
-      scrollCalibration.style.setProperty('--calibration-middle', `${(14 * deviation - inertia * .16).toFixed(2)}deg`);
-      scrollCalibration.style.setProperty('--calibration-inner', `${(-8 * deviation + inertia * .1).toFixed(2)}deg`);
+      scrollCalibration.style.setProperty('--calibration-outer', `${(reducedMotion ? 0 : -210 * remaining + inertia).toFixed(2)}deg`);
+      scrollCalibration.style.setProperty('--calibration-middle', `${(reducedMotion ? 0 : 150 * remaining - inertia * (2 / 3)).toFixed(2)}deg`);
+      scrollCalibration.style.setProperty('--calibration-inner', `${(reducedMotion ? 0 : -100 * remaining + inertia * (4 / 9)).toFixed(2)}deg`);
+      scrollCalibration.classList.toggle('is-calibrated', ratio > .995);
       if (calibrationRoute && calibrationProgress) {
         const length = calibrationRoute.getTotalLength();
         const point = calibrationRoute.getPointAtLength(length * ratio);
@@ -389,7 +408,7 @@
   window.addEventListener('scroll', () => {
     const delta = scrollY - previousScrollY;
     previousScrollY = scrollY;
-    calibrationInertia = reducedMotion ? 0 : clamp(delta * .36, -12, 12);
+    calibrationInertia = reducedMotion ? 0 : clamp(delta * .56, -18, 18);
     scrollCalibration?.classList.add('is-scrolling');
     clearTimeout(calibrationResetTimer);
     calibrationResetTimer = window.setTimeout(() => {
@@ -402,7 +421,14 @@
     requestMainFrame();
   }, { passive: true });
   window.addEventListener('resize', () => { layoutDirty = true; archiveCanvas?.resize(); requestMainFrame(); }, { passive: true });
-  window.addEventListener('load', () => { layoutDirty = true; requestMainFrame(); }, { once: true });
+  window.addEventListener('load', () => {
+    const initialHash = normalizeHash(location.hash);
+    if (location.hash !== initialHash) history.replaceState(history.state, '', initialHash);
+    if (initialHash !== '#home') finishNavigation(initialHash, history.state?.category || null, false);
+    layoutDirty = true;
+    scrollDirty = true;
+    requestMainFrame();
+  }, { once: true });
 
   /* ImageBitmap LRU */
   class BitmapCache {
