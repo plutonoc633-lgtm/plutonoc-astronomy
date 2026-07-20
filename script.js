@@ -28,8 +28,6 @@
   let filmSectionVisible = false;
   let archiveCanvas = null;
   let timecodeStart = performance.now();
-let lastTimecodeUpdate = 0;
-let timecodeTimer = 0;
 
   function requestMainFrame() {
     if (frameRequested) return;
@@ -47,28 +45,14 @@ let timecodeTimer = 0;
     }
     if (archiveCanvas?.frame(time)) needsNext = true;
     if (filmSectionVisible && !reducedMotion) {
-  if (time - lastTimecodeUpdate >= 100) {
-    lastTimecodeUpdate = time;
-
-    const elapsed = (time - timecodeStart) / 1000;
-    const totalFrames = Math.floor((elapsed % 3600) * 24);
-    const seconds = Math.floor(totalFrames / 24);
-    const frame = totalFrames % 24;
-    const timecode = $('[data-timecode]');
-
-    if (timecode) {
-      timecode.textContent =
-        `00:${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}:${pad(frame)}`;
+      const elapsed = (time - timecodeStart) / 1000;
+      const totalFrames = Math.floor((elapsed % 3600) * 24);
+      const seconds = Math.floor(totalFrames / 24);
+      const frame = totalFrames % 24;
+      const timecode = $('[data-timecode]');
+      if (timecode) timecode.textContent = `00:${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}:${pad(frame)}`;
+      needsNext = true;
     }
-  }
-
-  if (!timecodeTimer) {
-    timecodeTimer = window.setTimeout(() => {
-      timecodeTimer = 0;
-      requestMainFrame();
-    }, 100);
-  }
-}
     if (needsNext) requestMainFrame();
   }
 
@@ -286,20 +270,13 @@ let timecodeTimer = 0;
   const descentPanels = $$('.descent-panel');
   const homeMotion = $('[data-home-motion]');
   let visualStageOverride = null;
-let activeVisualStage = '';
 
-function setVisualStage(category) {
-  const stage = categoryOrder.includes(category) ? category : 'deepsky';
+  function setVisualStage(category) {
+    const stage = categoryOrder.includes(category) ? category : 'deepsky';
+    document.body.dataset.visualStage = stage;
+    document.documentElement.style.setProperty('--stage-color', categoryConfig[stage]?.color || '#9ec8ff');
+  }
 
-  if (stage === activeVisualStage) return;
-
-  activeVisualStage = stage;
-  document.body.dataset.visualStage = stage;
-  document.documentElement.style.setProperty(
-    '--stage-color',
-    categoryConfig[stage]?.color || '#9ec8ff'
-  );
-}
   descentPanels.forEach(panel => {
     const category = panel.dataset.homeFilter;
     const activate = () => {
@@ -380,9 +357,8 @@ function setVisualStage(category) {
   const progressBar = $('[data-reading-progress]');
   const scrollCalibration = $('[data-scroll-calibration]');
   const calibrationRoute = $('[data-calibration-route]', scrollCalibration);
-const calibrationProgress = $('[data-calibration-progress]', scrollCalibration);
-const calibrationRouteLength = calibrationRoute?.getTotalLength?.() || 0;
-const arrival = $('#contact');
+  const calibrationProgress = $('[data-calibration-progress]', scrollCalibration);
+  const arrival = $('#contact');
   const arrivalHero = $('.arrival-hero', arrival);
   const profileCopy = $('.profile-copy');
   let calibrationInertia = 0;
@@ -441,14 +417,12 @@ const arrival = $('#contact');
       scrollCalibration.style.setProperty('--calibration-inner', `${(reducedMotion ? 0 : -100 * remaining + inertia * (4 / 9)).toFixed(2)}deg`);
       scrollCalibration.classList.toggle('is-calibrated', ratio > .995);
       scrollCalibration.classList.toggle('is-near-end', ratio > .94);
-      if (calibrationRoute && calibrationProgress && calibrationRouteLength) {
-  const point = calibrationRoute.getPointAtLength(
-    calibrationRouteLength * ratio
-  );
-
-  calibrationProgress.setAttribute('cx', point.x.toFixed(2));
-  calibrationProgress.setAttribute('cy', point.y.toFixed(2));
-}
+      if (calibrationRoute && calibrationProgress) {
+        const length = calibrationRoute.getTotalLength();
+        const point = calibrationRoute.getPointAtLength(length * ratio);
+        calibrationProgress.setAttribute('cx', point.x.toFixed(2));
+        calibrationProgress.setAttribute('cy', point.y.toFixed(2));
+      }
     }
     updateArrivalProgress();
 
