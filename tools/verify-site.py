@@ -12,13 +12,16 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-CACHE_VERSION = "20260720-arrival-outro-1"
+CACHE_VERSION = "20260720-social-profiles-1"
 REQUIRED_ASSETS = {
     "assets/fonts/source-han-serif-cn-site.woff2": 750_000,
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
     "assets/branding/favicon-32.png": 20_000,
     "assets/branding/apple-touch-icon.png": 100_000,
+    "assets/branding/avatar-bilibili.webp": 100_000,
+    "assets/branding/avatar-douyin.webp": 100_000,
+    "assets/branding/avatar-xiaohongshu.webp": 100_000,
     "favicon.ico": 100_000,
     "assets/gallery/previews/earth/earth-007.webp": 400_000,
     "assets/gallery/hero/earth.webp": 700_000,
@@ -26,6 +29,9 @@ REQUIRED_ASSETS = {
 REMOTE_TYPES = {
     "assets/branding/plutonoc-share.jpg": "image/jpeg",
     "assets/branding/favicon-32.png": "image/png",
+    "assets/branding/avatar-bilibili.webp": "image/webp",
+    "assets/branding/avatar-douyin.webp": "image/webp",
+    "assets/branding/avatar-xiaohongshu.webp": "image/webp",
     "assets/fonts/source-han-serif-cn-site.woff2": "font/woff2",
     "assets/gallery/previews/earth/earth-007.webp": "image/webp",
     "assets/gallery/hero/earth.webp": "image/webp",
@@ -83,10 +89,15 @@ def verify_local(root: Path) -> None:
         'class="arrival-hero"',
         'class="arrival-outro"',
         'class="arrival-footer"',
-        '<h3>官方账号</h3>',
+        'src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
+        'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
+        'src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
+        'href="https://www.xiaohongshu.com/user/profile/60e62ebb0000000001007f48"',
     )
     for token in required_html:
         require(token in index, f"Missing index marker: {token}")
+    for token in ("官方账号", "FOLLOW PLUTONOC", "social-index", "account-heading"):
+        require(token not in index, f"Obsolete account decoration remains: {token}")
     require("assets/gallery/earth/earth-007.jpg" not in index, "Homepage still references the 12 MB Everest original")
     require("source-han-serif-cn-vf.woff2" not in index + style, "Complete serif font is still referenced at runtime")
     require("source-han-serif-cn-site.woff2" in style, "Serif subset is not referenced")
