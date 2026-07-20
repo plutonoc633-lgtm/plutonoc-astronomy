@@ -207,7 +207,7 @@
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
       '#records': ['ARCHIVE OPENED', 'DECLASSIFIED', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
-      '#contact': ['PER ASPERA AD ASTRA', '循此苦旅 以达天际', '']
+      '#contact': ['PLUTONOC', '择日成星', '']
     };
     const copy = category
       ? ['ARCHIVE OPENED', config?.english || 'ARCHIVE', `${categoryCounts[category] || allWorks.length} OBSERVATIONS`]
@@ -377,29 +377,19 @@
   function updateArrivalProgress() {
     if (!arrival) return;
     if (reducedMotion) {
-      arrival.style.setProperty('--arrival-left-x', '12vw');
-      arrival.style.setProperty('--arrival-right-x', '-10vw');
-      arrival.style.setProperty('--arrival-left-y', '-3vh');
-      arrival.style.setProperty('--arrival-right-y', '6vh');
-      arrival.style.setProperty('--arrival-left-rotate', '1.2deg');
-      arrival.style.setProperty('--arrival-right-rotate', '-1deg');
+      arrival.style.setProperty('--arrival-title-y', '0px');
       arrival.style.setProperty('--arrival-opacity', '1');
       arrival.style.setProperty('--arrival-blur', '0px');
-      arrival.style.setProperty('--arrival-spacing', '-.045em');
+      arrival.style.setProperty('--arrival-spacing', '.04em');
       arrival.classList.add('is-complete');
       return;
     }
     const bounds = arrival.getBoundingClientRect();
     const progress = clamp((innerHeight * .9 - bounds.top) / Math.max(bounds.height * .84, 1), 0, 1);
-    arrival.style.setProperty('--arrival-left-x', `${(-54 + progress * 70).toFixed(2)}vw`);
-    arrival.style.setProperty('--arrival-right-x', `${(54 - progress * 66).toFixed(2)}vw`);
-    arrival.style.setProperty('--arrival-left-y', `${(-8 + progress * 5).toFixed(2)}vh`);
-    arrival.style.setProperty('--arrival-right-y', `${(8 - progress * 2).toFixed(2)}vh`);
-    arrival.style.setProperty('--arrival-left-rotate', `${(-4 + progress * 5.2).toFixed(2)}deg`);
-    arrival.style.setProperty('--arrival-right-rotate', `${(4 - progress * 5).toFixed(2)}deg`);
+    arrival.style.setProperty('--arrival-title-y', `${(18 * (1 - progress)).toFixed(2)}px`);
     arrival.style.setProperty('--arrival-opacity', `${(.1 + progress * .9).toFixed(3)}`);
-    arrival.style.setProperty('--arrival-blur', `${(14 * (1 - progress)).toFixed(2)}px`);
-    arrival.style.setProperty('--arrival-spacing', `${(.02 - progress * .065).toFixed(3)}em`);
+    arrival.style.setProperty('--arrival-blur', `${(12 * (1 - progress)).toFixed(2)}px`);
+    arrival.style.setProperty('--arrival-spacing', `${(.1 - progress * .06).toFixed(3)}em`);
     arrival.classList.toggle('is-complete', progress > .985);
   }
 
