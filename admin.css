@@ -10,7 +10,7 @@ button, input, select, textarea { font: inherit; }
 main { padding: clamp(50px, 7vw, 100px) clamp(20px, 4vw, 60px); }
 .setup-panel, .login-panel { max-width: 1100px; margin: 10vh auto; }
 .setup-panel > span, .login-panel > div > span, .dashboard-head span { color: var(--accent); font: 400 9px/1 var(--meta); letter-spacing: .2em; }
-h1 { margin: 12px 0; font: 600 clamp(48px, 8vw, 110px)/1.08 var(--display); letter-spacing: 0; }
+h1 { margin: 12px 0; font: 500 clamp(48px, 8vw, 110px)/1.08 var(--display); letter-spacing: 0; }
 .setup-panel p { max-width: 680px; color: var(--muted); }
 code { padding: 2px 6px; background: #222; }
 .login-panel { display: grid; grid-template-columns: 1.2fr .8fr; gap: 8vw; align-items: end; }
@@ -44,12 +44,12 @@ button:hover { border-color: #777; }
 .form-actions .secondary { margin-right: auto; }
 .form-actions .primary { background: var(--text); color: #111; }
 .manager-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-.manager-head h2 { margin: 0; font: 600 23px/1.18 var(--display); letter-spacing: 0; }
+.manager-head h2 { margin: 0; font: 500 23px/1.18 var(--display); letter-spacing: 0; }
 .manager-head button { padding: 8px; border: 0; background: none; color: var(--muted); }
 .manager-list { display: grid; }
 .manager-card { display: grid; grid-template-columns: 110px 1fr; gap: 15px; padding: 18px 0; border-bottom: 1px solid var(--line); }
 .manager-card img { width: 110px; height: 74px; object-fit: cover; background: #000; }
-.manager-card h3 { margin: 0 0 5px; font: 600 15px/1.25 var(--display); letter-spacing: 0; }
+.manager-card h3 { margin: 0 0 5px; font: 500 15px/1.25 var(--display); letter-spacing: 0; }
 .manager-card p { margin: 0; color: var(--muted); font-size: 10px; }
 .manager-card .status { color: var(--accent); }
 .manager-card div:last-child { grid-column: 2; display: flex; gap: 6px; }
