@@ -387,7 +387,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
   0% { transform: translate3d(var(--char-from-x), var(--char-from-y), 0); }
   100% { transform: translate3d(var(--char-to-x), var(--char-to-y), 0); }
 }
-.profile-watermark { width: clamp(160px, 15vw, 220px); height: auto; margin-top: 22px; opacity: .88; filter: drop-shadow(0 3px 18px rgba(0,0,0,.7)); }
+.profile-watermark { width: clamp(120px, 11vw, 165px); height: auto; margin-top: 22px; opacity: .88; filter: drop-shadow(0 3px 18px rgba(0,0,0,.7)); }
 
 /* Section foundations */
 .works,
@@ -607,7 +607,7 @@ dialog { color: inherit; }
   .profile-copy h1 { max-width: 100%; align-items: baseline; gap: .08em; font-size: clamp(29px, 9.2vw, 36px); letter-spacing: 0; }
   .profile-copy h1 > span { filter: blur(1.5px); transform: none !important; transition: opacity .65s ease, filter .75s ease; }
   .profile-copy h1 i { animation: none !important; transform: none !important; line-height: 1; }
-  .profile-watermark { width: min(40vw, 150px); margin-top: 18px; opacity: .86; }
+  .profile-watermark { width: min(30vw, 110px); margin-top: 18px; opacity: .86; }
 
   .works,
   .films,
