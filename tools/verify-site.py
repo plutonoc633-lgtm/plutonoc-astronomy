@@ -12,7 +12,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-CACHE_VERSION = "20260720-pingfang-header-1"
+STYLE_CACHE_VERSION = "20260720-lighter-type-1"
+ADMIN_STYLE_CACHE_VERSION = "20260720-lighter-type-1"
+VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
+SCRIPT_CACHE_VERSION = "20260720-rollback-1"
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
@@ -81,9 +84,9 @@ def verify_local(root: Path) -> None:
         'property="og:image" content="https://plutonoc.cn/assets/branding/plutonoc-share.jpg"',
         'name="twitter:card" content="summary_large_image"',
         'href="assets/branding/favicon-32.png"',
-        f'style.css?v={CACHE_VERSION}',
-        f'video-data.js?v={CACHE_VERSION}',
-        f'script.js?v={CACHE_VERSION}',
+        f'style.css?v={STYLE_CACHE_VERSION}',
+        f'video-data.js?v={VIDEO_CACHE_VERSION}',
+        f'script.js?v={SCRIPT_CACHE_VERSION}',
         'href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)"',
         'href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)"',
         '<source media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
@@ -103,7 +106,7 @@ def verify_local(root: Path) -> None:
     for token in ("官方账号", "FOLLOW PLUTONOC", "social-index", "account-heading"):
         require(token not in index, f"Obsolete account decoration remains: {token}")
     require("assets/gallery/earth/earth-007.jpg" not in index, "Homepage still references the 12 MB Everest original")
-    require(f'admin.css?v={CACHE_VERSION}' in admin, "Admin page has an old cache version")
+    require(f'admin.css?v={ADMIN_STYLE_CACHE_VERSION}' in admin, "Admin page has an old cache version")
     runtime_sources = index + style + admin + admin_style
     for obsolete in (
         "source-han-serif-cn-vf.woff2",
@@ -171,8 +174,9 @@ def verify_remote(base_url: str) -> None:
             index_bytes, content_type = fetch(base)
             index = index_bytes.decode("utf-8")
             require(content_type == "text/html", f"Unexpected homepage type: {content_type}")
-            require(f"style.css?v={CACHE_VERSION}" in index, "Deployed homepage has an old cache version")
-            require(f"video-data.js?v={CACHE_VERSION}" in index, "Deployed video manifest has an old cache version")
+            require(f"style.css?v={STYLE_CACHE_VERSION}" in index, "Deployed homepage has an old cache version")
+            require(f"video-data.js?v={VIDEO_CACHE_VERSION}" in index, "Deployed video manifest has an old cache version")
+            require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
             for relative, expected_type in REMOTE_TYPES.items():
                 body, actual_type = fetch(urljoin(base, relative))
