@@ -8,7 +8,7 @@
 
 @font-face {
   font-family: "Source Han Serif CN";
-  src: url("assets/fonts/source-han-serif-cn-vf.woff2") format("woff2-variations");
+  src: url("assets/fonts/source-han-serif-cn-site.woff2") format("woff2-variations");
   font-style: normal;
   font-weight: 250 900;
   font-display: swap;
@@ -366,6 +366,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .home-profile { position: relative; min-height: calc(100svh - var(--header-height)); overflow: hidden; display: grid; place-items: center; background: #020304; border-bottom: 1px solid var(--line); }
 .profile-visual { position: absolute; inset: 0; overflow: hidden; clip-path: inset(0 0 10%); }
 .profile-visual.is-visible { clip-path: inset(0); }
+.profile-visual picture { display: block; width: 100%; height: 100%; }
 .profile-visual::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 48%, rgba(0,0,0,.04), rgba(0,0,0,.58) 92%), linear-gradient(180deg, rgba(1,3,6,.2), rgba(1,3,6,.46)); }
 .profile-visual img { width: 100%; height: 100%; object-fit: cover; object-position: center 48%; transform: scale(1.055); transition: transform 1.4s var(--ease-cinematic); }
 .profile-visual.is-visible img { transform: scale(1); }

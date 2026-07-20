@@ -24,6 +24,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Verify JavaScript
+        run: |
+          node --check script.js
+          node --check admin.js
+      - name: Verify static site
+        run: python tools/verify-site.py --root .
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
@@ -33,3 +39,5 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify deployment
+        run: python tools/verify-site.py --url "${{ steps.deployment.outputs.page_url }}"

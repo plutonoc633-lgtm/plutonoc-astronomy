@@ -1327,7 +1327,7 @@
   }
   function filmCard(film, index) {
     return `<figure class="film-card" data-film-index="${index}">
-      <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="${index === 0 ? 'eager' : 'lazy'}">
+      <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="lazy" decoding="async">
       <video class="film-preview" muted loop playsinline preload="none" aria-hidden="true"></video>
       <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
       <figcaption><h3>${escapeHtml(film.title)}</h3><p>${escapeHtml(film.date || '')}<br>${formatDuration(film.duration)}</p></figcaption>

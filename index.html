@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="PlutonoC 的摄影与动态影像记录">
   <meta name="theme-color" content="#050609">
+  <link rel="canonical" href="https://plutonoc.cn/">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PlutonoC">
+  <meta property="og:title" content="PlutonoC">
+  <meta property="og:description" content="PlutonoC 的摄影与动态影像记录">
+  <meta property="og:url" content="https://plutonoc.cn/">
+  <meta property="og:image" content="https://plutonoc.cn/assets/branding/plutonoc-share.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="云隐珠峰与 PlutonoC 手写口号">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PlutonoC">
+  <meta name="twitter:description" content="PlutonoC 的摄影与动态影像记录">
+  <meta name="twitter:image" content="https://plutonoc.cn/assets/branding/plutonoc-share.jpg">
+  <meta name="twitter:image:alt" content="云隐珠峰与 PlutonoC 手写口号">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="assets/branding/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png" sizes="180x180">
   <title>PlutonoC</title>
   <script>
     (() => {
@@ -17,9 +37,10 @@
     })();
   </script>
   <link rel="preload" href="assets/fonts/source-han-sans-cn-medium.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="assets/fonts/source-han-serif-cn-vf.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchpriority="high">
+  <link rel="preload" href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchpriority="high">
   <link rel="preload" href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css?v=20260720-handwritten-1">
+  <link rel="stylesheet" href="style.css?v=20260720-perf-share-1">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -92,19 +113,19 @@
       <div class="index-top"><span>PLUTONOC / INDEX</span><button type="button" data-index-close aria-label="关闭索引">关闭 <b>×</b></button></div>
       <div class="index-body">
         <nav class="index-nav" aria-label="栏目索引">
-          <a href="#home" data-index-link data-preview="assets/gallery/earth/earth-007.jpg"><span>01</span><b>首页</b><em>HOME</em></a>
+          <a href="#home" data-index-link data-preview="assets/gallery/previews/earth/earth-007.webp"><span>01</span><b>首页</b><em>HOME</em></a>
           <a href="#works" data-index-link data-gallery-target="deepsky" data-preview="assets/gallery/hero/deepsky.webp"><span>02.1</span><b>深空</b><em>DEEP SPACE</em><i data-index-category-count="deepsky"></i></a>
           <a href="#works" data-index-link data-gallery-target="sunmoon" data-preview="assets/gallery/hero/sunmoon.webp"><span>02.2</span><b>日月</b><em>SUN &amp; MOON</em><i data-index-category-count="sunmoon"></i></a>
           <a href="#works" data-index-link data-gallery-target="planet" data-preview="assets/gallery/hero/planet.webp"><span>02.3</span><b>行星</b><em>PLANETS</em><i data-index-category-count="planet"></i></a>
           <a href="#works" data-index-link data-gallery-target="nightscape" data-preview="assets/gallery/hero/nightscape.webp"><span>02.4</span><b>星野</b><em>NIGHTSCAPE</em><i data-index-category-count="nightscape"></i></a>
           <a href="#works" data-index-link data-gallery-target="earth" data-preview="assets/gallery/previews/earth/earth-022.webp" data-preview-position="center"><span>02.5</span><b>大地</b><em>EARTH</em><i data-index-category-count="earth"></i></a>
           <a href="#films" data-index-link data-preview="assets/videos/jupiter-poster.jpg"><span>03</span><b>动态影像</b><em>MOTION</em></a>
-          <a href="#records" data-index-link data-preview="assets/gallery/planetary/planetary-04.jpg"><span>04</span><b>可公开的情报</b><em>DECLASSIFIED</em></a>
+          <a href="#records" data-index-link data-preview="assets/gallery/previews/sunmoon/planetary-04.webp"><span>04</span><b>可公开的情报</b><em>DECLASSIFIED</em></a>
           <a href="#equipment" data-index-link data-preview="assets/equipment/previews/equipment-c925hd.webp"><span>05</span><b>设备</b><em>EQUIPMENT</em></a>
           <a href="#contact" data-index-link data-preview="assets/gallery/previews/earth/earth-052.webp" data-preview-position="center"><span>06</span><b>结尾</b><em>FINALE</em></a>
         </nav>
         <figure class="index-preview" aria-hidden="true">
-          <img src="assets/gallery/nightscape/nightscape-03.jpg" alt="">
+          <img src="assets/gallery/previews/nightscape/nightscape-03.webp" width="1600" height="1067" alt="" loading="lazy" decoding="async">
           <figcaption><span data-index-count>01</span><b data-index-name>首页</b></figcaption>
         </figure>
       </div>
@@ -120,47 +141,50 @@
     <section class="hero" id="home" data-section="01" data-section-name="首页">
       <div class="home-profile" id="profile">
         <figure class="profile-visual reveal">
-          <img src="assets/gallery/earth/earth-007.jpg" alt="云隐珠峰">
+          <picture>
+            <source media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">
+            <img src="assets/gallery/hero/earth.webp" width="5405" height="3545" alt="云隐珠峰" decoding="async" fetchpriority="high">
+          </picture>
         </figure>
         <div class="profile-copy reveal">
           <h1 aria-label="PER ASPERA AD ASTRA"><img src="assets/branding/per-aspera-ad-astra-handwritten.png" width="2048" height="272" alt="" aria-hidden="true" decoding="async" fetchpriority="high"></h1>
-          <img class="profile-watermark" src="assets/branding/plutonoc-watermark.png" width="2935" height="802" alt="" aria-hidden="true" decoding="async">
+          <img class="profile-watermark" src="assets/branding/plutonoc-watermark-web.png" width="640" height="175" alt="" aria-hidden="true" decoding="async">
         </div>
       </div>
       <nav class="descent-sheet" aria-label="摄影分类">
         <a class="descent-panel" href="#works" data-home-filter="deepsky" data-transition-link style="--panel-color:#9ec8ff">
-          <img src="assets/gallery/hero/deepsky.webp" alt="猎户座星云与跑步者星云">
+          <img src="assets/gallery/hero/deepsky.webp" width="1800" height="1214" alt="猎户座星云与跑步者星云" loading="lazy" decoding="async">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">01</span>
           <span class="descent-panel-meta"><b>深空</b><i>DEEP SPACE</i><em data-category-count="deepsky">31</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="sunmoon" data-transition-link style="--panel-color:#e5edf4">
-          <img src="assets/gallery/hero/sunmoon.webp" alt="月面部分地图">
+          <img src="assets/gallery/hero/sunmoon.webp" width="1800" height="1262" alt="月面部分地图" loading="lazy" decoding="async">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">02</span>
           <span class="descent-panel-meta"><b>日月</b><i>SUN &amp; MOON</i><em data-category-count="sunmoon">7</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="planet" data-transition-link style="--panel-color:#edf0f2">
-          <img src="assets/gallery/hero/planet.webp" alt="木星自转四小时">
+          <img src="assets/gallery/hero/planet.webp" width="1800" height="1286" alt="木星自转四小时" loading="lazy" decoding="async">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">03</span>
           <span class="descent-panel-meta"><b>行星</b><i>PLANETS</i><em data-category-count="planet">4</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="nightscape" data-transition-link style="--panel-color:#f4f1e9">
-          <img src="assets/gallery/hero/nightscape.webp" alt="冬季银河接片带星云标识">
+          <img src="assets/gallery/hero/nightscape.webp" width="1800" height="982" alt="冬季银河接片带星云标识" loading="lazy" decoding="async">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">04</span>
           <span class="descent-panel-meta"><b>星野</b><i>NIGHTSCAPE</i><em data-category-count="nightscape">14</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="earth" data-transition-link style="--panel-color:#ddb477">
-          <img src="assets/gallery/hero/earth.webp" alt="云隐珠峰">
+          <img src="assets/gallery/hero/earth.webp" width="2560" height="1679" alt="云隐珠峰" loading="lazy" decoding="async">
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">05</span>
           <span class="descent-panel-meta"><b>大地</b><i>EARTH</i><em data-category-count="earth">60</em></span>
         </a>
       </nav>
       <a class="motion-gateway" href="#films" data-transition-link>
-        <video src="assets/videos/jupiter.mp4" poster="assets/videos/jupiter-poster.jpg" muted loop playsinline preload="metadata" data-home-motion aria-label="木星动态观测影像"></video>
+        <video src="assets/videos/jupiter.mp4" poster="assets/videos/jupiter-poster.jpg" muted loop playsinline preload="none" data-home-motion aria-label="木星动态观测影像"></video>
         <span><i>06</i><b>动态影像</b><em>MOTION</em><small>00:06</small></span>
       </a>
     </section>
@@ -284,6 +308,6 @@
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script src="video-data.js?v=20260720-cloudbase-1"></script>
   <script src="gallery-data.js?v=20260718-beam-2"></script>
-  <script src="script.js?v=20260720-title-swap-1"></script>
+  <script src="script.js?v=20260720-perf-share-1"></script>
 </body>
 </html>
