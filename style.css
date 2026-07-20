@@ -370,14 +370,9 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .profile-visual img { width: 100%; height: 100%; object-fit: cover; object-position: center 48%; transform: scale(1.055); transition: transform 1.4s var(--ease-cinematic); }
 .profile-visual.is-visible img { transform: scale(1); }
 .profile-copy { position: relative; z-index: 2; display: grid; justify-items: center; width: min(94vw, 1400px); padding: 40px 20px; text-align: center; text-shadow: 0 3px 26px rgba(0,0,0,.72); }
-.profile-copy h1 { display: flex; align-items: baseline; justify-content: center; gap: .34em; font: 500 clamp(24px, 2.8vw, 42px)/1.1 var(--font-meta); letter-spacing: .14em; white-space: nowrap; }
-.profile-copy h1 > span { display: block; opacity: 0; filter: blur(2px); transition: opacity .75s ease, filter .85s ease, transform .9s var(--ease-cinematic); }
-.profile-copy h1 > span:nth-child(1) { transform: translate3d(-3px, 2px, 0); transition-delay: .06s; }
-.profile-copy h1 > span:nth-child(2) { transform: translate3d(2px, -2px, 0); transition-delay: .14s; }
-.profile-copy h1 > span:nth-child(3) { transform: translate3d(-2px, 2px, 0); transition-delay: .22s; }
-.profile-copy h1 > span:nth-child(4) { transform: translate3d(3px, -2px, 0); transition-delay: .3s; }
-.profile-copy.is-visible h1 > span { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) rotate(0); }
-.profile-copy h1 i { display: block; font-style: normal; }
+.profile-copy h1 { width: clamp(360px, 50vw, 720px); max-width: 90vw; }
+.profile-copy h1 img { display: block; width: 100%; height: auto; opacity: 0; filter: brightness(1.08) blur(2px) drop-shadow(0 3px 22px rgba(0,0,0,.72)); transform: translate3d(0, 5px, 0); transition: opacity .8s ease, filter .9s ease, transform .9s var(--ease-cinematic); }
+.profile-copy.is-visible h1 img { opacity: .94; filter: brightness(1.12) blur(0) drop-shadow(0 3px 22px rgba(0,0,0,.72)); transform: none; }
 .profile-watermark { width: clamp(76px, 7vw, 105px); height: auto; margin-top: 20px; opacity: .86; filter: drop-shadow(0 3px 16px rgba(0,0,0,.68)); }
 
 /* Section foundations */
@@ -581,9 +576,8 @@ dialog { color: inherit; }
   .profile-visual img { min-height: 100%; height: 100%; object-position: 51% 43%; transform: scale(1.2); }
   .profile-visual.is-visible img { transform: scale(1.16); }
   .profile-copy { padding: 30px 18px; }
-  .profile-copy h1 { max-width: 100%; align-items: baseline; gap: .22em; font-size: clamp(14px, 4.1vw, 18px); letter-spacing: .1em; }
-  .profile-copy h1 > span { filter: blur(1.5px); transform: none !important; transition: opacity .65s ease, filter .75s ease; }
-  .profile-copy h1 i { animation: none !important; transform: none !important; line-height: 1; }
+  .profile-copy h1 { width: min(80vw, 310px); max-width: 100%; }
+  .profile-copy h1 img { transform: translate3d(0, 3px, 0); }
   .profile-watermark { width: min(19vw, 68px); margin-top: 15px; opacity: .84; }
 
   .works,
@@ -649,8 +643,7 @@ dialog { color: inherit; }
   .scroll-calibration.is-calibrated svg,
   .scroll-calibration.is-calibrated .calibration-ring circle,
   .scroll-calibration.is-calibrated .calibration-progress { animation: none !important; }
-  .profile-copy h1 > span { opacity: 1; filter: none; transform: none; }
-  .profile-copy h1 i { animation: none !important; transform: none; }
+  .profile-copy h1 img { opacity: .94; filter: brightness(1.08) drop-shadow(0 3px 22px rgba(0,0,0,.72)); transform: none; }
   .arrival-copy h2 span { left: 50%; top: 37%; opacity: 1; filter: none; transform: translate3d(-50%, 0, 0) !important; }
   .reveal { opacity: 1; transform: none; }
 }
