@@ -4,7 +4,7 @@ window.localVideoData = [
     title: '星辰行梦',
     category: '其他',
     videoUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/star-dream.mp4',
-    posterUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/star-dream.jpg',
+    posterUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/star-dream-27s-v2.jpg',
     duration: 285.9,
     status: 'published',
     sortOrder: 1
@@ -14,7 +14,7 @@ window.localVideoData = [
     title: '江南大学天文协会宣传片',
     category: '其他',
     videoUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/tianjian-promo.mp4',
-    posterUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/tianjian-promo.jpg',
+    posterUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/tianjian-promo-title-v2.jpg',
     duration: 151.6,
     status: 'published',
     sortOrder: 2
