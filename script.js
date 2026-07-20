@@ -584,7 +584,7 @@ const arrival = $('#contact');
       this.opening = null;
       this.needsDraw = true;
       this.lastFrame = performance.now();
-      this.cache = new BitmapCache((isMobile ? 64 : 160) * 1024 * 1024);
+      this.cache = new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024);
       this.initialCamera = { x: 0, y: 0 };
       this.live = $('[data-canvas-live]');
       this.status = $('[data-canvas-status]');
@@ -608,7 +608,7 @@ const arrival = $('#contact');
     resize() {
       const bounds = this.canvas.getBoundingClientRect();
       if (!bounds.width || !bounds.height) return;
-      const dpr = Math.min(devicePixelRatio || 1, isMobile ? 1 : 1.5);
+      const dpr = Math.min(devicePixelRatio || 1, isMobile ? 1.2 : 1.75);
       this.width = bounds.width;
       this.height = bounds.height;
       this.dpr = dpr;
