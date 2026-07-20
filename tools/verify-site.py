@@ -12,14 +12,8 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-CACHE_VERSION = "20260720-typography-covers-3"
+CACHE_VERSION = "20260720-pingfang-header-1"
 REQUIRED_ASSETS = {
-    "assets/fonts/plutonoc-display.woff2": 120_000,
-    "assets/fonts/plutonoc-text-regular.woff2": 200_000,
-    "assets/fonts/plutonoc-text-medium.woff2": 200_000,
-    "assets/fonts/plutonoc-meta.woff2": 200_000,
-    "assets/fonts/SMILEY-SANS-OFL.txt": 10_000,
-    "assets/fonts/GLOW-SANS-OFL.txt": 10_000,
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
     "assets/branding/favicon-32.png": 20_000,
@@ -32,15 +26,12 @@ REQUIRED_ASSETS = {
     "assets/gallery/hero/earth.webp": 700_000,
 }
 REMOTE_TYPES = {
+    "assets/branding/plutonoc-watermark-web.png": "image/png",
     "assets/branding/plutonoc-share.jpg": "image/jpeg",
     "assets/branding/favicon-32.png": "image/png",
     "assets/branding/avatar-bilibili.webp": "image/webp",
     "assets/branding/avatar-douyin.webp": "image/webp",
     "assets/branding/avatar-xiaohongshu.webp": "image/webp",
-    "assets/fonts/plutonoc-display.woff2": "font/woff2",
-    "assets/fonts/plutonoc-text-regular.woff2": "font/woff2",
-    "assets/fonts/plutonoc-text-medium.woff2": "font/woff2",
-    "assets/fonts/plutonoc-meta.woff2": "font/woff2",
     "assets/gallery/previews/earth/earth-007.webp": "image/webp",
     "assets/gallery/hero/earth.webp": "image/webp",
 }
@@ -97,6 +88,7 @@ def verify_local(root: Path) -> None:
         'href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)"',
         '<source media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
         'src="assets/branding/plutonoc-watermark-web.png"',
+        'class="brand" href="#home" data-transition-link aria-label="PlutonoC，返回首页"><img src="assets/branding/plutonoc-watermark-web.png" width="640" height="175"',
         'preload="none" data-home-motion',
         'class="arrival-hero"',
         'class="arrival-outro"',
@@ -119,16 +111,16 @@ def verify_local(root: Path) -> None:
         "source-han-sans-cn-medium.woff2",
         "ibm-plex-sans-regular.woff2",
         "ibm-plex-sans-medium.woff2",
-    ):
-        require(obsolete not in runtime_sources, f"Obsolete runtime font is still referenced: {obsolete}")
-    for font_name in (
         "plutonoc-display.woff2",
         "plutonoc-text-regular.woff2",
         "plutonoc-text-medium.woff2",
         "plutonoc-meta.woff2",
+        "@font-face",
     ):
-        require(font_name in style, f"Public CSS does not reference {font_name}")
-        require(font_name in admin_style, f"Admin CSS does not reference {font_name}")
+        require(obsolete not in runtime_sources, f"Obsolete runtime font is still referenced: {obsolete}")
+    system_stack = '"PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif'
+    require(system_stack in style, "Public CSS does not use the approved system-font stack")
+    require(system_stack in admin_style, "Admin CSS does not use the approved system-font stack")
     require("font-synthesis: none" in style + admin_style, "Synthetic font styling has not been disabled")
     require("star-dream-27s-v2.jpg" in video_data, "Star Dream poster manifest is stale")
     require("tianjian-promo-title-v2.jpg" in video_data, "Tianjian poster manifest is stale")
@@ -142,20 +134,8 @@ def verify_local(root: Path) -> None:
     require(png_size(root / "assets/branding/favicon-32.png") == (32, 32), "PNG favicon must be 32x32")
     require(png_size(root / "assets/branding/apple-touch-icon.png") == (180, 180), "Apple icon must be 180x180")
 
-    font_total = sum((root / relative).stat().st_size for relative in (
-        "assets/fonts/plutonoc-display.woff2",
-        "assets/fonts/plutonoc-text-regular.woff2",
-        "assets/fonts/plutonoc-text-medium.woff2",
-        "assets/fonts/plutonoc-meta.woff2",
-    ))
-    require(font_total <= 650_000, f"Runtime font budget exceeded: {font_total} bytes")
-
     initial_owned = sum((root / relative).stat().st_size for relative in (
         "assets/gallery/hero/earth.webp",
-        "assets/fonts/plutonoc-display.woff2",
-        "assets/fonts/plutonoc-text-regular.woff2",
-        "assets/fonts/plutonoc-text-medium.woff2",
-        "assets/fonts/plutonoc-meta.woff2",
         "assets/branding/per-aspera-ad-astra-handwritten.png",
         "assets/branding/plutonoc-watermark-web.png",
     ))
@@ -168,7 +148,7 @@ def verify_local(root: Path) -> None:
         clean = reference.split("?", 1)[0]
         require((root / clean).is_file(), f"Referenced local file is missing: {clean}")
 
-    print(f"Local site verification passed; fonts: {font_total} bytes; owned first-view budget: {initial_owned} bytes")
+    print(f"Local site verification passed; runtime web fonts: 0 bytes; owned first-view budget: {initial_owned} bytes")
 
 
 def cache_bust(url: str) -> str:

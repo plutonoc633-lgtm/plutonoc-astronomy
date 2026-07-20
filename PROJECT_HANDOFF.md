@@ -64,7 +64,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 ### INDEX
 
 - 任意滚动位置可打开，支持键盘、Esc、焦点返回和当前栏目高亮。
-- 最新未提交修改：预览框改为横向 `16:10`，图片 `cover`，切换时交叉淡入。
+- 预览框为横向 `16:10`，图片使用 `cover`，切换时交叉淡入。
 - 大地预览固定为 `assets/gallery/previews/earth/earth-022.webp`（大地之树）。
 - 结尾预览固定为 `assets/gallery/previews/earth/earth-052.webp`（香格里拉）。
 - 手机端隐藏大预览图，仅保留栏目列表。
@@ -74,7 +74,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 
 - 贵州夏季银河照片构成独立满屏主视觉，照片上只显示单行 `择日成星`。
 - 设备区到照片通过顶部暗场、照片透明度与轻微缩放渐显；照片底部再渐变到深蓝星图信息区。
-- Bilibili、抖音账号卡以及版权、英文口号、返回顶部均位于照片后的独立信息区；手机端保持单栏账号卡和两行品牌栏。
+- Bilibili、抖音、小红书入口以及版权、英文口号、返回顶部均位于照片后的独立信息区；手机端保持一行三列头像入口和两行品牌栏。
 
 ## 4. 代码结构
 
@@ -249,8 +249,8 @@ git status --short
 ```powershell
 git diff --stat
 git status --short
-git add cloudbase-config.js index.html script.js style.css PROJECT_HANDOFF.md
-git commit -m "Refine responsive visuals and connect CloudBase videos"
+git add <本轮确认文件>
+git commit -m "<准确描述本轮变更>"
 git push origin main
 ```
 
@@ -282,7 +282,7 @@ https://plutonoc.cn/admin.html
 ## 11. 2026-07-20 手机端体验修正
 
 - 首页“择日成星”字号与逐字动效已减弱；手机端四字使用统一基线并取消漂移、旋转。
-- 原始透明水印已复制为 `assets/branding/plutonoc-watermark.png`，只显示在首页标题下方；桌面原文件未修改。
+- 原始透明水印已复制为 `assets/branding/plutonoc-watermark.png`；优化版同时用于首页标题下方和公开站点页头品牌，桌面原文件未修改。
 - 手机端珠峰图已放大并上移视觉中心；五栏改为固定宽度和中心点唯一高亮，移除会触发布局抖动的缩放与阈值观察逻辑。
 - 刷新带 hash 的页面会返回首页；首次直接打开深链接、站内 INDEX、前进和后退仍保留对应栏目导航。
 - “北京日报客户端”记录已删除，三条“中国国家天文”按 2026.02.11 / 02.05 / 01.28 置顶。
@@ -293,10 +293,10 @@ https://plutonoc.cn/admin.html
 
 - 首页珠峰改用现有 1600px / 2560px WebP 响应式资源，INDEX 同步使用轻量预览；`earth-007.jpg` 原图仍完整保留在摄影图库中。
 - 五栏图片和视频封面改为延迟加载，首页木星视频使用 `preload="none"`，进入可见区域时仍沿用原有播放逻辑。
-- 完整 Source Han Serif 字体保留为构建源，页面改用约 146KB 的当前站点字符子集；未来未包含字符回退系统宋体。
+- 当时页面曾使用约 146KB 的 Source Han Serif 字符子集；该运行时方案已被第 15 节的系统字体栈替代。
 - 原始水印保持不变，页面改用约 640px 的透明优化版本；新增 1200×630 珠峰品牌分享封面和由水印星球图案裁切的 favicon。
 - 首页增加 canonical、Open Graph、Twitter Card 与绝对分享图片地址，不修改现有视觉布局、CloudBase、视频数据或摄影数据。
-- `tools/build-web-assets.py` 负责确定性生成字体与品牌衍生资源；`tools/verify-site.py` 检查资源引用、尺寸、体积、缓存版本和线上状态。
+- `tools/build-web-assets.py` 当时同时生成字体与品牌衍生资源；最终职责已在第 15 节收敛为只生成品牌衍生资源。
 - GitHub Pages 工作流已加入部署前 JavaScript / 静态资源检查和部署后线上冒烟验证。
 
 ## 13. 2026-07-20 结尾转场与信息区重构
@@ -309,7 +309,7 @@ https://plutonoc.cn/admin.html
 - 手机端三个账号保持一行三列；品牌栏仍采用口号居中、版权与返回顶部并列的两行结构，全页不得横向溢出。
 - `© 2026 PLUTONOC`、`PER ASPERA AD ASTRA`、`BACK TO TOP ↑` 保留在独立品牌栏。
 
-## 14. 2026-07-20 全站字体与视频封面更新
+## 14. 2026-07-20 全站字体与视频封面更新（字体部分已被第 15 节替代）
 
 - 公开站点和 `admin.html` 的运行时字体统一改为“得意黑 + 未来荧黑”：得意黑用于中文展示标题，未来荧黑 Normal 用于正文与界面、Compressed 用于编号和英文元信息。
 - 构建脚本固定得意黑 `v2.0.1`、未来荧黑 `v0.93` 的官方发布包与 SHA-256；下载和完整字体只进入系统临时缓存，Git 仅保留四个 WOFF2 子集与两份 OFL 许可证。
@@ -317,3 +317,24 @@ https://plutonoc.cn/admin.html
 - 视频标题使用得意黑并缩小：重点视频 `clamp(24px, 3vw, 44px)`，列表视频 `clamp(20px, 2vw, 28px)`，手机端约 20–24px，长标题允许自然换行。
 - `星辰行梦` 封面改为原片 00:27 的“心脏星云 / IC1805”干净帧；`江南大学天文协会宣传片` 改为原片 00:02 的校徽联名干净帧，均输出 1920×1080 JPEG。
 - 新封面以版本化文件名同步至 CloudBase 文件存储与公开静态托管，并更新数据库 `posterFileId`、`posterUrl`、`updatedAt` 和本地静态清单；旧封面未删除，可随时回滚。
+
+## 15. 2026-07-20 最终字体、页头品牌与发布交接
+
+- 影视飓风官网当前 CSS 使用 `PingFang SC`，没有自定义 `@font-face`。公开站点和 `admin.html` 最终统一采用系统字体栈：`PingFang SC / Microsoft YaHei / Noto Sans CJK SC / sans-serif`。
+- Apple 设备优先使用苹方；Windows 使用微软雅黑；Android/Linux 使用可用的 Noto CJK 或无衬线系统回退。页面不下载字体、不依赖字体 CDN，运行时网页字体为 0 字节。
+- 标题使用 600，品牌与强调信息使用 500，正文和元信息使用 400；已移除为得意黑窄斜字形设置的负字距，并校正中文标题行高。
+- 得意黑、未来荧黑、旧思源与 IBM Plex 文件及许可证仍保留在仓库中作为历史回滚资源，但 HTML、公开 CSS、后台 CSS 和预载均不得引用它们。
+- 公开站点页头左侧文字 `PlutonoC` 已替换为 `assets/branding/plutonoc-watermark-web.png`：桌面高 24px、手机高 20px，保留 640×175 固有尺寸和透明通道。中间 `01 首页`、右侧 `INDEX` 及后台页头文字保持不变。
+- `tools/build-web-assets.py` 只生成优化水印、分享封面和 favicon，不再下载、裁切或输出字体；源摄影、手写口号和原始水印在构建前后进行哈希保护。
+- `tools/verify-site.py` 检查系统字体栈、页头水印标记、0 字体运行时引用、缓存版本、品牌资源尺寸、视频封面地址和线上 MIME 类型。
+- 当前缓存版本为 `20260720-pingfang-header-1`。发布前必须执行：
+
+```powershell
+node --check script.js
+node --check admin.js
+python tools/verify-site.py --root .
+git diff --check
+```
+
+- GitHub Pages 工作流会在上传前重复语法和静态检查，部署后运行线上冒烟验证。完成后检查 `https://plutonoc.cn/`、`https://plutonoc.cn/admin.html`，并确认浏览器网络面板没有 WOFF/WOFF2 请求。
+- CloudBase 环境、`videos` 集合、安全规则、三条视频、封面和静态清单本轮均未改动；继续遵守第 6 节现有约束。
