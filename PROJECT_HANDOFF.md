@@ -5,7 +5,7 @@
 GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 项目目录：`C:\Users\komorebi\Documents\Codex\2026-06-05\plugin-computer-use-openai-bundled\outputs`
 分支：`main`
-当前 HEAD：`705f3f8 Strengthen progress motion and navigation state`
+当前发布基线：`main`（提交哈希以 `git log -1 --oneline` 为准）
 
 ## 1. 项目目标
 
@@ -33,7 +33,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 - 摄影作品使用原生 Canvas 2D 无限二维画布，不能退回普通 DOM 网格。
 - Canvas 保持图片原始方向和比例，不用 `object-fit: cover` 裁掉主体；灯箱加载原图并完整显示。
 - 设备区保持双标签与现有文字，图片使用中心放大、两侧缩小的无限轮播。
-- 结尾文字固定为 `循此苦旅 / 以达天际`，小字为 `PER ASPERA AD ASTRA`，不能替换成“光最终抵达这里”等对白。
+- 结尾照片文字固定为单行 `择日成星`；账号、版权、英文口号和返回顶部必须位于照片后的独立信息区，不能重新铺在照片上。
 - 抖音主页链接固定：`https://v.douyin.com/pswzeVgv1D0/`。
 - 不新增大型动画库、外部字体 CDN、粒子模板、玻璃拟态或自定义鼠标。
 - 支持 `prefers-reduced-motion`，手机端优先流畅和无横向溢出。
@@ -43,8 +43,8 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 ### 首页
 
 - 首页由五个摄影分类入口和一个独立动态影像入口组成。
-- 首页已合并“云隐珠峰”个人视觉页，主文字为 `择日成星`。
-- 最新未提交修改：减小 `择日成星` 字号和动效；移除底图上的 `PlutonoC`，改为在五个分类栏整体中央悬浮小号 `PlutonoC`。
+- 首页已合并“云隐珠峰”个人视觉页，主视觉为手写图片 `PER ASPERA AD ASTRA`，下方显示小号水印。
+- 五个分类栏中央不显示 `PlutonoC` 署名；桌面端保留栏宽展开，手机端保持固定宽度与中心唯一高亮。
 - 五栏点击后直接筛选并进入 Canvas 对应分类。
 
 ### 几何进度符号
@@ -72,9 +72,9 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 
 ### 结尾
 
-- 最新未提交修改：减小结尾字号；加入低饱和红色斜切块、细线和圆弧等构成主义元素。
-- `循此苦旅` 与 `以达天际`保持非对称、轻微持续漂移，不能和 `PER ASPERA AD ASTRA` 重叠。
-- 社交链接和页脚已调整为正常文档流，并增加手机安全区。
+- 贵州夏季银河照片构成独立满屏主视觉，照片上只显示单行 `择日成星`。
+- 设备区到照片通过顶部暗场、照片透明度与轻微缩放渐显；照片底部再渐变到深蓝星图信息区。
+- Bilibili、抖音账号卡以及版权、英文口号、返回顶部均位于照片后的独立信息区；手机端保持单栏账号卡和两行品牌栏。
 
 ## 4. 代码结构
 
@@ -91,18 +91,9 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 - `assets/videos/jupiter-poster.webp`：木星封面。
 - `CNAME`：`plutonoc.cn`。
 
-## 5. 当前未提交改动
+## 5. 工作区约束
 
-工作区有 4 个修改文件，禁止回退：
-
-```text
-M cloudbase-config.js
-M index.html
-M script.js
-M style.css
-```
-
-改动规模：68 行新增、41 行删除。主要内容是本交接文档第 3 节所述视觉修正，以及 CloudBase 环境 ID 配置。
+本轮开始前 `main` 工作区干净。后续如出现未提交文件，一律先检查来源并保留用户修改，禁止直接回退或覆盖。
 
 `cloudbase-config.js` 当前为：
 
@@ -307,3 +298,12 @@ https://plutonoc.cn/admin.html
 - 首页增加 canonical、Open Graph、Twitter Card 与绝对分享图片地址，不修改现有视觉布局、CloudBase、视频数据或摄影数据。
 - `tools/build-web-assets.py` 负责确定性生成字体与品牌衍生资源；`tools/verify-site.py` 检查资源引用、尺寸、体积、缓存版本和线上状态。
 - GitHub Pages 工作流已加入部署前 JavaScript / 静态资源检查和部署后线上冒烟验证。
+
+## 13. 2026-07-20 结尾转场与信息区重构
+
+- 第 06 节拆为满屏照片主视觉和独立账号信息区；贵州夏季银河照片上只保留 `择日成星`。
+- 设备区进入照片时使用约一屏内完成的暗场、透明度和轻微缩放渐显，标题在照片显现后半程出现。
+- 照片底部通过加长暗场交叠进入深蓝星图信息区，不再出现照片与信息背景的直接硬切。
+- Bilibili、抖音改为独立账号卡；`© 2026 PLUTONOC`、`PER ASPERA AD ASTRA`、`BACK TO TOP ↑` 进入单独品牌栏。
+- 手机端账号卡单栏排列，品牌栏采用口号居中、版权与返回顶部并列的两行结构；全页无横向溢出。
+- 可见文案新增“官方账号”，已重新生成 Source Han Serif 中文字体子集；完整字体源文件保持不变。

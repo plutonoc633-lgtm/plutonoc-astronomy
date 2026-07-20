@@ -12,7 +12,7 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-CACHE_VERSION = "20260720-perf-share-1"
+CACHE_VERSION = "20260720-arrival-outro-1"
 REQUIRED_ASSETS = {
     "assets/fonts/source-han-serif-cn-site.woff2": 750_000,
     "assets/branding/plutonoc-watermark-web.png": 100_000,
@@ -80,6 +80,10 @@ def verify_local(root: Path) -> None:
         '<source media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
         'src="assets/branding/plutonoc-watermark-web.png"',
         'preload="none" data-home-motion',
+        'class="arrival-hero"',
+        'class="arrival-outro"',
+        'class="arrival-footer"',
+        '<h3>官方账号</h3>',
     )
     for token in required_html:
         require(token in index, f"Missing index marker: {token}")

@@ -359,6 +359,7 @@
   const calibrationRoute = $('[data-calibration-route]', scrollCalibration);
   const calibrationProgress = $('[data-calibration-progress]', scrollCalibration);
   const arrival = $('#contact');
+  const arrivalHero = $('.arrival-hero', arrival);
   const profileCopy = $('.profile-copy');
   let calibrationInertia = 0;
   let previousScrollY = scrollY;
@@ -377,6 +378,8 @@
   function updateArrivalProgress() {
     if (!arrival) return;
     if (reducedMotion) {
+      arrival.style.setProperty('--arrival-image-opacity', '1');
+      arrival.style.setProperty('--arrival-image-scale', '1');
       arrival.style.setProperty('--arrival-title-y', '0px');
       arrival.style.setProperty('--arrival-opacity', '1');
       arrival.style.setProperty('--arrival-blur', '0px');
@@ -384,13 +387,16 @@
       arrival.classList.add('is-complete');
       return;
     }
-    const bounds = arrival.getBoundingClientRect();
-    const progress = clamp((innerHeight * .9 - bounds.top) / Math.max(bounds.height * .84, 1), 0, 1);
-    arrival.style.setProperty('--arrival-title-y', `${(18 * (1 - progress)).toFixed(2)}px`);
-    arrival.style.setProperty('--arrival-opacity', `${(.1 + progress * .9).toFixed(3)}`);
-    arrival.style.setProperty('--arrival-blur', `${(12 * (1 - progress)).toFixed(2)}px`);
-    arrival.style.setProperty('--arrival-spacing', `${(.1 - progress * .06).toFixed(3)}em`);
-    arrival.classList.toggle('is-complete', progress > .985);
+    const bounds = (arrivalHero || arrival).getBoundingClientRect();
+    const imageProgress = clamp((innerHeight * .96 - bounds.top) / Math.max(innerHeight * .78, 1), 0, 1);
+    const titleProgress = clamp((imageProgress - .45) / .55, 0, 1);
+    arrival.style.setProperty('--arrival-image-opacity', `${(.08 + imageProgress * .92).toFixed(3)}`);
+    arrival.style.setProperty('--arrival-image-scale', `${(1.025 - imageProgress * .025).toFixed(4)}`);
+    arrival.style.setProperty('--arrival-title-y', `${(12 * (1 - titleProgress)).toFixed(2)}px`);
+    arrival.style.setProperty('--arrival-opacity', `${titleProgress.toFixed(3)}`);
+    arrival.style.setProperty('--arrival-blur', `${(8 * (1 - titleProgress)).toFixed(2)}px`);
+    arrival.style.setProperty('--arrival-spacing', `${(.08 - titleProgress * .04).toFixed(3)}em`);
+    arrival.classList.toggle('is-complete', titleProgress > .985);
   }
 
   function updateScrollExperience() {
