@@ -1,15 +1,32 @@
 window.localVideoData = [
   {
+    id: 'star-dream',
+    title: '星辰行梦',
+    category: '其他',
+    videoUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/star-dream.mp4',
+    posterUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/star-dream.jpg',
+    duration: 285.9,
+    status: 'published',
+    sortOrder: 1
+  },
+  {
+    id: 'tianjian-promo',
+    title: '江南大学天文协会宣传片',
+    category: '其他',
+    videoUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/tianjian-promo.mp4',
+    posterUrl: 'https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/tianjian-promo.jpg',
+    duration: 151.6,
+    status: 'published',
+    sortOrder: 2
+  },
+  {
     id: 'local-jupiter-observation',
     title: '木星观测',
-    summary: '6 秒木星与卫星动态观测影像',
-    date: '2026-02-02',
-    location: '江阴',
     category: '行星观测',
     videoUrl: 'assets/videos/jupiter.mp4',
     posterUrl: 'assets/videos/jupiter-poster.jpg',
     duration: 6.084,
     status: 'published',
-    sortOrder: 1
+    sortOrder: 3
   }
 ];

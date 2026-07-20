@@ -1,7 +1,8 @@
 window.PLUTONOC_CLOUDBASE = {
-  envId: '',
+  envId: 'activity-book-web-d7djhe7bb1e834',
   region: 'ap-shanghai',
   clientId: '',
   accessKey: '',
-  collection: 'videos'
+  collection: 'videos',
+  staticManifest: true
 };

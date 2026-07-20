@@ -1,6 +1,8 @@
 # PlutonoC 视频后台配置
 
-网站前台在未配置 CloudBase 时会展示 `video-data.js` 中的两条本地视频；完成以下配置后，前台会优先读取云端已发布内容。
+网站前台在未配置 CloudBase 时会展示 `video-data.js` 中的静态影像清单；完成以下配置后，前台可优先读取云端已发布内容。
+
+> 当前环境使用 CloudBase 体验版。该套餐拒绝新增 Web 安全域名和修改文件存储安全规则，因此 `cloudbase-config.js` 暂时启用 `staticManifest: true`：视频与封面仍保存在 CloudBase，并额外发布到同一环境的公开静态托管路径；数据库记录由 CLI 管理。套餐升级并完成安全域名配置后，可移除此开关，恢复 Web SDK 和 `/admin.html` 的完整管理流程。
 
 ## 1. 创建环境
 
@@ -42,7 +44,8 @@ window.PLUTONOC_CLOUDBASE = {
   region: 'ap-shanghai',
   clientId: '控制台要求时填写客户端 ID，否则留空',
   accessKey: '控制台要求时填写 Publishable Key，否则留空',
-  collection: 'videos'
+  collection: 'videos',
+  staticManifest: false
 };
 ```
 

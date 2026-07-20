@@ -123,7 +123,7 @@
   const indexCount = $('[data-index-count]', siteIndex);
   const indexName = $('[data-index-name]', siteIndex);
   let indexReturnFocus = null;
-  let indexPreviewTimer = 0;
+  let indexPreviewRequest = 0;
 
   function openIndex(event) {
     indexReturnFocus = event?.currentTarget || document.activeElement;
@@ -145,13 +145,25 @@
     indexCount.textContent = $('span', link)?.textContent || '';
     indexName.textContent = $('b', link)?.textContent || '';
     const source = link.dataset.preview;
-    if (!source || indexPreview.getAttribute('src') === source) return;
-    clearTimeout(indexPreviewTimer);
+    const position = link.dataset.previewPosition || 'center';
+    if (!source) return;
+    if (indexPreview.getAttribute('src') === source) {
+      indexPreview.style.setProperty('--index-preview-position', position);
+      return;
+    }
+    const request = ++indexPreviewRequest;
     indexPreview.classList.add('is-changing');
-    indexPreviewTimer = setTimeout(() => {
+    const preload = new Image();
+    preload.onload = () => {
+      if (request !== indexPreviewRequest) return;
       indexPreview.src = source;
-      indexPreview.classList.remove('is-changing');
-    }, reducedMotion ? 0 : 140);
+      indexPreview.style.setProperty('--index-preview-position', position);
+      requestAnimationFrame(() => indexPreview.classList.remove('is-changing'));
+    };
+    preload.onerror = () => {
+      if (request === indexPreviewRequest) indexPreview.classList.remove('is-changing');
+    };
+    preload.src = source;
   }
 
   $$('[data-index-open]').forEach(button => button.addEventListener('click', openIndex));
@@ -386,6 +398,7 @@
       scrollCalibration.style.setProperty('--calibration-middle', `${(reducedMotion ? 0 : 150 * remaining - inertia * (2 / 3)).toFixed(2)}deg`);
       scrollCalibration.style.setProperty('--calibration-inner', `${(reducedMotion ? 0 : -100 * remaining + inertia * (4 / 9)).toFixed(2)}deg`);
       scrollCalibration.classList.toggle('is-calibrated', ratio > .995);
+      scrollCalibration.classList.toggle('is-near-end', ratio > .94);
       if (calibrationRoute && calibrationProgress) {
         const length = calibrationRoute.getTotalLength();
         const point = calibrationRoute.getPointAtLength(length * ratio);
@@ -1270,6 +1283,7 @@
   }
   async function loadCloudFilms() {
     const config = window.PLUTONOC_CLOUDBASE || {};
+    if (config.staticManifest) return [];
     if (!config.envId || !window.cloudbase) return [];
     const options = { env: config.envId, region: config.region || 'ap-shanghai' };
     if (config.clientId) options.clientId = config.clientId;
@@ -1277,7 +1291,7 @@
     const app = window.cloudbase.init(options);
     const result = await app.database().collection(config.collection || 'videos').where({ status: 'published' }).orderBy('sortOrder', 'asc').get();
     const records = result.data || [];
-    const fileIds = [...new Set(records.flatMap(record => [record.videoFileId, record.posterFileId]).filter(Boolean))];
+    const fileIds = [...new Set(records.flatMap(record => [record.videoFileId, record.posterFileId]).filter(fileId => /^cloud:\/\//.test(fileId)))];
     let links = new Map();
     if (fileIds.length) {
       const urlResult = await app.getTempFileURL({ fileList: fileIds });
@@ -1287,7 +1301,7 @@
       ...record,
       id: record._id || record.id,
       date: normalizeDate(record.date),
-      videoUrl: links.get(record.videoFileId),
+      videoUrl: links.get(record.videoFileId) || record.videoUrl,
       posterUrl: links.get(record.posterFileId) || record.posterUrl
     })).filter(record => record.videoUrl);
   }
