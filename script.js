@@ -4,6 +4,8 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const isMobile = window.matchMedia('(max-width: 760px)').matches;
+  const reloadToHome = document.documentElement.dataset.reloadHome === 'true';
+  delete document.documentElement.dataset.reloadHome;
   const $ = (selector, root = document) => root?.querySelector(selector);
   const $$ = (selector, root = document) => [...(root?.querySelectorAll(selector) || [])];
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -284,7 +286,7 @@
       setVisualStage(category);
       requestMainFrame();
     };
-    panel.addEventListener('pointerenter', activate);
+    if (supportsHover) panel.addEventListener('pointerenter', activate);
     panel.addEventListener('focus', activate);
     if (supportsHover && !reducedMotion) {
       panel.addEventListener('pointermove', event => {
@@ -313,11 +315,31 @@
     requestMainFrame();
   });
 
-  if (isMobile && 'IntersectionObserver' in window) {
-    const mobilePanelObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => entry.target.classList.toggle('is-mobile-current', entry.isIntersecting && entry.intersectionRatio > .6));
-    }, { root: descentSheet, threshold: [.6] });
-    descentPanels.forEach(panel => mobilePanelObserver.observe(panel));
+  if (isMobile && descentSheet) {
+    let mobilePanelFrame = 0;
+    const updateMobilePanel = () => {
+      mobilePanelFrame = 0;
+      const sheetBounds = descentSheet.getBoundingClientRect();
+      const sheetCenter = sheetBounds.left + sheetBounds.width / 2;
+      let currentPanel = descentPanels[0] || null;
+      let currentDistance = Infinity;
+      descentPanels.forEach(panel => {
+        const bounds = panel.getBoundingClientRect();
+        const distance = Math.abs(bounds.left + bounds.width / 2 - sheetCenter);
+        if (distance < currentDistance) {
+          currentPanel = panel;
+          currentDistance = distance;
+        }
+      });
+      descentPanels.forEach(panel => panel.classList.toggle('is-mobile-current', panel === currentPanel));
+      if (currentPanel?.dataset.homeFilter) setVisualStage(currentPanel.dataset.homeFilter);
+    };
+    const requestMobilePanelUpdate = () => {
+      if (!mobilePanelFrame) mobilePanelFrame = requestAnimationFrame(updateMobilePanel);
+    };
+    descentSheet.addEventListener('scroll', requestMobilePanelUpdate, { passive: true });
+    window.addEventListener('resize', requestMobilePanelUpdate, { passive: true });
+    requestMobilePanelUpdate();
   }
 
   if (homeMotion && supportsHover && !reducedMotion && 'IntersectionObserver' in window) {
@@ -441,6 +463,14 @@
     layoutDirty = true;
     scrollDirty = true;
     requestMainFrame();
+  }, { once: true });
+  window.addEventListener('pageshow', () => {
+    if (!reloadToHome) return;
+    requestAnimationFrame(() => {
+      scrollTo(0, 0);
+      scrollDirty = true;
+      requestMainFrame();
+    });
   }, { once: true });
 
   /* ImageBitmap LRU */

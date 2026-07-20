@@ -6,9 +6,19 @@
   <meta name="description" content="PlutonoC 的摄影与动态影像记录">
   <meta name="theme-color" content="#050609">
   <title>PlutonoC</title>
+  <script>
+    (() => {
+      history.scrollRestoration = 'manual';
+      const navigation = performance.getEntriesByType('navigation')[0];
+      if (navigation?.type !== 'reload') return;
+      document.documentElement.dataset.reloadHome = 'true';
+      history.replaceState(history.state, '', location.pathname + location.search);
+      scrollTo(0, 0);
+    })();
+  </script>
   <link rel="preload" href="assets/fonts/source-han-sans-cn-medium.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/source-han-serif-cn-vf.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=20260720-cloudbase-1">
+  <link rel="stylesheet" href="style.css?v=20260720-mobile-2">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -113,10 +123,10 @@
         </figure>
         <div class="profile-copy reveal">
           <h1 aria-label="择日成星"><span aria-hidden="true"><i>择</i></span><span aria-hidden="true"><i>日</i></span><span aria-hidden="true"><i>成</i></span><span aria-hidden="true"><i>星</i></span></h1>
+          <img class="profile-watermark" src="assets/branding/plutonoc-watermark.png" width="2935" height="802" alt="" aria-hidden="true" decoding="async">
         </div>
       </div>
       <nav class="descent-sheet" aria-label="摄影分类">
-        <span class="descent-wordmark" aria-hidden="true">PlutonoC</span>
         <a class="descent-panel" href="#works" data-home-filter="deepsky" data-transition-link style="--panel-color:#9ec8ff">
           <img src="assets/gallery/hero/deepsky.webp" alt="猎户座星云与跑步者星云">
           <span class="descent-panel-shade"></span>
@@ -194,14 +204,13 @@
     <section class="records" id="records" data-section="04" data-section-name="可公开的情报">
       <header class="section-heading reveal"><p>DECLASSIFIED</p><h2>可公开的情报</h2></header>
       <div class="archive-list reveal">
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/K_0qa-cIS_PpmyEyQJ11Sg" target="_blank" rel="noopener"><time>2026.02.11</time><span>发表</span><b>星影｜何时达遥夜，乍见初日明</b><em>中国国家天文 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/EjBPA65iruF6-iadVOWCZA" target="_blank" rel="noopener"><time>2026.02.05</time><span>发表</span><b>星影｜风霜固成雪，时光结为星</b><em>中国国家天文 ↗</em></a>
+        <a class="archive-row" href="https://mp.weixin.qq.com/s/1MxA0iLaNUAKzhco-4RU5A" target="_blank" rel="noopener"><time>2026.01.28</time><span>发表</span><b>星影｜亿万星辰奔涌向我</b><em>中国国家天文 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>A1 星野相机赛道优秀奖《坠入地球的银河子民》</b><em>星耀山河 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B1 天体·日月行星赛道三等奖《月与血月》</b><em>星耀山河 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/cSfQd-Q1k3rvHpXKugNNpQ" target="_blank" rel="noopener"><time>2025</time><span>获奖</span><b>B2 天体·深空天体赛道优秀奖《深空》</b><em>星耀山河 ↗</em></a>
         <a class="archive-row" href="https://mp.weixin.qq.com/s/b8GBWK_bFoLBnD4GFYRFUQ" target="_blank" rel="noopener"><time>2025.10.19</time><span>报道</span><b>美美Sunday，一起来数星星~</b><em>江南大学 ↗</em></a>
-        <a class="archive-row" href="https://peking.bjd.com.cn/content/s68f4f62ae4b02424b0c1c554.html" target="_blank" rel="noopener"><time>2025.10.19</time><span>转载</span><b>美美Sunday，一起来数星星~</b><em>北京日报客户端 ↗</em></a>
-        <a class="archive-row" href="https://mp.weixin.qq.com/s/1MxA0iLaNUAKzhco-4RU5A" target="_blank" rel="noopener"><time>2026.01.28</time><span>发表</span><b>星影｜亿万星辰奔涌向我</b><em>中国国家天文 ↗</em></a>
-        <a class="archive-row" href="https://mp.weixin.qq.com/s/EjBPA65iruF6-iadVOWCZA" target="_blank" rel="noopener"><time>2026.02.05</time><span>发表</span><b>星影｜风霜固成雪，时光结为星</b><em>中国国家天文 ↗</em></a>
-        <a class="archive-row" href="https://mp.weixin.qq.com/s/K_0qa-cIS_PpmyEyQJ11Sg" target="_blank" rel="noopener"><time>2026.02.11</time><span>发表</span><b>星影｜何时达遥夜，乍见初日明</b><em>中国国家天文 ↗</em></a>
       </div>
     </section>
 
@@ -235,13 +244,6 @@
     </section>
 
     <section class="arrival" id="contact" data-section="06" data-section-name="结尾">
-      <svg class="arrival-construction" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
-        <path class="arrival-plane" d="M-120 690 L1090 230 L1710 350 L340 805 Z"></path>
-        <path class="arrival-line" d="M105 708 L1280 265"></path>
-        <path class="arrival-line arrival-line-secondary" d="M420 845 L1480 445"></path>
-        <circle class="arrival-orbit" cx="1240" cy="245" r="190"></circle>
-        <circle class="arrival-orbit arrival-orbit-small" cx="1240" cy="245" r="118"></circle>
-      </svg>
       <div class="arrival-copy">
         <h2><span><i>循此苦旅</i></span><span><i>以达天际</i></span></h2>
       </div>
@@ -278,6 +280,6 @@
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script src="video-data.js?v=20260720-cloudbase-1"></script>
   <script src="gallery-data.js?v=20260718-beam-2"></script>
-  <script src="script.js?v=20260720-cloudbase-1"></script>
+  <script src="script.js?v=20260720-mobile-2"></script>
 </body>
 </html>
