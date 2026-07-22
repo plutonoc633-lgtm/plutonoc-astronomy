@@ -28,6 +28,7 @@
   let filmSectionVisible = false;
   let archiveCanvas = null;
   let timecodeStart = performance.now();
+  let timecodeTimer = 0;
 
   function requestMainFrame() {
     if (frameRequested) return;
@@ -38,22 +39,35 @@
   function runMainFrame(time) {
     frameRequested = false;
     let needsNext = false;
+    if (layoutDirty) refreshLayoutMetrics();
     if (scrollDirty || layoutDirty) {
       updateScrollExperience();
       scrollDirty = false;
       layoutDirty = false;
     }
     if (archiveCanvas?.frame(time)) needsNext = true;
-    if (filmSectionVisible && !reducedMotion) {
-      const elapsed = (time - timecodeStart) / 1000;
-      const totalFrames = Math.floor((elapsed % 3600) * 24);
-      const seconds = Math.floor(totalFrames / 24);
-      const frame = totalFrames % 24;
-      const timecode = $('[data-timecode]');
-      if (timecode) timecode.textContent = `00:${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}:${pad(frame)}`;
-      needsNext = true;
-    }
     if (needsNext) requestMainFrame();
+  }
+
+  function updateTimecode() {
+    const elapsed = (performance.now() - timecodeStart) / 1000;
+    const totalFrames = Math.floor((elapsed % 3600) * 24);
+    const seconds = Math.floor(totalFrames / 24);
+    const frame = totalFrames % 24;
+    const timecode = $('[data-timecode]');
+    if (timecode) timecode.textContent = `00:${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}:${pad(frame)}`;
+  }
+
+  function syncTimecode() {
+    const shouldRun = filmSectionVisible && !reducedMotion && !document.hidden;
+    if (!shouldRun) {
+      clearInterval(timecodeTimer);
+      timecodeTimer = 0;
+      return;
+    }
+    if (timecodeTimer) return;
+    updateTimecode();
+    timecodeTimer = window.setInterval(updateTimecode, 100);
   }
 
   function updateDynamicCounts() {
@@ -86,6 +100,7 @@
   const currentSection = $('[data-current-section]');
   const header = $('[data-header]');
   let activeSection = null;
+  const sectionTops = new Map();
 
   function setActiveSection(section) {
     if (!section || activeSection === section) return;
@@ -102,10 +117,10 @@
   }
 
   function updateActiveSectionFromScroll() {
-    const detectionLine = scrollY + (header?.offsetHeight || 0) + innerHeight * .32;
+    const detectionLine = scrollY + layoutMetrics.headerHeight + innerHeight * .32;
     let nextSection = sections[0];
     for (const section of sections) {
-      if (section.offsetTop <= detectionLine) nextSection = section;
+      if ((sectionTops.get(section) ?? Infinity) <= detectionLine) nextSection = section;
       else break;
     }
     setActiveSection(nextSection);
@@ -221,6 +236,7 @@
     const normalizedHash = normalizeHash(hash);
     const target = $(normalizedHash);
     if (!target) return;
+    if (normalizedHash === '#works' || category) ensureArchiveCanvas();
     if (category && archiveCanvas) archiveCanvas.setFilter(category, true);
     target.scrollIntoView({ block: 'start', behavior: 'auto' });
     if (pushHistory && location.hash !== normalizedHash) history.pushState({ category }, '', normalizedHash);
@@ -270,9 +286,12 @@
   const descentPanels = $$('.descent-panel');
   const homeMotion = $('[data-home-motion]');
   let visualStageOverride = null;
+  let activeVisualStage = '';
 
   function setVisualStage(category) {
     const stage = categoryOrder.includes(category) ? category : 'deepsky';
+    if (stage === activeVisualStage) return;
+    activeVisualStage = stage;
     document.body.dataset.visualStage = stage;
     document.documentElement.style.setProperty('--stage-color', categoryConfig[stage]?.color || '#9ec8ff');
   }
@@ -364,6 +383,35 @@
   let calibrationInertia = 0;
   let previousScrollY = scrollY;
   let calibrationResetTimer = 0;
+  const layoutMetrics = {
+    scrollable: 1,
+    headerHeight: 0,
+    calibrationHeight: isMobile ? 50 : 74,
+    calibrationTravel: 0,
+    calibrationRouteLength: 0,
+    worksTop: Infinity,
+    worksBottom: -Infinity,
+    arrivalHeroTop: Infinity
+  };
+
+  function documentTop(element) {
+    return element ? element.getBoundingClientRect().top + scrollY : Infinity;
+  }
+
+  function refreshLayoutMetrics() {
+    layoutMetrics.scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
+    layoutMetrics.headerHeight = header?.offsetHeight || 0;
+    layoutMetrics.calibrationHeight = scrollCalibration?.getBoundingClientRect().height || (isMobile ? 50 : 74);
+    const calibrationTop = layoutMetrics.headerHeight + 18;
+    layoutMetrics.calibrationTravel = Math.max(innerHeight - calibrationTop - layoutMetrics.calibrationHeight - 18, 0);
+    layoutMetrics.calibrationRouteLength = calibrationRoute?.getTotalLength?.() || 0;
+    sectionTops.clear();
+    sections.forEach(section => sectionTops.set(section, documentTop(section)));
+    const works = $('#works');
+    layoutMetrics.worksTop = documentTop(works);
+    layoutMetrics.worksBottom = Number.isFinite(layoutMetrics.worksTop) ? layoutMetrics.worksTop + (works?.offsetHeight || 0) : -Infinity;
+    layoutMetrics.arrivalHeroTop = documentTop(arrivalHero || arrival);
+  }
 
   if ('IntersectionObserver' in window && !reducedMotion) {
     const textMotionObserver = new IntersectionObserver(entries => {
@@ -387,8 +435,8 @@
       arrival.classList.add('is-complete');
       return;
     }
-    const bounds = (arrivalHero || arrival).getBoundingClientRect();
-    const imageProgress = clamp((innerHeight * .96 - bounds.top) / Math.max(innerHeight * .78, 1), 0, 1);
+    const arrivalTop = layoutMetrics.arrivalHeroTop - scrollY;
+    const imageProgress = clamp((innerHeight * .96 - arrivalTop) / Math.max(innerHeight * .78, 1), 0, 1);
     const titleProgress = clamp((imageProgress - .45) / .55, 0, 1);
     arrival.style.setProperty('--arrival-image-opacity', `${(.08 + imageProgress * .92).toFixed(3)}`);
     arrival.style.setProperty('--arrival-image-scale', `${(1.025 - imageProgress * .025).toFixed(4)}`);
@@ -400,26 +448,21 @@
   }
 
   function updateScrollExperience() {
-    const scrollable = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
-    const ratio = clamp(scrollY / scrollable, 0, 1);
+    const ratio = clamp(scrollY / layoutMetrics.scrollable, 0, 1);
     if (progressBar) progressBar.style.transform = `scaleX(${ratio})`;
     header.classList.toggle('is-scrolled', scrollY > 20);
     updateActiveSectionFromScroll();
     if (scrollCalibration) {
-      const height = scrollCalibration.getBoundingClientRect().height || (isMobile ? 50 : 74);
-      const top = header.offsetHeight + 18;
-      const travel = Math.max(innerHeight - top - height - 18, 0);
       const remaining = 1 - ratio;
       const inertia = reducedMotion ? 0 : calibrationInertia;
-      scrollCalibration.style.setProperty('--calibration-y', `${(ratio * travel).toFixed(2)}px`);
+      scrollCalibration.style.setProperty('--calibration-y', `${(ratio * layoutMetrics.calibrationTravel).toFixed(2)}px`);
       scrollCalibration.style.setProperty('--calibration-outer', `${(reducedMotion ? 0 : -210 * remaining + inertia).toFixed(2)}deg`);
       scrollCalibration.style.setProperty('--calibration-middle', `${(reducedMotion ? 0 : 150 * remaining - inertia * (2 / 3)).toFixed(2)}deg`);
       scrollCalibration.style.setProperty('--calibration-inner', `${(reducedMotion ? 0 : -100 * remaining + inertia * (4 / 9)).toFixed(2)}deg`);
       scrollCalibration.classList.toggle('is-calibrated', ratio > .995);
       scrollCalibration.classList.toggle('is-near-end', ratio > .94);
-      if (calibrationRoute && calibrationProgress) {
-        const length = calibrationRoute.getTotalLength();
-        const point = calibrationRoute.getPointAtLength(length * ratio);
+      if (calibrationRoute && calibrationProgress && layoutMetrics.calibrationRouteLength) {
+        const point = calibrationRoute.getPointAtLength(layoutMetrics.calibrationRouteLength * ratio);
         calibrationProgress.setAttribute('cx', point.x.toFixed(2));
         calibrationProgress.setAttribute('cy', point.y.toFixed(2));
       }
@@ -431,8 +474,8 @@
     if (ratio >= .4) fallbackStage = 'planet';
     if (ratio >= .6) fallbackStage = 'nightscape';
     if (ratio >= .78) fallbackStage = 'earth';
-    const worksBounds = $('#works')?.getBoundingClientRect();
-    const worksVisible = worksBounds && worksBounds.top < innerHeight * .72 && worksBounds.bottom > innerHeight * .25;
+    const worksVisible = layoutMetrics.worksTop < scrollY + innerHeight * .72
+      && layoutMetrics.worksBottom > scrollY + innerHeight * .25;
     setVisualStage(visualStageOverride || (worksVisible && archiveCanvas?.filter !== 'all' ? archiveCanvas.filter : fallbackStage));
   }
 
@@ -471,11 +514,14 @@
 
   /* ImageBitmap LRU */
   class BitmapCache {
-    constructor(budget) {
+    constructor(budget, concurrency) {
       this.budget = budget;
+      this.concurrency = concurrency;
       this.bytes = 0;
       this.entries = new Map();
       this.protectedSources = new Set();
+      this.queue = [];
+      this.active = 0;
     }
 
     get(source) {
@@ -486,8 +532,27 @@
 
     request(source) {
       if (!source || this.entries.has(source)) return;
-      const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true };
+      const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true, queued: true };
       this.entries.set(source, entry);
+      this.queue.push(source);
+      this.pump();
+    }
+
+    pump() {
+      while (this.active < this.concurrency && this.queue.length) {
+        const source = this.queue.shift();
+        const entry = this.entries.get(source);
+        if (!entry?.pending || !entry.queued) continue;
+        entry.queued = false;
+        this.active += 1;
+        this.load(source, entry).finally(() => {
+          this.active -= 1;
+          this.pump();
+        });
+      }
+    }
+
+    async load(source, entry) {
       const finish = bitmap => {
         entry.bitmap = bitmap;
         entry.pending = false;
@@ -496,23 +561,47 @@
         this.prune();
         archiveCanvas?.requestDraw();
       };
-      const fallback = () => {
-        const image = new Image();
-        image.decoding = 'async';
-        image.onload = () => finish(image);
-        image.onerror = () => { entry.pending = false; entry.failed = true; };
-        image.src = source;
-      };
-      if (location.protocol !== 'file:' && 'createImageBitmap' in window) {
-        fetch(source).then(response => {
+      try {
+        if (location.protocol !== 'file:' && 'createImageBitmap' in window) {
+          const response = await fetch(source);
           if (!response.ok) throw new Error(`Image ${response.status}`);
-          return response.blob();
-        }).then(blob => createImageBitmap(blob)).then(finish).catch(fallback);
-      } else fallback();
+          finish(await createImageBitmap(await response.blob()));
+          return;
+        }
+        const image = await new Promise((resolve, reject) => {
+          const fallbackImage = new Image();
+          fallbackImage.decoding = 'async';
+          fallbackImage.onload = () => resolve(fallbackImage);
+          fallbackImage.onerror = reject;
+          fallbackImage.src = source;
+        });
+        finish(image);
+      } catch (_) {
+        try {
+          const image = await new Promise((resolve, reject) => {
+            const fallbackImage = new Image();
+            fallbackImage.decoding = 'async';
+            fallbackImage.onload = () => resolve(fallbackImage);
+            fallbackImage.onerror = reject;
+            fallbackImage.src = source;
+          });
+          finish(image);
+        } catch (_) {
+          entry.pending = false;
+          entry.failed = true;
+        }
+      }
     }
 
     protect(sources) {
       this.protectedSources = new Set(sources);
+      if (this.queue.length) {
+        const priority = new Set(sources);
+        this.queue = [
+          ...this.queue.filter(source => priority.has(source)),
+          ...this.queue.filter(source => !priority.has(source))
+        ];
+      }
       this.prune();
     }
 
@@ -558,7 +647,7 @@
       this.opening = null;
       this.needsDraw = true;
       this.lastFrame = performance.now();
-      this.cache = new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024);
+      this.cache = new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024, isMobile ? 4 : 6);
       this.initialCamera = { x: 0, y: 0 };
       this.live = $('[data-canvas-live]');
       this.status = $('[data-canvas-status]');
@@ -1018,10 +1107,38 @@
   }
 
   const canvasElement = $('[data-archive-canvas]');
-  if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas(canvasElement, allWorks);
-  $$('.gallery-filters [data-filter]').forEach(button => button.addEventListener('click', () => archiveCanvas?.setFilter(button.dataset.filter)));
-  $('.gallery-prev')?.addEventListener('click', () => archiveCanvas?.go(-1));
-  $('.gallery-next')?.addEventListener('click', () => archiveCanvas?.go(1));
+  let stopArchiveCanvasWarmup = () => {};
+  function ensureArchiveCanvas() {
+    if (!canvasElement || archiveCanvas) return archiveCanvas;
+    archiveCanvas = new InfiniteArchiveCanvas(canvasElement, allWorks);
+    stopArchiveCanvasWarmup();
+    layoutDirty = true;
+    requestMainFrame();
+    return archiveCanvas;
+  }
+
+  if (canvasElement) {
+    if ('IntersectionObserver' in window) {
+      let archiveCanvasNear = false;
+      const warmArchiveCanvas = () => {
+        if (!archiveCanvasNear || (scrollY <= 32 && normalizeHash(location.hash) === '#home')) return;
+        ensureArchiveCanvas();
+      };
+      const archiveCanvasObserver = new IntersectionObserver(entries => {
+        archiveCanvasNear = entries.some(entry => entry.isIntersecting);
+        warmArchiveCanvas();
+      }, { rootMargin: '800px 0px', threshold: 0 });
+      archiveCanvasObserver.observe(canvasElement);
+      window.addEventListener('scroll', warmArchiveCanvas, { passive: true });
+      stopArchiveCanvasWarmup = () => {
+        archiveCanvasObserver.disconnect();
+        window.removeEventListener('scroll', warmArchiveCanvas);
+      };
+    } else if (location.hash === '#works') ensureArchiveCanvas();
+  }
+  $$('.gallery-filters [data-filter]').forEach(button => button.addEventListener('click', () => ensureArchiveCanvas()?.setFilter(button.dataset.filter)));
+  $('.gallery-prev')?.addEventListener('click', () => ensureArchiveCanvas()?.go(-1));
+  $('.gallery-next')?.addEventListener('click', () => ensureArchiveCanvas()?.go(1));
 
   /* Photo dialog */
   const photoDialog = $('[data-photo-dialog]');
@@ -1282,13 +1399,15 @@
       entries.forEach(entry => {
         if (entry.target.id === 'films') {
           filmSectionVisible = entry.isIntersecting;
-          if (filmSectionVisible) { timecodeStart = performance.now(); requestMainFrame(); }
+          if (filmSectionVisible) timecodeStart = performance.now();
           else stopAllFilmPreviews();
+          syncTimecode();
         }
       });
     }, { threshold: .18 });
     atmosphereObserver.observe($('#films'));
   }
+  document.addEventListener('visibilitychange', syncTimecode);
 
   /* Video archive */
   const videoDialog = $('[data-video-dialog]');
@@ -1381,12 +1500,16 @@
       feature.innerHTML = '<div class="film-empty">暂无影像</div>';
       list.innerHTML = '';
       status.textContent = '';
+      layoutDirty = true;
+      requestMainFrame();
       return;
     }
     feature.innerHTML = filmCard(films[0], 0);
     list.innerHTML = films.slice(1).map((film, index) => filmCard(film, index + 1)).join('');
     status.textContent = `${pad(films.length)} / MOTION`;
     wireFilmPreviews();
+    layoutDirty = true;
+    requestMainFrame();
   }
   function openFilm(index) {
     const film = loadedFilms[index];

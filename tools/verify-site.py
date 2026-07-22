@@ -12,10 +12,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260720-lighter-type-1"
+STYLE_CACHE_VERSION = "20260722-performance-1"
 ADMIN_STYLE_CACHE_VERSION = "20260720-lighter-type-1"
 VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
-SCRIPT_CACHE_VERSION = "20260720-rollback-1"
+SCRIPT_CACHE_VERSION = "20260722-performance-1"
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
@@ -78,6 +78,7 @@ def verify_local(root: Path) -> None:
     admin = (root / "admin.html").read_text(encoding="utf-8")
     admin_style = (root / "admin.css").read_text(encoding="utf-8")
     video_data = (root / "video-data.js").read_text(encoding="utf-8")
+    script = (root / "script.js").read_text(encoding="utf-8")
 
     required_html = (
         '<link rel="canonical" href="https://plutonoc.cn/">',
@@ -127,6 +128,15 @@ def verify_local(root: Path) -> None:
     require("font-synthesis: none" in style + admin_style, "Synthetic font styling has not been disabled")
     require("star-dream-27s-v2.jpg" in video_data, "Star Dream poster manifest is stale")
     require("tianjian-promo-title-v2.jpg" in video_data, "Tianjian poster manifest is stale")
+    for marker in (
+        "function ensureArchiveCanvas()",
+        "rootMargin: '800px 0px'",
+        "new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024, isMobile ? 4 : 6)",
+        "window.setInterval(updateTimecode, 100)",
+        "layoutMetrics.calibrationRouteLength",
+    ):
+        require(marker in script, f"Missing performance marker: {marker}")
+    require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
 
     for relative, maximum in REQUIRED_ASSETS.items():
         path = root / relative

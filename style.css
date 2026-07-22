@@ -85,8 +85,9 @@ button { border: 0; padding: 0; background: none; }
   width: 116%;
   height: 116%;
   opacity: 0;
-  transition: opacity 1.2s var(--ease-cinematic), transform 1.4s var(--ease-cinematic);
+  transition: opacity 1.2s var(--ease-cinematic), transform 1.4s var(--ease-cinematic), visibility 0s linear 1.2s;
 }
+.background-stage { visibility: hidden; }
 .background-stage::before,
 .background-stage::after { content: ""; position: absolute; inset: 0; }
 .background-deepsky {
@@ -134,21 +135,26 @@ button { border: 0; padding: 0; background: none; }
 body[data-visual-stage="sunmoon"] .background-deepsky,
 body[data-visual-stage="planet"] .background-deepsky,
 body[data-visual-stage="nightscape"] .background-deepsky,
-body[data-visual-stage="earth"] .background-deepsky { opacity: .24; }
-body[data-visual-stage="sunmoon"] .background-sunmoon { opacity: 1; }
-body[data-visual-stage="planet"] .background-planet { opacity: 1; }
-body[data-visual-stage="nightscape"] .background-nightscape { opacity: 1; }
-body[data-visual-stage="earth"] .background-earth { opacity: 1; }
+body[data-visual-stage="earth"] .background-deepsky { opacity: 0; }
+body[data-visual-stage="deepsky"] .background-deepsky,
+body[data-visual-stage="sunmoon"] .background-sunmoon,
+body[data-visual-stage="planet"] .background-planet,
+body[data-visual-stage="nightscape"] .background-nightscape,
+body[data-visual-stage="earth"] .background-earth {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
 .background-drawing { inset: 0; width: 100%; height: 100%; opacity: .72; }
 .background-drawing path,
 .background-drawing circle,
 .background-drawing ellipse { vector-effect: non-scaling-stroke; }
-.background-art { opacity: 0; transition: opacity 1.2s var(--ease-cinematic), transform 1.5s var(--ease-cinematic); }
+.background-art { opacity: 0; visibility: hidden; transition: opacity 1.2s var(--ease-cinematic), transform 1.5s var(--ease-cinematic), visibility 0s linear 1.2s; }
 body[data-visual-stage="deepsky"] .background-art-deepsky,
 body[data-visual-stage="sunmoon"] .background-art-sunmoon,
 body[data-visual-stage="planet"] .background-art-planet,
 body[data-visual-stage="nightscape"] .background-art-nightscape,
-body[data-visual-stage="earth"] .background-art-earth { opacity: 1; }
+body[data-visual-stage="earth"] .background-art-earth { opacity: 1; visibility: visible; transition-delay: 0s; }
 .nebula-ribbon { fill: none; stroke: rgba(130, 172, 225, .14); stroke-width: 150; filter: blur(35px); }
 .celestial-grid { fill: none; stroke: rgba(210, 222, 233, .26); stroke-width: 1; stroke-dasharray: 4 12; }
 .star { fill: rgba(224, 236, 249, .76); filter: drop-shadow(0 0 8px rgba(158, 200, 255, .9)); }
@@ -524,7 +530,7 @@ dialog { color: inherit; }
 
 @media (max-width: 760px) {
   :root { --header-height: 62px; --page-gutter: 18px; }
-  .site-header { grid-template-columns: 1fr auto; }
+  .site-header { grid-template-columns: 1fr auto; background: rgba(5, 6, 9, .96); backdrop-filter: none; }
   .section-status { display: none; }
   .brand img { height: 20px; }
   .index-panel { width: 100%; padding: 20px; }

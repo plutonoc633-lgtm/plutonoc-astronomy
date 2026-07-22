@@ -322,12 +322,12 @@ https://plutonoc.cn/admin.html
 
 - 影视飓风官网当前 CSS 使用 `PingFang SC`，没有自定义 `@font-face`。公开站点和 `admin.html` 最终统一采用系统字体栈：`PingFang SC / Microsoft YaHei / Noto Sans CJK SC / sans-serif`。
 - Apple 设备优先使用苹方；Windows 使用微软雅黑；Android/Linux 使用可用的 Noto CJK 或无衬线系统回退。页面不下载字体、不依赖字体 CDN，运行时网页字体为 0 字节。
-- 标题使用 600，品牌与强调信息使用 500，正文和元信息使用 400；已移除为得意黑窄斜字形设置的负字距，并校正中文标题行高。
+- 标题、品牌与强调信息最终统一使用 500，正文和元信息使用 400；已移除为得意黑窄斜字形设置的负字距，并校正中文标题行高。
 - 得意黑、未来荧黑、旧思源与 IBM Plex 文件及许可证仍保留在仓库中作为历史回滚资源，但 HTML、公开 CSS、后台 CSS 和预载均不得引用它们。
 - 公开站点页头左侧文字 `PlutonoC` 已替换为 `assets/branding/plutonoc-watermark-web.png`：桌面高 24px、手机高 20px，保留 640×175 固有尺寸和透明通道。中间 `01 首页`、右侧 `INDEX` 及后台页头文字保持不变。
 - `tools/build-web-assets.py` 只生成优化水印、分享封面和 favicon，不再下载、裁切或输出字体；源摄影、手写口号和原始水印在构建前后进行哈希保护。
 - `tools/verify-site.py` 检查系统字体栈、页头水印标记、0 字体运行时引用、缓存版本、品牌资源尺寸、视频封面地址和线上 MIME 类型。
-- 当前缓存版本为 `20260720-pingfang-header-1`。发布前必须执行：
+- 当前公共 CSS 与脚本缓存版本为 `20260722-performance-1`；后台 CSS 和视频清单继续使用各自现有版本。发布前必须执行：
 
 ```powershell
 node --check script.js
@@ -338,3 +338,14 @@ git diff --check
 
 - GitHub Pages 工作流会在上传前重复语法和静态检查，部署后运行线上冒烟验证。完成后检查 `https://plutonoc.cn/`、`https://plutonoc.cn/admin.html`，并确认浏览器网络面板没有 WOFF/WOFF2 请求。
 - CloudBase 环境、`videos` 集合、安全规则、三条视频、封面和静态清单本轮均未改动；继续遵守第 6 节现有约束。
+
+## 16. 2026-07-22 远端整理与浏览性能优化
+
+- 执行本轮前已用 `git pull --ff-only` 接收远端 `main` 的 6 个提交：`6d5f00e`、`22547fa`、`5184aa0`、`7d72bac`、`8538f51`、`a51ab00`。其中保留了前台 11 处、后台 3 处标题字重由 600 调为 500 的最终结果，以及相应缓存和发布检查修正。
+- 中间提交曾降低 Canvas 清晰度、缓存并调整节流逻辑，随后因摄影图片加载异常被回退。本轮不得重新采用该方案；Canvas 仍保持手机 DPR 上限 1.2、桌面 DPR 上限 1.75，以及手机 96MB、桌面 240MB 的 ImageBitmap 缓存。
+- 摄影 Canvas 改为按需创建：只有距摄影区约 800px、直接进入 `#works`，或主动点击摄影分类/控制按钮时才运行 `ensureArchiveCanvas()`。停留首页时不得请求 Canvas 摄影预览。
+- Canvas 图片加载限制为手机同时 4 张、桌面同时 6 张；当前画面中的资源会在待处理队列中优先，避免一次性解码大量图片。摄影计数、筛选、拖动、惯性、灯箱和清晰度保持不变。
+- 动态影像时间码改为 100ms 定时更新，只有视频区可见且页面位于前台时运行；离开视频区、切换标签页或启用减少动态效果后立即停止，不再让主 `requestAnimationFrame` 循环常驻 60fps。
+- 栏目位置、结尾位置、页头高度、校准组件高度及 SVG 轨迹长度集中缓存，只在加载、窗口尺寸变化、Canvas 创建和视频列表渲染后重算。滚动帧不再重复执行 `getTotalLength()` 和多次 `getBoundingClientRect()`。
+- 相同视觉阶段不再重复写入 `data-visual-stage` 与颜色变量；非当前背景层在淡出结束后设为不可见。手机页头使用高不透明背景并关闭实时 `backdrop-filter`，降低大面积模糊合成压力。
+- `tools/verify-site.py` 会检查按需 Canvas、4/6 并发、100ms 时间码、布局缓存和新缓存版本。回滚时应整体回滚本节相关脚本、CSS、HTML 缓存参数和验证标记，不能只恢复 Canvas 构造语句。
