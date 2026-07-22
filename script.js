@@ -83,15 +83,26 @@
   /* Reveal and section state */
   const revealElements = $$('.reveal');
   if (reducedMotion || !('IntersectionObserver' in window)) {
-    revealElements.forEach(element => element.classList.add('is-visible'));
+    revealElements.forEach(element => {
+      element.classList.remove('is-reveal-before', 'is-reveal-after');
+      element.classList.add('is-visible');
+    });
   } else {
     const revealObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-visible');
-        revealObserver.unobserve(entry.target);
+        const element = entry.target;
+        if (entry.isIntersecting) {
+          element.classList.remove('is-reveal-before', 'is-reveal-after');
+          element.classList.add('is-visible');
+          return;
+        }
+        const rootTop = entry.rootBounds?.top || 0;
+        const hasPassed = entry.boundingClientRect.bottom <= rootTop;
+        element.classList.remove('is-visible');
+        element.classList.toggle('is-reveal-before', hasPassed);
+        element.classList.toggle('is-reveal-after', !hasPassed);
       });
-    }, { threshold: .08, rootMargin: '0px 0px -6% 0px' });
+    }, { threshold: [0, .08, .35], rootMargin: '-8% 0px -12% 0px' });
     revealElements.forEach(element => revealObserver.observe(element));
   }
 

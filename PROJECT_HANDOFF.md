@@ -327,7 +327,7 @@ https://plutonoc.cn/admin.html
 - 公开站点页头左侧文字 `PlutonoC` 已替换为 `assets/branding/plutonoc-watermark-web.png`：桌面高 24px、手机高 20px，保留 640×175 固有尺寸和透明通道。中间 `01 首页`、右侧 `INDEX` 及后台页头文字保持不变。
 - `tools/build-web-assets.py` 只生成优化水印、分享封面和 favicon，不再下载、裁切或输出字体；源摄影、手写口号和原始水印在构建前后进行哈希保护。
 - `tools/verify-site.py` 检查系统字体栈、页头水印标记、0 字体运行时引用、缓存版本、品牌资源尺寸、视频封面地址和线上 MIME 类型。
-- 当前公共 CSS 与脚本缓存版本为 `20260722-performance-1`；后台 CSS 和视频清单继续使用各自现有版本。发布前必须执行：
+- 当前公共 CSS 与脚本缓存版本为 `20260722-scroll-reveal-1`；后台 CSS 和视频清单继续使用各自现有版本。发布前必须执行：
 
 ```powershell
 node --check script.js
@@ -349,3 +349,11 @@ git diff --check
 - 栏目位置、结尾位置、页头高度、校准组件高度及 SVG 轨迹长度集中缓存，只在加载、窗口尺寸变化、Canvas 创建和视频列表渲染后重算。滚动帧不再重复执行 `getTotalLength()` 和多次 `getBoundingClientRect()`。
 - 相同视觉阶段不再重复写入 `data-visual-stage` 与颜色变量；非当前背景层在淡出结束后设为不可见。手机页头使用高不透明背景并关闭实时 `backdrop-filter`，降低大面积模糊合成压力。
 - `tools/verify-site.py` 会检查按需 Canvas、4/6 并发、100ms 时间码、布局缓存和新缓存版本。回滚时应整体回滚本节相关脚本、CSS、HTML 缓存参数和验证标记，不能只恢复 Canvas 构造语句。
+
+## 17. 2026-07-22 可逆滚动进出场
+
+- 原有 `.reveal` 一次性淡入改为可逆状态：内容从下方进入时淡入、恢复清晰，越过视口顶部后轻微上移并淡出，向上返回时重新播放。
+- 动效由 `IntersectionObserver` 的 `[0, .08, .35]` 阈值触发，不增加滚动事件布局读取或持续 `requestAnimationFrame` 循环；进入、离开方向直接使用 observer 回调提供的边界数据判断。
+- 桌面入场位移 22px、离场位移 12px、模糊上限 3px；手机缩至 14px / 8px、模糊上限 1.5px。标题、视频列表、情报行和社交入口使用不超过 240ms 的轻量错峰。
+- 摄影 Canvas 外框只改变透明度，不缩放、不模糊；Canvas 按需加载、DPR、96MB / 240MB 缓存和 4/6 图片并发保持不变。结尾照片与“择日成星”仍使用原滚动进度动画。
+- `prefers-reduced-motion` 下所有新增位移、模糊、错峰与重复播放均取消，内容直接显示。当前公共 CSS 与脚本缓存版本为 `20260722-scroll-reveal-1`。
