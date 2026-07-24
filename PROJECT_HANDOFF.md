@@ -357,3 +357,18 @@ git diff --check
 - 桌面入场位移 22px、离场位移 12px、模糊上限 3px；手机缩至 14px / 8px、模糊上限 1.5px。标题、视频列表、情报行和社交入口使用不超过 240ms 的轻量错峰。
 - 摄影 Canvas 外框只改变透明度，不缩放、不模糊；Canvas 按需加载、DPR、96MB / 240MB 缓存和 4/6 图片并发保持不变。结尾照片与“择日成星”仍使用原滚动进度动画。
 - `prefers-reduced-motion` 下所有新增位移、模糊、错峰与重复播放均取消，内容直接显示。当前公共 CSS 与脚本缓存版本为 `20260722-scroll-reveal-1`。
+
+## 18. 2026-07-24 真机验收与线上自动巡检
+
+- 新增 `REAL_DEVICE_QA.md`，覆盖 iPhone Safari、iPhone 微信内置浏览器、Android Chrome 与 Android 微信内置浏览器。真机结果由实际设备填写；浏览器模拟不能替代微信内核验收。
+- `tools/verify-site.py --url https://plutonoc.cn/` 现在同时检查首页、后台、当前缓存版本、分享与品牌资源、CloudBase SDK、两段云端视频及封面、站内木星兜底视频及封面。视频使用 Range 请求且只读取前 1KB，不完整下载。
+- `.github/workflows/monitor-production.yml` 每 6 小时执行一次，也可手动运行。它只读取公开 URL，不执行部署、不修改 CloudBase，也不采集真实访客的设备、IP、错误或行为数据。
+- 连续重试仍失败时，工作流创建或更新固定标题 `[monitor] PlutonoC production availability failure` 的 Issue，并指派给 `plutonoc633-lgtm`。同一故障只保留一个开放 Issue；恢复后自动留言并关闭。
+- Issue 仅包含公开目标、UTC 时间、失败摘要和 Actions 运行地址。排障时先打开失败的 Actions 运行，再在仓库根目录执行：
+
+```powershell
+python tools/verify-site.py --url https://plutonoc.cn/
+```
+
+- 临时停用巡检应在 GitHub Actions 中禁用 `Monitor PlutonoC Production` 工作流；不要删除验证脚本，因为 Pages 部署后仍会复用它。
+- GitHub 定时工作流可能延迟执行，本方案用于故障提醒，不构成实时 SLA。任何真机兼容修复都必须先写入 `REAL_DEVICE_QA.md` 的问题记录，并保持现有视觉方向、Canvas 清晰度和 CloudBase 数据不变。

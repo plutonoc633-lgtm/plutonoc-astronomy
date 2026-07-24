@@ -1,0 +1,77 @@
+name: Monitor PlutonoC Production
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: monitor-production
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check production
+        id: check
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python tools/verify-site.py --url https://plutonoc.cn/ 2>&1 | tee monitor-report.txt
+
+      - name: Prepare incident report
+        if: steps.check.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "Production verification failed."
+            echo
+            echo "- Checked at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            echo "- Target: https://plutonoc.cn/"
+            echo "- Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo '```text'
+            tail -c 6000 monitor-report.txt
+            echo
+            echo '```'
+          } > incident-body.md
+
+      - name: Create or update incident
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INCIDENT_TITLE: "[monitor] PlutonoC production availability failure"
+        shell: bash
+        run: |
+          issue_number="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number,title --jq ".[] | select(.title == \"$INCIDENT_TITLE\") | .number" | head -n 1)"
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --body-file incident-body.md --add-assignee plutonoc633-lgtm
+          else
+            gh issue create --title "$INCIDENT_TITLE" --body-file incident-body.md --assignee plutonoc633-lgtm
+          fi
+
+      - name: Close recovered incident
+        if: steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INCIDENT_TITLE: "[monitor] PlutonoC production availability failure"
+        shell: bash
+        run: |
+          issue_number="$(gh issue list --state open --search "$INCIDENT_TITLE in:title" --json number,title --jq ".[] | select(.title == \"$INCIDENT_TITLE\") | .number" | head -n 1)"
+          if [ -n "$issue_number" ]; then
+            gh issue comment "$issue_number" --body "Production verification recovered at $(date -u +'%Y-%m-%d %H:%M:%S UTC'). Closing automatically."
+            gh issue close "$issue_number"
+          fi
+
+      - name: Mark workflow failed
+        if: steps.check.outcome == 'failure'
+        run: exit 1

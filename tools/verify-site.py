@@ -16,6 +16,9 @@ STYLE_CACHE_VERSION = "20260722-scroll-reveal-1"
 ADMIN_STYLE_CACHE_VERSION = "20260720-lighter-type-1"
 VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
+CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
+CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
+CLOUDBASE_PUBLIC_BASE = "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/"
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
@@ -32,11 +35,22 @@ REMOTE_TYPES = {
     "assets/branding/plutonoc-watermark-web.png": "image/png",
     "assets/branding/plutonoc-share.jpg": "image/jpeg",
     "assets/branding/favicon-32.png": "image/png",
+    "assets/branding/apple-touch-icon.png": "image/png",
     "assets/branding/avatar-bilibili.webp": "image/webp",
     "assets/branding/avatar-douyin.webp": "image/webp",
     "assets/branding/avatar-xiaohongshu.webp": "image/webp",
     "assets/gallery/previews/earth/earth-007.webp": "image/webp",
     "assets/gallery/hero/earth.webp": "image/webp",
+}
+REMOTE_VIDEO_PROBES = {
+    "CloudBase Star Dream video": urljoin(CLOUDBASE_PUBLIC_BASE, "videos/star-dream.mp4"),
+    "CloudBase Tianjian promo video": urljoin(CLOUDBASE_PUBLIC_BASE, "videos/tianjian-promo.mp4"),
+    "Pages Jupiter fallback video": "assets/videos/jupiter.mp4",
+}
+REMOTE_POSTER_PROBES = {
+    "CloudBase Star Dream poster": urljoin(CLOUDBASE_PUBLIC_BASE, "video-posters/star-dream-27s-v2.jpg"),
+    "CloudBase Tianjian promo poster": urljoin(CLOUDBASE_PUBLIC_BASE, "video-posters/tianjian-promo-title-v2.jpg"),
+    "Pages Jupiter fallback poster": "assets/videos/jupiter-poster.jpg",
 }
 
 
@@ -79,6 +93,8 @@ def verify_local(root: Path) -> None:
     admin_style = (root / "admin.css").read_text(encoding="utf-8")
     video_data = (root / "video-data.js").read_text(encoding="utf-8")
     script = (root / "script.js").read_text(encoding="utf-8")
+    monitor_workflow = (root / ".github/workflows/monitor-production.yml").read_text(encoding="utf-8")
+    device_qa = (root / "REAL_DEVICE_QA.md").read_text(encoding="utf-8")
 
     required_html = (
         '<link rel="canonical" href="https://plutonoc.cn/">',
@@ -147,6 +163,19 @@ def verify_local(root: Path) -> None:
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
+    for marker in (
+        'cron: "17 */6 * * *"',
+        "workflow_dispatch:",
+        "issues: write",
+        "python tools/verify-site.py --url https://plutonoc.cn/",
+        "[monitor] PlutonoC production availability failure",
+        "gh issue edit",
+        "gh issue close",
+    ):
+        require(marker in monitor_workflow, f"Missing production monitor marker: {marker}")
+    for environment in ("iPhone Safari", "iPhone 微信内置浏览器", "Android Chrome", "Android 微信内置浏览器"):
+        require(environment in device_qa, f"Missing real-device QA environment: {environment}")
+    require("Sentry" not in index + script + monitor_workflow, "Visitor error collection must remain disabled")
 
     for relative, maximum in REQUIRED_ASSETS.items():
         path = root / relative
@@ -186,8 +215,22 @@ def fetch(url: str) -> tuple[bytes, str]:
         return response.read(), response.headers.get_content_type()
 
 
+def fetch_prefix(url: str, byte_count: int = 1024) -> tuple[bytes, str, int]:
+    request = Request(
+        cache_bust(url),
+        headers={
+            "Cache-Control": "no-cache",
+            "Range": f"bytes=0-{byte_count - 1}",
+            "User-Agent": "PlutonoC availability monitor",
+        },
+    )
+    with urlopen(request, timeout=20) as response:
+        return response.read(byte_count), response.headers.get_content_type(), response.status
+
+
 def verify_remote(base_url: str) -> None:
     base = base_url.rstrip("/") + "/"
+    require(urlsplit(base).scheme == "https", f"Remote verification requires HTTPS: {base}")
     last_error: Exception | None = None
     for attempt in range(12):
         try:
@@ -198,18 +241,44 @@ def verify_remote(base_url: str) -> None:
             require(f"video-data.js?v={VIDEO_CACHE_VERSION}" in index, "Deployed video manifest has an old cache version")
             require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
+            require(CLOUDBASE_SDK_URL in index, "Homepage CloudBase SDK reference is missing")
             for relative, expected_type in REMOTE_TYPES.items():
                 body, actual_type = fetch(urljoin(base, relative))
                 require(body, f"Empty remote asset: {relative}")
                 require(actual_type == expected_type, f"Unexpected type for {relative}: {actual_type}")
-            for poster_url in (
-                "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/star-dream-27s-v2.jpg",
-                "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/tianjian-promo-title-v2.jpg",
-            ):
-                body, actual_type = fetch(poster_url)
-                require(body, f"Empty remote poster: {poster_url}")
-                require(actual_type == "image/jpeg", f"Unexpected poster type: {actual_type}")
-            print(f"Remote site verification passed: {base}")
+
+            admin_bytes, admin_type = fetch(urljoin(base, "admin.html"))
+            admin = admin_bytes.decode("utf-8")
+            require(admin_type == "text/html", f"Unexpected admin page type: {admin_type}")
+            require(f"admin.css?v={ADMIN_STYLE_CACHE_VERSION}" in admin, "Deployed admin page has an old CSS version")
+            require(f"cloudbase-config.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old CloudBase config version")
+            require(f"admin.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old script version")
+            require(CLOUDBASE_SDK_URL in admin, "Admin CloudBase SDK reference is missing")
+
+            sdk_prefix, sdk_type, sdk_status = fetch_prefix(CLOUDBASE_SDK_URL)
+            require(sdk_status in {200, 206}, f"Unexpected CloudBase SDK status: {sdk_status}")
+            require(sdk_prefix, "CloudBase SDK returned an empty response")
+            require(sdk_type in {"application/javascript", "text/javascript"}, f"Unexpected CloudBase SDK type: {sdk_type}")
+
+            for label, poster_url in REMOTE_POSTER_PROBES.items():
+                target = urljoin(base, poster_url)
+                prefix, actual_type, status = fetch_prefix(target)
+                require(status in {200, 206}, f"{label} returned status {status}")
+                require(prefix, f"{label} returned an empty response")
+                require(actual_type == "image/jpeg", f"{label} has unexpected type: {actual_type}")
+
+            for label, video_url in REMOTE_VIDEO_PROBES.items():
+                target = urljoin(base, video_url)
+                prefix, actual_type, status = fetch_prefix(target)
+                require(status in {200, 206}, f"{label} returned status {status}")
+                require(prefix, f"{label} returned an empty response")
+                require(actual_type == "video/mp4", f"{label} has unexpected type: {actual_type}")
+
+            print(
+                f"Remote site verification passed: {base}; "
+                f"admin, CloudBase SDK, {len(REMOTE_POSTER_PROBES)} posters and "
+                f"{len(REMOTE_VIDEO_PROBES)} videos are reachable"
+            )
             return
         except Exception as error:  # Pages and CDN publication can lag briefly.
             last_error = error
