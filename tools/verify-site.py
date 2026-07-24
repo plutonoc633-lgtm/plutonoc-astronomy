@@ -12,7 +12,7 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260722-scroll-reveal-1"
+STYLE_CACHE_VERSION = "20260724-admin-entry-1"
 ADMIN_STYLE_CACHE_VERSION = "20260720-lighter-type-1"
 VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
@@ -113,6 +113,7 @@ def verify_local(root: Path) -> None:
         'class="arrival-hero"',
         'class="arrival-outro"',
         'class="arrival-footer reveal"',
+        '<a class="admin-entry" href="admin.html" aria-label="管理员登录">管理</a>',
         'src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
         'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
         'src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
@@ -160,6 +161,7 @@ def verify_local(root: Path) -> None:
         ".film-list.reveal.is-visible .film-card",
         ".archive-list.reveal.is-visible .archive-row",
         ".equipment-media.reveal.is-visible",
+        ".arrival-footer .admin-entry",
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
@@ -241,6 +243,7 @@ def verify_remote(base_url: str) -> None:
             require(f"video-data.js?v={VIDEO_CACHE_VERSION}" in index, "Deployed video manifest has an old cache version")
             require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
+            require('<a class="admin-entry" href="admin.html" aria-label="管理员登录">管理</a>' in index, "Deployed admin entry is missing")
             require(CLOUDBASE_SDK_URL in index, "Homepage CloudBase SDK reference is missing")
             for relative, expected_type in REMOTE_TYPES.items():
                 body, actual_type = fetch(urljoin(base, relative))

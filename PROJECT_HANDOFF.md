@@ -372,3 +372,9 @@ python tools/verify-site.py --url https://plutonoc.cn/
 
 - 临时停用巡检应在 GitHub Actions 中禁用 `Monitor PlutonoC Production` 工作流；不要删除验证脚本，因为 Pages 部署后仍会复用它。
 - GitHub 定时工作流可能延迟执行，本方案用于故障提醒，不构成实时 SLA。任何真机兼容修复都必须先写入 `REAL_DEVICE_QA.md` 的问题记录，并保持现有视觉方向、Canvas 清晰度和 CloudBase 数据不变。
+
+## 19. 2026-07-24 管理员登录入口
+
+- 公开网站最后一页底部品牌栏的版权文字后增加低调的“管理”入口，链接至同域名 `admin.html`；首页、页头和 INDEX 不增加后台入口。
+- 入口只负责导航，不改变安全边界。访问后台仍必须通过现有 CloudBase 管理员登录，网站不保存或暴露密码。
+- 桌面和手机均保持原有品牌栏结构；“管理”与版权使用细分隔线区分，`BACK TO TOP` 行为不变。当前公共 CSS 缓存版本为 `20260724-admin-entry-1`。
