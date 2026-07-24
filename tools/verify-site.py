@@ -12,7 +12,7 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260724-hidden-admin-3"
+STYLE_CACHE_VERSION = "20260724-footer-visible-4"
 ADMIN_STYLE_CACHE_VERSION = "20260724-admin-minimal-1"
 VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
@@ -112,7 +112,7 @@ def verify_local(root: Path) -> None:
         'preload="none" data-home-motion',
         'class="arrival-hero"',
         'class="arrival-outro"',
-        'class="arrival-footer reveal"',
+        'class="arrival-footer"',
         '<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>',
         'src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
         'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
@@ -125,6 +125,7 @@ def verify_local(root: Path) -> None:
         require(token not in index, f"Obsolete account decoration remains: {token}")
     for token in ('class="header-actions"', 'class="admin-entry"', '>管理</a>'):
         require(token not in index, f"Visible admin entry remains: {token}")
+    require('class="arrival-footer reveal"' not in index, "Footer must not be hidden by the reveal observer")
     require("assets/gallery/earth/earth-007.jpg" not in index, "Homepage still references the 12 MB Everest original")
     require(f'admin.css?v={ADMIN_STYLE_CACHE_VERSION}' in admin, "Admin page has an old cache version")
     for token in ("PRIVATE FILM STUDIO", "CONFIGURATION REQUIRED", "OWNER ACCESS", "私人影像管理", "VIDEO PUBLISHER"):
@@ -251,6 +252,7 @@ def verify_remote(base_url: str) -> None:
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
             require('<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
             require('class="admin-entry"' not in index and ">管理</a>" not in index, "Deployed header still exposes the admin entry")
+            require('class="arrival-footer reveal"' not in index, "Deployed footer is still controlled by the reveal observer")
             require(CLOUDBASE_SDK_URL in index, "Homepage CloudBase SDK reference is missing")
             for relative, expected_type in REMOTE_TYPES.items():
                 body, actual_type = fetch(urljoin(base, relative))

@@ -493,7 +493,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .social-links a:hover { color: #fff; }
 .social-links a:hover img { border-color: rgba(185,213,243,.42); filter: brightness(1.06) saturate(1); }
 .social-links a:hover span { color: #a5b8cc; }
-.arrival-footer { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; margin-top: clamp(68px, 7vw, 96px); min-height: 68px; padding-top: 24px; border-top: 1px solid rgba(158,200,255,.14); color: #7e8d9f; font: 9px/1.4 var(--font-meta); letter-spacing: .14em; }
+.arrival-footer { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; margin-top: clamp(68px, 7vw, 96px); min-height: 68px; padding-top: 24px; border-top: 1px solid rgba(158,200,255,.14); color: #7e8d9f; font: 9px/1.4 var(--font-meta); letter-spacing: .14em; visibility: visible; opacity: 1; filter: none; transform: none; }
 .arrival-footer span:nth-child(2) { text-align: center; }
 .arrival-footer .footer-admin-entry { justify-self: start; }
 .arrival-footer .back-to-top { justify-self: end; }
