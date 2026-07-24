@@ -375,7 +375,7 @@ python tools/verify-site.py --url https://plutonoc.cn/
 
 ## 19. 2026-07-24 管理员登录入口
 
-- 公开网站页头不再显示“管理”；管理员入口改为结尾品牌栏左侧的 `© 2026 PLUTONOC`，链接至同域名 `admin.html`，外观与普通版权文字一致。
+- 公开网站页头不再显示“管理”；管理员入口改为结尾品牌栏左侧的 `© 2026 PLUTONOC`，链接至 CloudBase Web 应用根地址，外观与普通版权文字一致。
 - 入口隐藏只用于减少路人误点，不构成安全措施。后台仍由 CloudBase 身份验证保护；管理员账号与密码只在 CloudBase 用户管理中维护，不得写入代码、Git、命令记录或交接文档。
 - 后台登录页已精简为“登录”、账号、密码、状态和按钮；管理界面删除英文眉题与重复说明，但保留上传格式、状态、编辑、发布、删除和退出等必要功能。CloudBase 业务逻辑未修改。
 - 结尾底栏不得添加 `.reveal`：它位于文档最末端，观察器的底部负边距会使其在最大滚动位置仍无法进入触发区，从而保持透明。底栏现在固定可见，并由静态检查阻止该类名回归。
@@ -383,7 +383,10 @@ python tools/verify-site.py --url https://plutonoc.cn/
 
 ## 20. 2026-07-24 GitHub 摄影与视频内容后台
 
-- `/admin.html` 仍以 CloudBase 账号密码登录作为第一层身份验证，但不再查询受体验版安全域名限制的 `videos` 数据库集合；因此旧后台右侧的 `network request error` 路径已移除。
+- 正式管理后台不是 Pages 同域的 `/admin.html`，而是 CloudBase Web 应用根地址：`https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/`。官网结尾版权入口已指向这里；Web 应用域名处于 CloudBase 现有安全域名范围，可正常进行账号密码登录和云函数调用。
+- 后台页面源文件变化后，必须额外执行 `powershell -ExecutionPolicy Bypass -File tools/deploy-admin-cloudbase.ps1`。该脚本只生成已忽略的 `work/cloudbase-admin/` 临时目录并部署 `plutonoc-studio`，不会读取或写入 GitHub 令牌。
+- `tools/verify-site.py --url https://plutonoc.cn/` 同时检查 Pages 中的后台副本和 CloudBase 正式后台，包括 HTML、CSS、脚本、CloudBase 配置、SDK、图片、视频与封面。正式后台任一关键资源不可访问时，部署检查与六小时巡检都会失败。
+- 管理后台仍以 CloudBase 账号密码登录作为第一层身份验证，但不再查询受体验版安全域名限制的 `videos` 数据库集合。体验版拒绝把 `plutonoc.cn` 加入安全域名，旧静态托管域名还会显示腾讯风险提醒，因此正式后台作为 CloudBase Web 应用部署在 `https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/`；官网结尾版权入口必须指向该地址，不能改回同域 `/admin.html`。
 - 后台已升级为纯 CloudBase 账号密码登录。登录后浏览器通过 Web SDK 调用 `plutonoc-content-publisher` 云函数，不再显示 GitHub 令牌输入框，也不在 `sessionStorage`、本地存储或前端代码中保存仓库凭据。
 - 云函数使用 CloudBase 调用上下文读取当前用户 UID，并在函数内只允许既有唯一管理员 UID。GitHub 细粒度令牌保存在云函数的 `plutonoc_github_token` 环境变量中，只授权 `plutonoc633-lgtm/plutonoc-astronomy` 且 Repository permissions 仅为 `Contents: Read and write`。真实令牌不得写入仓库、配置文件、URL、日志或交接文档。
 - 规范内容位于 `content/gallery.json` 与 `content/videos.json`。`gallery-data.js`、`video-data.js` 是确定性生成的前台运行时文件；本地修改规范数据后必须执行：

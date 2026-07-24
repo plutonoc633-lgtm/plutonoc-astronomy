@@ -19,6 +19,7 @@ ADMIN_SCRIPT_CACHE_VERSION = "20260724-server-publisher-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
+CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
@@ -108,7 +109,7 @@ def verify_local(root: Path) -> None:
         'class="arrival-hero"',
         'class="arrival-outro"',
         'class="arrival-footer"',
-        '<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>',
+        f'<a class="footer-admin-entry" href="{CLOUDBASE_ADMIN_URL}">© 2026 PLUTONOC</a>',
         'src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
         'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
         'src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
@@ -280,6 +281,33 @@ def fetch_prefix(url: str, byte_count: int = 1024) -> tuple[bytes, str, int]:
         return response.read(byte_count), response.headers.get_content_type(), response.status
 
 
+def verify_remote_admin(url: str, label: str) -> None:
+    admin_bytes, admin_type = fetch(url)
+    admin = admin_bytes.decode("utf-8")
+    require(admin_type == "text/html", f"Unexpected {label} type: {admin_type}")
+    require(f"admin.css?v={ADMIN_STYLE_CACHE_VERSION}" in admin, f"{label} has an old CSS version")
+    require(
+        f"cloudbase-config.js?v={CLOUDBASE_CACHE_VERSION}" in admin,
+        f"{label} has an old CloudBase config version",
+    )
+    require(f"admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}" in admin, f"{label} has an old script version")
+    require(CLOUDBASE_SDK_URL in admin, f"{label} CloudBase SDK reference is missing")
+    require("OWNER ACCESS" not in admin and "VIDEO PUBLISHER" not in admin, f"{label} contains obsolete annotations")
+    require('data-photo-form' in admin and 'data-publisher' in admin, f"{label} photo studio is missing")
+    require('data-github-form' not in admin, f"{label} still asks for a GitHub token")
+
+    for asset in ("admin.css", "admin.js", "cloudbase-config.js"):
+        body, actual_type = fetch(urljoin(url, asset))
+        require(body, f"Empty {label} asset: {asset}")
+        if asset.endswith(".css"):
+            require(actual_type == "text/css", f"Unexpected {label} asset type for {asset}: {actual_type}")
+        else:
+            require(
+                actual_type in {"application/javascript", "text/javascript"},
+                f"Unexpected {label} asset type for {asset}: {actual_type}",
+            )
+
+
 def verify_remote(base_url: str) -> None:
     base = base_url.rstrip("/") + "/"
     require(urlsplit(base).scheme == "https", f"Remote verification requires HTTPS: {base}")
@@ -294,7 +322,7 @@ def verify_remote(base_url: str) -> None:
             require(re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index), "Deployed video cache version is missing")
             require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
-            require('<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
+            require(f'<a class="footer-admin-entry" href="{CLOUDBASE_ADMIN_URL}">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
             require('class="admin-entry"' not in index and ">管理</a>" not in index, "Deployed header still exposes the admin entry")
             require('class="arrival-footer reveal"' not in index, "Deployed footer is still controlled by the reveal observer")
             require(CLOUDBASE_SDK_URL in index, "Homepage CloudBase SDK reference is missing")
@@ -303,16 +331,8 @@ def verify_remote(base_url: str) -> None:
                 require(body, f"Empty remote asset: {relative}")
                 require(actual_type == expected_type, f"Unexpected type for {relative}: {actual_type}")
 
-            admin_bytes, admin_type = fetch(urljoin(base, "admin.html"))
-            admin = admin_bytes.decode("utf-8")
-            require(admin_type == "text/html", f"Unexpected admin page type: {admin_type}")
-            require(f"admin.css?v={ADMIN_STYLE_CACHE_VERSION}" in admin, "Deployed admin page has an old CSS version")
-            require(f"cloudbase-config.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old CloudBase config version")
-            require(f"admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}" in admin, "Deployed admin page has an old script version")
-            require(CLOUDBASE_SDK_URL in admin, "Admin CloudBase SDK reference is missing")
-            require("OWNER ACCESS" not in admin and "VIDEO PUBLISHER" not in admin, "Deployed admin page still contains obsolete annotations")
-            require('data-photo-form' in admin and 'data-publisher' in admin, "Deployed photo studio is missing")
-            require('data-github-form' not in admin, "Deployed admin still asks for a GitHub token")
+            verify_remote_admin(urljoin(base, "admin.html"), "Pages admin page")
+            verify_remote_admin(CLOUDBASE_ADMIN_URL, "CloudBase admin page")
 
             video_reference = re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index)
             require(video_reference is not None, "Deployed video runtime reference is missing")
@@ -348,7 +368,7 @@ def verify_remote(base_url: str) -> None:
 
             print(
                 f"Remote site verification passed: {base}; "
-                f"admin, CloudBase SDK and {len(deployed_videos)} current videos/posters are reachable"
+                f"Pages/CloudBase admin, CloudBase SDK and {len(deployed_videos)} current videos/posters are reachable"
             )
             return
         except Exception as error:  # Pages and CDN publication can lag briefly.

@@ -16,5 +16,14 @@
         "plutonoc_github_token": "{{env.PLUTONOC_GITHUB_TOKEN}}"
       }
     }
-  ]
+  ],
+  "app": {
+    "serviceName": "plutonoc-studio",
+    "framework": "static",
+    "installCommand": "",
+    "buildCommand": "",
+    "outputDir": "./",
+    "root": "work/cloudbase-admin",
+    "deployPath": "/"
+  }
 }
