@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "version": "2.0",
+  "envId": "activity-book-web-d7djhe7bb1e834",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "plutonoc-content-publisher",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "timeout": 60,
+      "memorySize": 256,
+      "installDependency": true,
+      "description": "PlutonoC 管理后台的受保护 GitHub 内容发布服务",
+      "envVariables": {
+        "plutonoc_github_token": "{{env.PLUTONOC_GITHUB_TOKEN}}"
+      }
+    }
+  ]
+}

@@ -4,9 +4,7 @@
   const $ = (selector, root = document) => root?.querySelector(selector);
   const $$ = (selector, root = document) => [...(root?.querySelectorAll(selector) || [])];
   const config = window.PLUTONOC_CLOUDBASE || {};
-  const repository = { owner: 'plutonoc633-lgtm', name: 'plutonoc-astronomy', branch: 'main' };
-  const tokenKey = 'plutonoc.github.token';
-  const apiVersion = '2022-11-28';
+  const publisherFunction = 'plutonoc-content-publisher';
   const detailKeys = ['date', 'location', 'equipment', 'parameters', 'process', 'story', 'notes'];
   const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
   const categoryLabels = { deepsky: '深空', sunmoon: '日月', planet: '行星', nightscape: '星野', earth: '大地' };
@@ -14,10 +12,7 @@
   const loginPanel = $('[data-login]');
   const dashboard = $('[data-dashboard]');
   const publisher = $('[data-publisher]');
-  const githubConnect = $('[data-github-connect]');
   const signOutButton = $('[data-sign-out]');
-  const disconnectButton = $('[data-disconnect]');
-  const githubState = $('[data-github-state]');
   const publishState = $('[data-publish-state]');
   const photoForm = $('[data-photo-form]');
   const videoForm = $('[data-video-form]');
@@ -25,7 +20,6 @@
   let app;
   let auth;
   let repoState = null;
-  let githubToken = '';
   let preparedPhoto = null;
   let preparedPoster = null;
   let photoPreviewUrl = '';
@@ -80,37 +74,14 @@
 
   function formatError(error) {
     const detail = error?.message || error?.error_description || error?.code || String(error);
-    if (/bad credentials|401|token/i.test(detail)) return 'GitHub 令牌无效或已过期';
-    if (/403|permission|forbidden|denied|unauthorized/i.test(detail)) return '权限不足，请确认令牌只授权本仓库且 Contents 为可读写';
+    if (/GITHUB_AUTH|凭据无效|凭据.*过期/i.test(detail)) return '服务器端发布凭据已过期，请联系维护者更新';
+    if (/GITHUB_PERMISSION|权限不足|FORBIDDEN|无权发布/i.test(detail)) return '当前账号无权发布内容';
+    if (/CONFIG_REQUIRED|尚未配置/i.test(detail)) return '发布服务尚未完成服务器配置';
     if (/409|422|conflict|reference update failed/i.test(detail)) return '远端内容已变化。你的表单仍保留，请刷新内容后再发布';
     if (/password|credential|login|auth/i.test(detail)) return '登录失败，请检查账号和密码';
+    if (/FILE_TOO_LARGE|单文件限制|request.*large/i.test(detail)) return '网页图片仍然过大，请先压缩原图后重试';
     if (/network|fetch/i.test(detail)) return '网络请求失败，请检查连接后重试';
     return detail;
-  }
-
-  async function githubRequest(path, options = {}) {
-    const response = await fetch(`https://api.github.com${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${githubToken}`,
-        'X-GitHub-Api-Version': apiVersion,
-        ...(options.headers || {}),
-      },
-    });
-    if (!response.ok) {
-      let detail = '';
-      try { detail = (await response.json()).message || ''; } catch {}
-      throw new Error(`${response.status} ${detail || response.statusText}`);
-    }
-    if (response.status === 204) return null;
-    return response.json();
-  }
-
-  function decodeGithubText(content) {
-    const binary = atob(content.replace(/\s/g, ''));
-    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-    return new TextDecoder().decode(bytes);
   }
 
   function bytesToBase64(bytes) {
@@ -122,66 +93,33 @@
     return btoa(binary);
   }
 
-  async function readRepositoryText(path) {
-    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-    const result = await githubRequest(`/repos/${repository.owner}/${repository.name}/contents/${encodedPath}?ref=${repository.branch}`);
-    return decodeGithubText(result.content);
+  async function publisherRequest(action, data = {}) {
+    const response = await app.callFunction({
+      name: publisherFunction,
+      data: { action, ...data },
+      parse: true,
+    });
+    let result = response?.result;
+    if (typeof result === 'string') {
+      try { result = JSON.parse(result); } catch {}
+    }
+    if (!result?.ok) {
+      const error = new Error(result?.error?.message || response?.message || '发布服务调用失败');
+      error.code = result?.error?.code || response?.code || 'PUBLISHER_ERROR';
+      throw error;
+    }
+    return result.data;
   }
 
   async function loadRepositoryContent() {
-    setPublishState('正在读取 GitHub 内容', 'working');
-    const reference = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/ref/heads/${repository.branch}`);
-    const headSha = reference.object.sha;
-    const commit = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/commits/${headSha}`);
-    const [galleryText, videosText, index, style, script] = await Promise.all([
-      readRepositoryText('content/gallery.json'),
-      readRepositoryText('content/videos.json'),
-      readRepositoryText('index.html'),
-      readRepositoryText('style.css'),
-      readRepositoryText('script.js'),
-    ]);
-    const gallery = JSON.parse(galleryText);
-    const videos = JSON.parse(videosText);
+    setPublishState('正在读取网站内容', 'working');
+    const state = await publisherRequest('load');
+    const { gallery, videos } = state;
     validateGallery(gallery);
     validateVideos(videos);
-    repoState = {
-      headSha,
-      treeSha: commit.tree.sha,
-      gallery,
-      videos,
-      index,
-      style,
-      script,
-    };
+    repoState = state;
     renderAll();
     setPublishState(`内容已连接 / ${gallery.items.length} 张照片 / ${videos.items.length} 条影像`, 'success');
-  }
-
-  async function connectGithub(token) {
-    githubToken = token.trim();
-    if (!githubToken) throw new Error('请输入 GitHub 令牌');
-    const repo = await githubRequest(`/repos/${repository.owner}/${repository.name}`);
-    if (repo.full_name?.toLowerCase() !== `${repository.owner}/${repository.name}`.toLowerCase()) throw new Error('仓库验证失败');
-    if (!repo.permissions?.push) throw new Error('令牌缺少该仓库的 Contents: Read and write 权限');
-    await loadRepositoryContent();
-    sessionStorage.setItem(tokenKey, githubToken);
-    githubConnect.hidden = true;
-    publisher.hidden = false;
-    disconnectButton.hidden = false;
-    githubState.hidden = false;
-    githubState.textContent = 'GitHub 已连接';
-  }
-
-  function disconnectGithub() {
-    sessionStorage.removeItem(tokenKey);
-    githubToken = '';
-    repoState = null;
-    publisher.hidden = true;
-    githubConnect.hidden = false;
-    disconnectButton.hidden = true;
-    githubState.hidden = true;
-    $('[data-github-form]').reset();
-    setMessage($('[data-github-message]'), '');
   }
 
   function contentVersion() {
@@ -195,50 +133,6 @@
       String(now.getUTCSeconds()).padStart(2, '0'),
     ].join('');
     return `${digits}-${Math.random().toString(36).slice(2, 6)}`;
-  }
-
-  function galleryRuntime(data) {
-    const items = data.items
-      .filter(item => item.status === 'published')
-      .sort((a, b) => {
-        const categoryDelta = (data.categoryConfig[a.category]?.order || 99) - (data.categoryConfig[b.category]?.order || 99);
-        return categoryDelta || a.sortOrder - b.sortOrder || a.id.localeCompare(b.id);
-      })
-      .map(item => ({
-        id: item.id,
-        category: item.category,
-        title: item.title,
-        src: item.src,
-        previewSrc: item.previewSrc,
-        width: item.width,
-        height: item.height,
-        featured: Boolean(item.featured),
-        previewRotation: Number(item.previewRotation) || 0,
-        details: normalizeDetails(item.details),
-      }));
-    return `window.categoryConfig=${JSON.stringify(data.categoryConfig)};\nwindow.galleryData=${JSON.stringify(items)};\n`;
-  }
-
-  function videoRuntime(data) {
-    const items = data.items
-      .filter(item => item.status === 'published')
-      .slice()
-      .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
-      .map(item => ({
-        id: item.id,
-        title: item.title,
-        category: item.category,
-        summary: item.summary || '',
-        date: item.date || '',
-        location: item.location || '',
-        videoUrl: item.videoUrl,
-        posterUrl: item.posterUrl,
-        duration: Number(item.duration) || 0,
-        aspectRatio: Number(item.aspectRatio) || 16 / 9,
-        status: item.status,
-        sortOrder: item.sortOrder,
-      }));
-    return `window.localVideoData=${JSON.stringify(items)};\n`;
   }
 
   function validateGallery(data) {
@@ -273,17 +167,10 @@
   }
 
   async function createBlob(path, content) {
-    let body;
-    if (content instanceof Blob) {
-      body = { content: bytesToBase64(new Uint8Array(await content.arrayBuffer())), encoding: 'base64' };
-    } else {
-      body = { content: String(content), encoding: 'utf-8' };
-    }
-    const result = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/blobs`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    return { path, mode: '100644', type: 'blob', sha: result.sha };
+    if (!(content instanceof Blob)) throw new Error('发布服务只接受图片文件');
+    const base64 = bytesToBase64(new Uint8Array(await content.arrayBuffer()));
+    const result = await publisherRequest('createBlob', { path, content: base64 });
+    return { path, sha: result.sha };
   }
 
   async function publishChanges({ gallery, videos, files = [], deletions = [], message, changed }) {
@@ -291,8 +178,6 @@
     publishing = true;
     $$('.content-form button').forEach(button => { button.disabled = true; });
     try {
-      const liveReference = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/ref/heads/${repository.branch}`);
-      if (liveReference.object.sha !== repoState.headSha) throw new Error('conflict: remote head changed');
       const version = contentVersion();
       const nextGallery = gallery || deepClone(repoState.gallery);
       const nextVideos = videos || deepClone(repoState.videos);
@@ -300,53 +185,37 @@
       if (changed === 'videos') nextVideos.contentVersion = version;
       validateGallery(nextGallery);
       validateVideos(nextVideos);
-      let nextIndex = repoState.index;
-      if (changed === 'gallery') nextIndex = nextIndex.replace(/gallery-data\.js\?v=[^"]+/g, `gallery-data.js?v=${version}`);
-      if (changed === 'videos') nextIndex = nextIndex.replace(/video-data\.js\?v=[^"]+/g, `video-data.js?v=${version}`);
 
       setPublishState('正在准备原子提交', 'working');
-      const textFiles = [
-        ['content/gallery.json', `${JSON.stringify(nextGallery, null, 2)}\n`],
-        ['content/videos.json', `${JSON.stringify(nextVideos, null, 2)}\n`],
-        ['gallery-data.js', galleryRuntime(nextGallery)],
-        ['video-data.js', videoRuntime(nextVideos)],
-        ['index.html', nextIndex],
-      ];
-      const uniqueFiles = new Map([...textFiles, ...files].map(([path, content]) => [path, content]));
-      const treeEntries = [];
+      const uniqueFiles = new Map(files);
+      const fileEntries = [];
       let completed = 0;
       for (const [path, content] of uniqueFiles) {
-        treeEntries.push(await createBlob(path, content));
+        fileEntries.push(await createBlob(path, content));
         completed += 1;
         setPublishState(`正在上传内容 ${completed} / ${uniqueFiles.size}`, 'working');
       }
-      [...new Set(deletions)].filter(path => path && !uniqueFiles.has(path)).forEach(path => {
-        treeEntries.push({ path, mode: '100644', type: 'blob', sha: null });
-      });
-      const tree = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/trees`, {
-        method: 'POST',
-        body: JSON.stringify({ base_tree: repoState.treeSha, tree: treeEntries }),
-      });
-      const commit = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/commits`, {
-        method: 'POST',
-        body: JSON.stringify({ message, tree: tree.sha, parents: [repoState.headSha] }),
-      });
-      await githubRequest(`/repos/${repository.owner}/${repository.name}/git/refs/heads/${repository.branch}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ sha: commit.sha, force: false }),
+      const result = await publisherRequest('publish', {
+        expectedHeadSha: repoState.headSha,
+        gallery: nextGallery,
+        videos: nextVideos,
+        fileEntries,
+        deletions: [...new Set(deletions)].filter(path => path && !uniqueFiles.has(path)),
+        message,
+        changed,
       });
       repoState = {
         ...repoState,
-        headSha: commit.sha,
-        treeSha: tree.sha,
+        headSha: result.sha,
+        treeSha: result.treeSha,
         gallery: nextGallery,
         videos: nextVideos,
-        index: nextIndex,
+        index: result.index,
       };
       renderAll();
-      setPublishState(`已提交 ${commit.sha.slice(0, 7)}，等待 Pages 部署`, 'working');
+      setPublishState(`已提交 ${result.sha.slice(0, 7)}，等待 Pages 部署`, 'working');
       pollDeployment(version, changed);
-      return commit.sha;
+      return result.sha;
     } finally {
       publishing = false;
       $$('.content-form button').forEach(button => { button.disabled = false; });
@@ -394,7 +263,7 @@
     });
   }
 
-  async function renderImage(source, maxEdge, quality, cropRatio = 0) {
+  async function renderImage(source, maxEdge, quality, cropRatio = 0, maxBytes = 3_500_000) {
     const sourceWidth = source.width || source.naturalWidth;
     const sourceHeight = source.height || source.naturalHeight;
     let cropX = 0;
@@ -412,13 +281,31 @@
       }
     }
     const scale = Math.min(1, maxEdge / Math.max(cropWidth, cropHeight));
-    const width = Math.max(1, Math.round(cropWidth * scale));
-    const height = Math.max(1, Math.round(cropHeight * scale));
-    const canvas = document.createElement('canvas');
+    let width = Math.max(1, Math.round(cropWidth * scale));
+    let height = Math.max(1, Math.round(cropHeight * scale));
+    let canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     canvas.getContext('2d', { alpha: true }).drawImage(source, cropX, cropY, cropWidth, cropHeight, 0, 0, width, height);
-    return { blob: await canvasBlob(canvas, 'image/webp', quality), width, height };
+    let currentQuality = quality;
+    let blob = await canvasBlob(canvas, 'image/webp', currentQuality);
+    while (blob.size > maxBytes && currentQuality > .62) {
+      currentQuality -= .08;
+      blob = await canvasBlob(canvas, 'image/webp', currentQuality);
+    }
+    if (blob.size > maxBytes) {
+      const resizeScale = Math.min(.9, Math.sqrt(maxBytes / blob.size) * .94);
+      width = Math.max(1, Math.round(width * resizeScale));
+      height = Math.max(1, Math.round(height * resizeScale));
+      const resized = document.createElement('canvas');
+      resized.width = width;
+      resized.height = height;
+      resized.getContext('2d', { alpha: true }).drawImage(canvas, 0, 0, width, height);
+      canvas = resized;
+      blob = await canvasBlob(canvas, 'image/webp', .76);
+    }
+    if (blob.size > maxBytes) throw new Error('图片压缩后仍超过发布服务单文件限制');
+    return { blob, width, height };
   }
 
   async function sha256(blob) {
@@ -923,23 +810,6 @@
     try { await loadRepositoryContent(); } catch (error) { setPublishState(formatError(error), 'error'); }
   }));
 
-  $('[data-github-form]').addEventListener('submit', async event => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    setMessage($('[data-github-message]'), '正在验证并读取内容');
-    form.querySelector('button').disabled = true;
-    try {
-      await connectGithub(form.token.value);
-      form.reset();
-    } catch (error) {
-      githubToken = '';
-      sessionStorage.removeItem(tokenKey);
-      setMessage($('[data-github-message]'), formatError(error), true);
-    } finally {
-      form.querySelector('button').disabled = false;
-    }
-  });
-
   $('[data-login-form]').addEventListener('submit', async event => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -947,15 +817,15 @@
     try {
       await signIn(form.username.value.trim(), form.password.value);
       form.reset();
-      showDashboard();
+      await showDashboard();
     } catch (error) {
       setMessage($('[data-login-message]'), formatError(error), true);
     }
   });
 
-  disconnectButton.addEventListener('click', disconnectGithub);
   signOutButton.addEventListener('click', async () => {
-    disconnectGithub();
+    repoState = null;
+    publisher.hidden = true;
     await auth.signOut();
     dashboard.hidden = true;
     signOutButton.hidden = true;
@@ -966,19 +836,14 @@
     loginPanel.hidden = true;
     dashboard.hidden = false;
     signOutButton.hidden = false;
-    const savedToken = sessionStorage.getItem(tokenKey) || '';
-    if (savedToken) {
-      try {
-        await connectGithub(savedToken);
-        resetPhotoForm();
-        resetVideoForm();
-        return;
-      } catch {
-        disconnectGithub();
-      }
+    publisher.hidden = false;
+    try {
+      await loadRepositoryContent();
+      resetPhotoForm();
+      resetVideoForm();
+    } catch (error) {
+      setPublishState(formatError(error), 'error');
     }
-    githubConnect.hidden = false;
-    publisher.hidden = true;
   }
 
   async function initialize() {

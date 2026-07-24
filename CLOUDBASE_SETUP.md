@@ -53,4 +53,6 @@ window.PLUTONOC_CLOUDBASE = {
 
 ## 5. 使用
 
-部署后打开 `/admin.html`，使用站长账号登录，再连接仅授权本仓库 Contents 读写的 GitHub 细粒度令牌。摄影作品可直接新增、替换、编辑和隐藏；视频资料与封面也在后台维护。大型 MP4 先在 CloudBase 静态托管控制台上传，再把公开地址填入后台。公开网站只展示已发布记录。
+部署后打开 `/admin.html`，使用站长账号和密码登录即可管理内容。浏览器不再接触 GitHub 凭据；`plutonoc-content-publisher` 云函数会校验唯一管理员 UID，并使用服务器端环境变量中的仓库凭据代为提交。摄影作品可直接新增、替换、编辑和隐藏；视频资料与封面也在后台维护。大型 MP4 先在 CloudBase 静态托管控制台上传，再把公开地址填入后台。公开网站只展示已发布记录。
+
+发布函数的仓库凭据只允许限定到 `plutonoc633-lgtm/plutonoc-astronomy`，Repository permissions 只开启 `Contents: Read and write`。本地维护时使用进程环境变量 `PLUTONOC_GITHUB_TOKEN` 解析 `cloudbaserc.json` 中的占位符，真实值不得写入配置文件、Git、日志或交接文档。

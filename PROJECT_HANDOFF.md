@@ -384,7 +384,8 @@ python tools/verify-site.py --url https://plutonoc.cn/
 ## 20. 2026-07-24 GitHub 摄影与视频内容后台
 
 - `/admin.html` 仍以 CloudBase 账号密码登录作为第一层身份验证，但不再查询受体验版安全域名限制的 `videos` 数据库集合；因此旧后台右侧的 `network request error` 路径已移除。
-- 登录后需要连接 GitHub。只使用限定到 `plutonoc633-lgtm/plutonoc-astronomy`、Repository permissions 中 `Contents: Read and write` 的细粒度 Personal Access Token。令牌仅写入当前标签页的 `sessionStorage`，断开 GitHub、退出后台或关闭标签页后清除；不得写入仓库、交接文档、URL 或日志。
+- 后台已升级为纯 CloudBase 账号密码登录。登录后浏览器通过 Web SDK 调用 `plutonoc-content-publisher` 云函数，不再显示 GitHub 令牌输入框，也不在 `sessionStorage`、本地存储或前端代码中保存仓库凭据。
+- 云函数使用 CloudBase 调用上下文读取当前用户 UID，并在函数内只允许既有唯一管理员 UID。GitHub 细粒度令牌保存在云函数的 `plutonoc_github_token` 环境变量中，只授权 `plutonoc633-lgtm/plutonoc-astronomy` 且 Repository permissions 仅为 `Contents: Read and write`。真实令牌不得写入仓库、配置文件、URL、日志或交接文档。
 - 规范内容位于 `content/gallery.json` 与 `content/videos.json`。`gallery-data.js`、`video-data.js` 是确定性生成的前台运行时文件；本地修改规范数据后必须执行：
 
 ```powershell
@@ -396,6 +397,14 @@ node tools/build-content.mjs --check
 - 新照片只生成最长边 3000px 的高质量 WebP 展示图和最长边 1600px 的 WebP 预览图，原片不进入 Git。上传路径带 SHA-256 内容哈希；精选变化时同步生成新的 2560px 分类首页封面。
 - 永久删除从当前 Git 树移除记录及不再引用的图片；如果旧素材仍被结尾背景、HTML、CSS、脚本或视频清单引用，则保留素材文件但删除摄影记录。Git 历史仍可用于恢复。
 - 视频后台改为维护 `content/videos.json`：支持标题、分类、简介、日期、地点、排序、状态、公开 MP4 地址和 1920×1080 WebP 封面。大型视频不进入 Git；先在 CloudBase 静态托管控制台上传，再把公开 MP4 地址填入后台。
-- 每次后台发布都会先确认远端 `main` 仍是编辑时读取的提交，再通过 GitHub Git Data API 创建 blob、tree、commit 并以 `force: false` 更新分支。资料、衍生图片、运行时清单和 HTML 缓存版本在同一个提交中生效；远端冲突时拒绝覆盖并保留表单。
+- 每次后台发布都会由云函数确认远端 `main` 仍是编辑时读取的提交，再通过 GitHub Git Data API 创建 blob、tree、commit 并以 `force: false` 更新分支。资料、衍生图片、运行时清单和 HTML 缓存版本在同一个提交中生效；远端冲突时拒绝覆盖并保留表单。图片先逐个创建 Git blob，最终树与内容清单仍只在一次原子提交中生效。
 - 发布后后台轮询线上 `index.html` 的内容缓存版本，显示“部署中 / 已上线”。Pages 工作流新增 `node tools/build-content.mjs --check`，`tools/verify-site.py` 会验证规范数据与运行时清单数量一致、每类精选唯一、后台 Git 发布标记和不再调用 CloudBase 集合。初次迁移基线为 116 张摄影作品和 3 条视频，后续内容增删不应被固定数量阻断。
-- 当前后台 CSS 与脚本缓存版本均为 `20260724-content-studio-1`。前台视觉结构、摄影 Canvas 按需加载、视频播放数据字段和 CloudBase 三个既有视频文件均未改变。
+- 当前后台 CSS 与脚本缓存版本均为 `20260724-server-publisher-1`。云函数源码位于 `cloudfunctions/plutonoc-content-publisher/`，部署配置为 `cloudbaserc.json`；配置只提交 `{{env.PLUTONOC_GITHUB_TOKEN}}` 占位符。前台视觉结构、摄影 Canvas 按需加载、视频播放数据字段和 CloudBase 三个既有视频文件均未改变。
+
+服务器凭据更新命令不得直接把令牌写进命令行。应在当前 PowerShell 进程中私下设置 `PLUTONOC_GITHUB_TOKEN`，然后执行：
+
+```powershell
+npx --yes --package @cloudbase/cli@3.6.3 tcb config update fn plutonoc-content-publisher -e activity-book-web-d7djhe7bb1e834
+```
+
+选择合并环境变量，完成后立即清除当前进程变量。日常只更新函数代码时优先使用 `tcb fn code update`，避免无意覆盖服务器环境变量。

@@ -6,14 +6,12 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC Studio</title>
-  <link rel="stylesheet" href="admin.css?v=20260724-content-studio-1">
+  <link rel="stylesheet" href="admin.css?v=20260724-server-publisher-1">
 </head>
 <body>
   <header class="studio-header">
     <a href="index.html" aria-label="返回 PlutonoC">PlutonoC</a>
     <div class="header-tools">
-      <span data-github-state hidden></span>
-      <button type="button" data-disconnect hidden>断开 GitHub</button>
       <button type="button" data-sign-out hidden>退出</button>
     </div>
   </header>
@@ -40,21 +38,8 @@
         <button type="button" data-studio-tab="videos">动态影像</button>
       </nav>
 
-      <section class="github-connect" data-github-connect>
-        <div>
-          <h1>连接 GitHub</h1>
-          <p>使用仅授权 <code>plutonoc633-lgtm/plutonoc-astronomy</code>、Contents 可读写的细粒度令牌。令牌只保留在当前标签页。</p>
-          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建细粒度令牌 ↗</a>
-        </div>
-        <form data-github-form>
-          <label>GitHub 令牌<input name="token" type="password" autocomplete="off" spellcheck="false" required></label>
-          <button type="submit">连接</button>
-          <p class="form-message" data-github-message role="status"></p>
-        </form>
-      </section>
-
       <section class="publisher" data-publisher hidden>
-        <div class="publish-state" data-publish-state role="status">内容已连接</div>
+        <div class="publish-state" data-publish-state role="status">正在读取内容</div>
 
         <section class="studio-panel is-active" data-studio-panel="photos">
           <div class="panel-heading">
@@ -180,6 +165,6 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin.js?v=20260724-content-studio-1"></script>
+  <script src="admin.js?v=20260724-server-publisher-1"></script>
 </body>
 </html>

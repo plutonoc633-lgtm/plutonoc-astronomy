@@ -14,8 +14,8 @@ from urllib.request import Request, urlopen
 
 
 STYLE_CACHE_VERSION = "20260724-footer-visible-4"
-ADMIN_STYLE_CACHE_VERSION = "20260724-content-studio-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260724-content-studio-1"
+ADMIN_STYLE_CACHE_VERSION = "20260724-server-publisher-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260724-server-publisher-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
@@ -82,6 +82,8 @@ def verify_local(root: Path) -> None:
     admin = (root / "admin.html").read_text(encoding="utf-8")
     admin_style = (root / "admin.css").read_text(encoding="utf-8")
     admin_script = (root / "admin.js").read_text(encoding="utf-8")
+    publisher_script = (root / "cloudfunctions/plutonoc-content-publisher/index.js").read_text(encoding="utf-8")
+    cloudbase_rc = json.loads((root / "cloudbaserc.json").read_text(encoding="utf-8"))
     video_data = (root / "video-data.js").read_text(encoding="utf-8")
     gallery_data = (root / "gallery-data.js").read_text(encoding="utf-8")
     gallery_content = json.loads((root / "content/gallery.json").read_text(encoding="utf-8"))
@@ -133,16 +135,25 @@ def verify_local(root: Path) -> None:
         'data-studio-tab="videos"',
         'data-photo-form',
         'data-video-form',
-        'data-github-form',
-        '只保留在当前标签页',
+        'data-publisher',
     ):
         require(token in admin, f"Missing essential admin marker: {token}")
     require(f'admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}' in admin, "Admin script has an old cache version")
-    require("sessionStorage.setItem(tokenKey" in admin_script, "GitHub token is not stored per-tab")
-    require("sessionStorage.removeItem(tokenKey)" in admin_script, "GitHub token is not cleared on disconnect")
-    require("repo.permissions?.push" in admin_script, "GitHub token write permission is not verified")
+    require("data-github-form" not in admin, "Admin still asks the user for a GitHub token")
+    require("sessionStorage" not in admin_script, "Admin still stores a GitHub credential in the browser")
+    require("api.github.com" not in admin_script, "Admin still calls GitHub directly from the browser")
+    require("app.callFunction" in admin_script and "plutonoc-content-publisher" in admin_script, "Admin server publisher bridge is missing")
     require(".collection(" not in admin_script, "Admin still queries the blocked CloudBase database")
-    require("/git/trees" in admin_script and "force: false" in admin_script, "Admin atomic Git publishing is missing")
+    require("/git/trees" in publisher_script and "force: false" in publisher_script, "Server atomic Git publishing is missing")
+    require("app.auth.getUserInfo()" in publisher_script and "administratorUid" in publisher_script, "Publisher administrator check is missing")
+    require("process.env.plutonoc_github_token" in publisher_script, "Publisher secret environment variable is missing")
+    publisher_config = next(
+        item for item in cloudbase_rc.get("functions", []) if item.get("name") == "plutonoc-content-publisher"
+    )
+    require(
+        publisher_config.get("envVariables", {}).get("plutonoc_github_token") == "{{env.PLUTONOC_GITHUB_TOKEN}}",
+        "Publisher token must remain an environment placeholder",
+    )
     require("3000" in admin_script and "1600" in admin_script, "Admin photo derivatives are not configured")
     runtime_sources = index + style + admin + admin_style
     for obsolete in (
@@ -300,7 +311,8 @@ def verify_remote(base_url: str) -> None:
             require(f"admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}" in admin, "Deployed admin page has an old script version")
             require(CLOUDBASE_SDK_URL in admin, "Admin CloudBase SDK reference is missing")
             require("OWNER ACCESS" not in admin and "VIDEO PUBLISHER" not in admin, "Deployed admin page still contains obsolete annotations")
-            require('data-photo-form' in admin and 'data-github-form' in admin, "Deployed photo studio is missing")
+            require('data-photo-form' in admin and 'data-publisher' in admin, "Deployed photo studio is missing")
+            require('data-github-form' not in admin, "Deployed admin still asks for a GitHub token")
 
             video_reference = re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index)
             require(video_reference is not None, "Deployed video runtime reference is missing")
