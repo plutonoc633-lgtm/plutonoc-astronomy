@@ -4,22 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#08090b">
   <title>PlutonoC Studio</title>
-  <link rel="stylesheet" href="admin.css?v=20260724-admin-minimal-1">
+  <link rel="stylesheet" href="admin.css?v=20260724-content-studio-1">
 </head>
 <body>
-  <header class="studio-header"><a href="index.html">PlutonoC</a><button type="button" data-sign-out hidden>退出</button></header>
+  <header class="studio-header">
+    <a href="index.html" aria-label="返回 PlutonoC">PlutonoC</a>
+    <div class="header-tools">
+      <span data-github-state hidden></span>
+      <button type="button" data-disconnect hidden>断开 GitHub</button>
+      <button type="button" data-sign-out hidden>退出</button>
+    </div>
+  </header>
+
   <main>
     <section class="setup-panel" data-setup hidden>
-      <h1>尚未连接 CloudBase</h1>
-      <p>先按 <a href="CLOUDBASE_SETUP.md">配置说明</a> 创建腾讯云环境，再将环境 ID 填入 <code>cloudbase-config.js</code>。页面不会保存腾讯云密钥。</p>
+      <h1>后台暂不可用</h1>
+      <p>CloudBase 身份认证未能初始化，请稍后刷新。</p>
     </section>
 
     <section class="login-panel" data-login hidden>
       <h1>登录</h1>
       <form data-login-form>
-        <label>账号<input name="username" autocomplete="username" required placeholder="用户名"></label>
+        <label>账号<input name="username" autocomplete="username" required></label>
         <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
         <button type="submit">登录 <span>→</span></button>
         <p class="form-message" data-login-message role="status"></p>
@@ -27,31 +35,151 @@
     </section>
 
     <section class="dashboard" data-dashboard hidden>
-      <div class="dashboard-head"><h1>动态影像</h1></div>
-      <div class="dashboard-grid">
-        <form class="video-form" data-video-form>
-          <input type="hidden" name="recordId">
-          <input type="hidden" name="existingVideoFileId">
-          <input type="hidden" name="existingPosterFileId">
-          <div class="file-zone">
-            <label>视频文件 <small>MP4 / H.264 + AAC / 最大 1 GB</small><input name="video" type="file" accept="video/mp4,.mp4"></label>
-            <span data-video-file>尚未选择文件</span>
-          </div>
-          <div class="form-row"><label>标题<input name="title" required maxlength="80" placeholder="例如：木星自转四小时"></label><label>分类<select name="category"><option>行星观测</option><option>星野延时</option><option>天象记录</option><option>观测现场</option><option>其他</option></select></label></div>
-          <label>简介<textarea name="summary" rows="3" maxlength="300" placeholder="简要说明拍摄对象与过程"></textarea></label>
-          <div class="form-row"><label>日期<input name="date" type="date"></label><label>地点<input name="location" maxlength="60" placeholder="例如：江阴"></label><label>排序<input name="sortOrder" type="number" min="0" value="0"></label></div>
-          <label>自定义封面 <small>可不选，将从视频自动截取</small><input name="poster" type="file" accept="image/jpeg,image/png,image/webp"></label>
-          <figure class="poster-preview"><canvas data-poster-canvas width="1600" height="900"></canvas><figcaption data-poster-message>选择视频后生成封面预览</figcaption></figure>
-          <div class="progress" data-progress hidden><i></i><span>准备上传</span></div>
-          <p class="form-message" data-form-message role="status"></p>
-          <div class="form-actions"><button type="button" class="secondary" data-reset-form>清空</button><button type="submit" name="intent" value="draft">保存草稿</button><button type="submit" name="intent" value="published" class="primary">发布影像</button></div>
+      <nav class="studio-tabs" aria-label="内容类型">
+        <button type="button" class="is-active" data-studio-tab="photos">摄影作品</button>
+        <button type="button" data-studio-tab="videos">动态影像</button>
+      </nav>
+
+      <section class="github-connect" data-github-connect>
+        <div>
+          <h1>连接 GitHub</h1>
+          <p>使用仅授权 <code>plutonoc633-lgtm/plutonoc-astronomy</code>、Contents 可读写的细粒度令牌。令牌只保留在当前标签页。</p>
+          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建细粒度令牌 ↗</a>
+        </div>
+        <form data-github-form>
+          <label>GitHub 令牌<input name="token" type="password" autocomplete="off" spellcheck="false" required></label>
+          <button type="submit">连接</button>
+          <p class="form-message" data-github-message role="status"></p>
         </form>
-        <aside class="video-manager"><div class="manager-head"><h2>影像资料</h2><button type="button" data-refresh>刷新</button></div><div class="manager-list" data-manager-list><p>正在读取</p></div></aside>
-      </div>
+      </section>
+
+      <section class="publisher" data-publisher hidden>
+        <div class="publish-state" data-publish-state role="status">内容已连接</div>
+
+        <section class="studio-panel is-active" data-studio-panel="photos">
+          <div class="panel-heading">
+            <div><p>PHOTOGRAPHY</p><h1>摄影作品</h1></div>
+            <button type="button" class="primary compact" data-new-photo>新增作品</button>
+          </div>
+          <div class="dashboard-grid">
+            <form class="content-form" data-photo-form>
+              <input type="hidden" name="recordId">
+              <input type="hidden" name="existingSrc">
+              <input type="hidden" name="existingPreviewSrc">
+              <div class="form-heading"><h2 data-photo-form-title>新增作品</h2><button type="button" data-reset-photo>清空</button></div>
+              <label class="file-zone">图片
+                <small>JPEG / PNG / WebP；发布时自动生成网页版本，原片不会上传</small>
+                <input name="image" type="file" accept="image/jpeg,image/png,image/webp">
+                <span data-photo-file>尚未选择图片</span>
+              </label>
+              <figure class="asset-preview photo-preview"><img data-photo-preview alt=""><figcaption data-photo-preview-message>选择图片后显示预览</figcaption></figure>
+              <div class="form-row">
+                <label>标题<input name="title" maxlength="100" required></label>
+                <label>分类<select name="category" required>
+                  <option value="deepsky">深空</option>
+                  <option value="sunmoon">日月</option>
+                  <option value="planet">行星</option>
+                  <option value="nightscape">星野</option>
+                  <option value="earth">大地</option>
+                </select></label>
+              </div>
+              <div class="form-row three">
+                <label>日期<input name="date" type="date"></label>
+                <label>地点<input name="location" maxlength="100"></label>
+                <label>排序<input name="sortOrder" type="number" min="0" value="1"></label>
+              </div>
+              <div class="form-row">
+                <label>设备<textarea name="equipment" rows="2" maxlength="300"></textarea></label>
+                <label>拍摄参数<textarea name="parameters" rows="2" maxlength="300"></textarea></label>
+              </div>
+              <label>处理过程<textarea name="process" rows="3" maxlength="1000"></textarea></label>
+              <label>故事<textarea name="story" rows="3" maxlength="1000"></textarea></label>
+              <label>备注<textarea name="notes" rows="2" maxlength="500"></textarea></label>
+              <div class="form-row options">
+                <label class="check"><input name="featured" type="checkbox">设为该分类首页精选</label>
+                <label>状态<select name="status"><option value="published">已发布</option><option value="hidden">已隐藏</option></select></label>
+              </div>
+              <p class="form-message" data-photo-message role="status"></p>
+              <div class="form-actions">
+                <button type="button" class="danger" data-delete-photo hidden>永久删除</button>
+                <button type="submit" class="primary">保存并发布</button>
+              </div>
+            </form>
+
+            <aside class="content-manager">
+              <div class="manager-head"><h2>作品列表 <span data-photo-count></span></h2><button type="button" data-refresh-content>刷新</button></div>
+              <div class="manager-filters">
+                <input type="search" data-photo-search placeholder="搜索标题">
+                <select data-photo-category><option value="all">全部分类</option><option value="deepsky">深空</option><option value="sunmoon">日月</option><option value="planet">行星</option><option value="nightscape">星野</option><option value="earth">大地</option></select>
+                <select data-photo-status><option value="all">全部状态</option><option value="published">已发布</option><option value="hidden">已隐藏</option></select>
+              </div>
+              <div class="manager-list photo-list" data-photo-list><p>正在读取</p></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="studio-panel" data-studio-panel="videos" hidden>
+          <div class="panel-heading">
+            <div><p>FILMS</p><h1>动态影像</h1></div>
+            <button type="button" class="primary compact" data-new-video>新增影像</button>
+          </div>
+          <div class="dashboard-grid">
+            <form class="content-form" data-video-form>
+              <input type="hidden" name="recordId">
+              <input type="hidden" name="existingPosterUrl">
+              <div class="form-heading"><h2 data-video-form-title>新增影像</h2><button type="button" data-reset-video>清空</button></div>
+              <label>公开 MP4 地址或站内路径
+                <small>大视频先上传至 CloudBase 静态托管，再粘贴公开地址</small>
+                <input name="videoUrl" type="text" required placeholder="https://…/video.mp4">
+              </label>
+              <div class="form-row">
+                <label>标题<input name="title" maxlength="100" required></label>
+                <label>分类<select name="category"><option>行星观测</option><option>星野延时</option><option>天象记录</option><option>观测现场</option><option>其他</option></select></label>
+              </div>
+              <label>简介<textarea name="summary" rows="3" maxlength="500"></textarea></label>
+              <div class="form-row three">
+                <label>日期<input name="date" type="date"></label>
+                <label>地点<input name="location" maxlength="100"></label>
+                <label>排序<input name="sortOrder" type="number" min="0" value="1"></label>
+              </div>
+              <div class="form-row">
+                <label>时长（秒）<input name="duration" type="number" min="0" step="0.001" required></label>
+                <label>画幅比例<input name="aspectRatio" type="number" min="0.1" step="0.001" value="1.7778" required></label>
+              </div>
+              <button type="button" class="secondary probe-button" data-probe-video>从视频地址读取时长与画幅</button>
+              <label class="file-zone">替换封面
+                <small>可不选；选择后自动生成 1920×1080 WebP</small>
+                <input name="poster" type="file" accept="image/jpeg,image/png,image/webp">
+                <span data-poster-file>保留现有封面</span>
+              </label>
+              <figure class="asset-preview poster-preview"><img data-poster-preview alt=""><figcaption data-poster-preview-message>封面预览</figcaption></figure>
+              <label>状态<select name="status"><option value="published">已发布</option><option value="draft">草稿</option></select></label>
+              <p class="form-message" data-video-message role="status"></p>
+              <div class="form-actions">
+                <button type="button" class="danger" data-delete-video hidden>永久删除</button>
+                <button type="submit" class="primary">保存并发布</button>
+              </div>
+            </form>
+            <aside class="content-manager">
+              <div class="manager-head"><h2>影像列表 <span data-video-count></span></h2><button type="button" data-refresh-content>刷新</button></div>
+              <div class="manager-list" data-video-list><p>正在读取</p></div>
+            </aside>
+          </div>
+        </section>
+      </section>
     </section>
   </main>
+
+  <dialog class="confirm-dialog" data-confirm-dialog>
+    <form method="dialog">
+      <h2>确认永久删除</h2>
+      <p data-confirm-message></p>
+      <div><button value="cancel">取消</button><button value="confirm" class="danger">永久删除</button></div>
+    </form>
+  </dialog>
+
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin.js?v=20260720-cloudbase-1"></script>
+  <script src="admin.js?v=20260724-content-studio-1"></script>
 </body>
 </html>

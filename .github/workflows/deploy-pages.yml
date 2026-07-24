@@ -28,6 +28,7 @@ jobs:
         run: |
           node --check script.js
           node --check admin.js
+          node tools/build-content.mjs --check
       - name: Verify static site
         run: python tools/verify-site.py --root .
       - name: Configure Pages

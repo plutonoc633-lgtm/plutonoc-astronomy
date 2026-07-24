@@ -2,7 +2,7 @@
 
 网站前台在未配置 CloudBase 时会展示 `video-data.js` 中的静态影像清单；完成以下配置后，前台可优先读取云端已发布内容。
 
-> 当前环境使用 CloudBase 体验版。该套餐拒绝新增 Web 安全域名和修改文件存储安全规则，因此 `cloudbase-config.js` 暂时启用 `staticManifest: true`：视频与封面仍保存在 CloudBase，并额外发布到同一环境的公开静态托管路径；数据库记录由 CLI 管理。套餐升级并完成安全域名配置后，可移除此开关，恢复 Web SDK 和 `/admin.html` 的完整管理流程。
+> 当前环境使用 CloudBase 体验版。该套餐拒绝新增 Web 安全域名和修改文件存储安全规则，因此 `cloudbase-config.js` 启用 `staticManifest: true`：既有视频与封面继续保存在 CloudBase 的公开静态托管路径。`/admin.html` 只使用 CloudBase 身份认证，摄影数据、视频资料和封面改由 GitHub 内容后台发布，不再从网页查询 `videos` 集合。
 
 ## 1. 创建环境
 
@@ -45,7 +45,7 @@ window.PLUTONOC_CLOUDBASE = {
   clientId: '控制台要求时填写客户端 ID，否则留空',
   accessKey: '控制台要求时填写 Publishable Key，否则留空',
   collection: 'videos',
-  staticManifest: false
+  staticManifest: true
 };
 ```
 
@@ -53,4 +53,4 @@ window.PLUTONOC_CLOUDBASE = {
 
 ## 5. 使用
 
-部署后直接打开 `/admin.html`，使用站长账号登录。上传 MP4、填写资料并选择“保存草稿”或“发布影像”。公开网站只展示已发布记录。
+部署后打开 `/admin.html`，使用站长账号登录，再连接仅授权本仓库 Contents 读写的 GitHub 细粒度令牌。摄影作品可直接新增、替换、编辑和隐藏；视频资料与封面也在后台维护。大型 MP4 先在 CloudBase 静态托管控制台上传，再把公开地址填入后台。公开网站只展示已发布记录。

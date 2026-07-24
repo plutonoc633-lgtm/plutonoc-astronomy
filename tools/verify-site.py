@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import struct
 import sys
@@ -13,12 +14,11 @@ from urllib.request import Request, urlopen
 
 
 STYLE_CACHE_VERSION = "20260724-footer-visible-4"
-ADMIN_STYLE_CACHE_VERSION = "20260724-admin-minimal-1"
-VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
+ADMIN_STYLE_CACHE_VERSION = "20260724-content-studio-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260724-content-studio-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
-CLOUDBASE_PUBLIC_BASE = "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/"
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
@@ -41,16 +41,6 @@ REMOTE_TYPES = {
     "assets/branding/avatar-xiaohongshu.webp": "image/webp",
     "assets/gallery/previews/earth/earth-007.webp": "image/webp",
     "assets/gallery/hero/earth.webp": "image/webp",
-}
-REMOTE_VIDEO_PROBES = {
-    "CloudBase Star Dream video": urljoin(CLOUDBASE_PUBLIC_BASE, "videos/star-dream.mp4"),
-    "CloudBase Tianjian promo video": urljoin(CLOUDBASE_PUBLIC_BASE, "videos/tianjian-promo.mp4"),
-    "Pages Jupiter fallback video": "assets/videos/jupiter.mp4",
-}
-REMOTE_POSTER_PROBES = {
-    "CloudBase Star Dream poster": urljoin(CLOUDBASE_PUBLIC_BASE, "video-posters/star-dream-27s-v2.jpg"),
-    "CloudBase Tianjian promo poster": urljoin(CLOUDBASE_PUBLIC_BASE, "video-posters/tianjian-promo-title-v2.jpg"),
-    "Pages Jupiter fallback poster": "assets/videos/jupiter-poster.jpg",
 }
 
 
@@ -91,7 +81,11 @@ def verify_local(root: Path) -> None:
     style = (root / "style.css").read_text(encoding="utf-8")
     admin = (root / "admin.html").read_text(encoding="utf-8")
     admin_style = (root / "admin.css").read_text(encoding="utf-8")
+    admin_script = (root / "admin.js").read_text(encoding="utf-8")
     video_data = (root / "video-data.js").read_text(encoding="utf-8")
+    gallery_data = (root / "gallery-data.js").read_text(encoding="utf-8")
+    gallery_content = json.loads((root / "content/gallery.json").read_text(encoding="utf-8"))
+    video_content = json.loads((root / "content/videos.json").read_text(encoding="utf-8"))
     script = (root / "script.js").read_text(encoding="utf-8")
     monitor_workflow = (root / ".github/workflows/monitor-production.yml").read_text(encoding="utf-8")
     device_qa = (root / "REAL_DEVICE_QA.md").read_text(encoding="utf-8")
@@ -102,7 +96,6 @@ def verify_local(root: Path) -> None:
         'name="twitter:card" content="summary_large_image"',
         'href="assets/branding/favicon-32.png"',
         f'style.css?v={STYLE_CACHE_VERSION}',
-        f'video-data.js?v={VIDEO_CACHE_VERSION}',
         f'script.js?v={SCRIPT_CACHE_VERSION}',
         'href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)"',
         'href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)"',
@@ -130,8 +123,27 @@ def verify_local(root: Path) -> None:
     require(f'admin.css?v={ADMIN_STYLE_CACHE_VERSION}' in admin, "Admin page has an old cache version")
     for token in ("PRIVATE FILM STUDIO", "CONFIGURATION REQUIRED", "OWNER ACCESS", "私人影像管理", "VIDEO PUBLISHER"):
         require(token not in admin, f"Obsolete admin annotation remains: {token}")
-    for token in ('<section class="login-panel" data-login hidden>', "<h1>登录</h1>", 'name="username"', 'name="password"', 'data-dashboard hidden', "<h1>动态影像</h1>"):
+    for token in (
+        '<section class="login-panel" data-login hidden>',
+        "<h1>登录</h1>",
+        'name="username"',
+        'name="password"',
+        'data-dashboard hidden',
+        'data-studio-tab="photos"',
+        'data-studio-tab="videos"',
+        'data-photo-form',
+        'data-video-form',
+        'data-github-form',
+        '只保留在当前标签页',
+    ):
         require(token in admin, f"Missing essential admin marker: {token}")
+    require(f'admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}' in admin, "Admin script has an old cache version")
+    require("sessionStorage.setItem(tokenKey" in admin_script, "GitHub token is not stored per-tab")
+    require("sessionStorage.removeItem(tokenKey)" in admin_script, "GitHub token is not cleared on disconnect")
+    require("repo.permissions?.push" in admin_script, "GitHub token write permission is not verified")
+    require(".collection(" not in admin_script, "Admin still queries the blocked CloudBase database")
+    require("/git/trees" in admin_script and "force: false" in admin_script, "Admin atomic Git publishing is missing")
+    require("3000" in admin_script and "1600" in admin_script, "Admin photo derivatives are not configured")
     runtime_sources = index + style + admin + admin_style
     for obsolete in (
         "source-han-serif-cn-vf.woff2",
@@ -150,8 +162,28 @@ def verify_local(root: Path) -> None:
     require(system_stack in style, "Public CSS does not use the approved system-font stack")
     require(system_stack in admin_style, "Admin CSS does not use the approved system-font stack")
     require("font-synthesis: none" in style + admin_style, "Synthetic font styling has not been disabled")
-    require("star-dream-27s-v2.jpg" in video_data, "Star Dream poster manifest is stale")
-    require("tianjian-promo-title-v2.jpg" in video_data, "Tianjian poster manifest is stale")
+    require(gallery_content.get("items"), "Canonical gallery must contain at least one photo")
+    require(video_content.get("items"), "Canonical video archive must contain at least one video")
+    featured = [item for item in gallery_content["items"] if item.get("featured") and item.get("status") == "published"]
+    require(len(featured) == len(gallery_content.get("categoryConfig", {})), "Canonical gallery must retain one featured photo per category")
+    require(gallery_data.startswith("window.categoryConfig="), "Generated gallery runtime is invalid")
+    require(video_data.startswith("window.localVideoData="), "Generated video runtime is invalid")
+    gallery_runtime_match = re.search(r"window\.galleryData=(\[.*\]);\s*$", gallery_data, re.S)
+    video_runtime_match = re.search(r"window\.localVideoData=(\[.*\]);\s*$", video_data, re.S)
+    require(gallery_runtime_match is not None, "Generated gallery runtime payload is missing")
+    require(video_runtime_match is not None, "Generated video runtime payload is missing")
+    gallery_runtime_items = json.loads(gallery_runtime_match.group(1))
+    video_runtime_items = json.loads(video_runtime_match.group(1))
+    require(
+        len(gallery_runtime_items) == sum(item.get("status") == "published" for item in gallery_content["items"]),
+        "Gallery runtime does not match published canonical records",
+    )
+    require(
+        len(video_runtime_items) == sum(item.get("status") == "published" for item in video_content["items"]),
+        "Video runtime does not match published canonical records",
+    )
+    require(re.search(r'gallery-data\.js\?v=[A-Za-z0-9._-]+', index), "Gallery cache version is missing")
+    require(re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index), "Video cache version is missing")
     for marker in (
         "function ensureArchiveCanvas()",
         "rootMargin: '800px 0px'",
@@ -247,7 +279,8 @@ def verify_remote(base_url: str) -> None:
             index = index_bytes.decode("utf-8")
             require(content_type == "text/html", f"Unexpected homepage type: {content_type}")
             require(f"style.css?v={STYLE_CACHE_VERSION}" in index, "Deployed homepage has an old cache version")
-            require(f"video-data.js?v={VIDEO_CACHE_VERSION}" in index, "Deployed video manifest has an old cache version")
+            require(re.search(r'gallery-data\.js\?v=[A-Za-z0-9._-]+', index), "Deployed gallery cache version is missing")
+            require(re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index), "Deployed video cache version is missing")
             require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
             require('<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
@@ -264,33 +297,46 @@ def verify_remote(base_url: str) -> None:
             require(admin_type == "text/html", f"Unexpected admin page type: {admin_type}")
             require(f"admin.css?v={ADMIN_STYLE_CACHE_VERSION}" in admin, "Deployed admin page has an old CSS version")
             require(f"cloudbase-config.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old CloudBase config version")
-            require(f"admin.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old script version")
+            require(f"admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}" in admin, "Deployed admin page has an old script version")
             require(CLOUDBASE_SDK_URL in admin, "Admin CloudBase SDK reference is missing")
             require("OWNER ACCESS" not in admin and "VIDEO PUBLISHER" not in admin, "Deployed admin page still contains obsolete annotations")
+            require('data-photo-form' in admin and 'data-github-form' in admin, "Deployed photo studio is missing")
+
+            video_reference = re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index)
+            require(video_reference is not None, "Deployed video runtime reference is missing")
+            deployed_video_bytes, deployed_video_type = fetch(urljoin(base, video_reference.group(0)))
+            require(
+                deployed_video_type in {"application/javascript", "text/javascript"},
+                f"Unexpected video runtime type: {deployed_video_type}",
+            )
+            deployed_video_text = deployed_video_bytes.decode("utf-8")
+            deployed_video_match = re.search(r"window\.localVideoData=(\[.*\]);\s*$", deployed_video_text, re.S)
+            require(deployed_video_match is not None, "Deployed video runtime payload is invalid")
+            deployed_videos = json.loads(deployed_video_match.group(1))
+            require(deployed_videos, "Deployed video runtime is empty")
 
             sdk_prefix, sdk_type, sdk_status = fetch_prefix(CLOUDBASE_SDK_URL)
             require(sdk_status in {200, 206}, f"Unexpected CloudBase SDK status: {sdk_status}")
             require(sdk_prefix, "CloudBase SDK returned an empty response")
             require(sdk_type in {"application/javascript", "text/javascript"}, f"Unexpected CloudBase SDK type: {sdk_type}")
 
-            for label, poster_url in REMOTE_POSTER_PROBES.items():
-                target = urljoin(base, poster_url)
+            for video in deployed_videos:
+                label = video.get("title") or video.get("id") or "Video"
+                target = urljoin(base, video["posterUrl"])
                 prefix, actual_type, status = fetch_prefix(target)
-                require(status in {200, 206}, f"{label} returned status {status}")
-                require(prefix, f"{label} returned an empty response")
-                require(actual_type == "image/jpeg", f"{label} has unexpected type: {actual_type}")
+                require(status in {200, 206}, f"{label} poster returned status {status}")
+                require(prefix, f"{label} poster returned an empty response")
+                require(actual_type in {"image/jpeg", "image/png", "image/webp"}, f"{label} poster has unexpected type: {actual_type}")
 
-            for label, video_url in REMOTE_VIDEO_PROBES.items():
-                target = urljoin(base, video_url)
+                target = urljoin(base, video["videoUrl"])
                 prefix, actual_type, status = fetch_prefix(target)
-                require(status in {200, 206}, f"{label} returned status {status}")
-                require(prefix, f"{label} returned an empty response")
-                require(actual_type == "video/mp4", f"{label} has unexpected type: {actual_type}")
+                require(status in {200, 206}, f"{label} video returned status {status}")
+                require(prefix, f"{label} video returned an empty response")
+                require(actual_type == "video/mp4", f"{label} video has unexpected type: {actual_type}")
 
             print(
                 f"Remote site verification passed: {base}; "
-                f"admin, CloudBase SDK, {len(REMOTE_POSTER_PROBES)} posters and "
-                f"{len(REMOTE_VIDEO_PROBES)} videos are reachable"
+                f"admin, CloudBase SDK and {len(deployed_videos)} current videos/posters are reachable"
             )
             return
         except Exception as error:  # Pages and CDN publication can lag briefly.

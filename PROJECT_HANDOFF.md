@@ -84,7 +84,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 - `gallery-data.js`：旧天文摄影数据。
 - `gallery-earth-data.js`：新增大地摄影数据。
 - `cloudbase-config.js`：CloudBase 公共配置，只允许环境 ID 等公开配置，不得写入密码、SecretId、SecretKey。
-- `admin.html / admin.js / admin.css`：CloudBase 视频管理后台。
+- `admin.html / admin.js / admin.css`：CloudBase 身份认证 + GitHub 摄影与视频内容后台。
 - `assets/gallery/originals/`：灯箱原图。
 - `assets/gallery/previews/`：Canvas 与首页预览资源。
 - `assets/videos/jupiter.mp4`：本地 6.084 秒木星兜底视频。
@@ -132,7 +132,7 @@ status: NORMAL
 - 对 `videos` 执行查询返回空数组，但集合是否已在控制台正式创建、权限是否设置完成仍需确认。
 - 当前云存储权限为 `PRIVATE`（仅创建者及管理员可读写），需要改为公开读取、管理员写入。
 - 当前安全域名列表还没有 `plutonoc.cn`、GitHub Pages 地址、本地测试地址。
-- 已有管理员账号名 `administrator`，密码未知且不得写入代码或交接文档。
+- 已有唯一管理员账号；账号名和密码仅在 CloudBase 用户管理中维护，不得写入代码或交接文档。
 
 PowerShell 给 `tcb db nosql execute --command` 传 JSON 时，必须保留反斜杠转义，否则 Windows 命令行会吃掉双引号。例如：
 
@@ -200,7 +200,7 @@ npx --yes --package @cloudbase/cli@3.6.3 tcb -e activity-book-web-d7djhe7bb1e834
 
 ### B. 上传与发布视频
 
-优先使用现有 `admin.html` 上传，因为它已实现元数据、封面、草稿、发布、编辑和删除。若后台登录必须输入密码，只让用户在页面中自行输入管理员密码，然后继续剩余操作；不要索要或保存密码。
+本节是旧版 CloudBase 视频上传流程，已由第 20 节取代。当前 `admin.html` 维护摄影数据、视频资料和封面；大型 MP4 先由用户在 CloudBase 静态托管控制台上传，再将公开地址填入后台。后台密码只由用户在页面中输入，不得索要或保存。
 
 如后台上传不稳定，可使用 CLI：
 
@@ -361,7 +361,7 @@ git diff --check
 ## 18. 2026-07-24 真机验收与线上自动巡检
 
 - 新增 `REAL_DEVICE_QA.md`，覆盖 iPhone Safari、iPhone 微信内置浏览器、Android Chrome 与 Android 微信内置浏览器。真机结果由实际设备填写；浏览器模拟不能替代微信内核验收。
-- `tools/verify-site.py --url https://plutonoc.cn/` 现在同时检查首页、后台、当前缓存版本、分享与品牌资源、CloudBase SDK、两段云端视频及封面、站内木星兜底视频及封面。视频使用 Range 请求且只读取前 1KB，不完整下载。
+- `tools/verify-site.py --url https://plutonoc.cn/` 现在同时检查首页、后台、当前缓存版本、分享与品牌资源、CloudBase SDK，以及当前 `video-data.js` 中全部已发布视频和封面。视频使用 Range 请求且只读取前 1KB，不完整下载；后台发布增删视频后不需要手动改巡检 URL。
 - `.github/workflows/monitor-production.yml` 每 6 小时执行一次，也可手动运行。它只读取公开 URL，不执行部署、不修改 CloudBase，也不采集真实访客的设备、IP、错误或行为数据。
 - 连续重试仍失败时，工作流创建或更新固定标题 `[monitor] PlutonoC production availability failure` 的 Issue，并指派给 `plutonoc633-lgtm`。同一故障只保留一个开放 Issue；恢复后自动留言并关闭。
 - Issue 仅包含公开目标、UTC 时间、失败摘要和 Actions 运行地址。排障时先打开失败的 Actions 运行，再在仓库根目录执行：
@@ -376,7 +376,26 @@ python tools/verify-site.py --url https://plutonoc.cn/
 ## 19. 2026-07-24 管理员登录入口
 
 - 公开网站页头不再显示“管理”；管理员入口改为结尾品牌栏左侧的 `© 2026 PLUTONOC`，链接至同域名 `admin.html`，外观与普通版权文字一致。
-- 入口隐藏只用于减少路人误点，不构成安全措施。后台仍由 CloudBase 身份验证保护，管理员用户名为 `administrator`；密码未知时必须在 CloudBase 用户管理中重置，密码不得写入代码、Git、命令记录或交接文档。
+- 入口隐藏只用于减少路人误点，不构成安全措施。后台仍由 CloudBase 身份验证保护；管理员账号与密码只在 CloudBase 用户管理中维护，不得写入代码、Git、命令记录或交接文档。
 - 后台登录页已精简为“登录”、账号、密码、状态和按钮；管理界面删除英文眉题与重复说明，但保留上传格式、状态、编辑、发布、删除和退出等必要功能。CloudBase 业务逻辑未修改。
 - 结尾底栏不得添加 `.reveal`：它位于文档最末端，观察器的底部负边距会使其在最大滚动位置仍无法进入触发区，从而保持透明。底栏现在固定可见，并由静态检查阻止该类名回归。
-- 当前公共 CSS 缓存版本为 `20260724-footer-visible-4`，后台 CSS 缓存版本为 `20260724-admin-minimal-1`。静态检查会同时阻止页头管理入口、底栏隐藏、旧后台注释和旧缓存版本回归。
+- 当前公共 CSS 缓存版本为 `20260724-footer-visible-4`。后台缓存版本已由第 20 节替代；静态检查会同时阻止页头管理入口、底栏隐藏和旧后台注释回归。
+
+## 20. 2026-07-24 GitHub 摄影与视频内容后台
+
+- `/admin.html` 仍以 CloudBase 账号密码登录作为第一层身份验证，但不再查询受体验版安全域名限制的 `videos` 数据库集合；因此旧后台右侧的 `network request error` 路径已移除。
+- 登录后需要连接 GitHub。只使用限定到 `plutonoc633-lgtm/plutonoc-astronomy`、Repository permissions 中 `Contents: Read and write` 的细粒度 Personal Access Token。令牌仅写入当前标签页的 `sessionStorage`，断开 GitHub、退出后台或关闭标签页后清除；不得写入仓库、交接文档、URL 或日志。
+- 规范内容位于 `content/gallery.json` 与 `content/videos.json`。`gallery-data.js`、`video-data.js` 是确定性生成的前台运行时文件；本地修改规范数据后必须执行：
+
+```powershell
+node tools/build-content.mjs
+node tools/build-content.mjs --check
+```
+
+- 摄影后台已迁移全部 116 张作品，保留原分类、顺序、路径与每类唯一精选。支持新增、编辑详情、替换、排序、精选、隐藏、恢复和永久删除；详情字段为 `date / location / equipment / parameters / process / story / notes`。
+- 新照片只生成最长边 3000px 的高质量 WebP 展示图和最长边 1600px 的 WebP 预览图，原片不进入 Git。上传路径带 SHA-256 内容哈希；精选变化时同步生成新的 2560px 分类首页封面。
+- 永久删除从当前 Git 树移除记录及不再引用的图片；如果旧素材仍被结尾背景、HTML、CSS、脚本或视频清单引用，则保留素材文件但删除摄影记录。Git 历史仍可用于恢复。
+- 视频后台改为维护 `content/videos.json`：支持标题、分类、简介、日期、地点、排序、状态、公开 MP4 地址和 1920×1080 WebP 封面。大型视频不进入 Git；先在 CloudBase 静态托管控制台上传，再把公开 MP4 地址填入后台。
+- 每次后台发布都会先确认远端 `main` 仍是编辑时读取的提交，再通过 GitHub Git Data API 创建 blob、tree、commit 并以 `force: false` 更新分支。资料、衍生图片、运行时清单和 HTML 缓存版本在同一个提交中生效；远端冲突时拒绝覆盖并保留表单。
+- 发布后后台轮询线上 `index.html` 的内容缓存版本，显示“部署中 / 已上线”。Pages 工作流新增 `node tools/build-content.mjs --check`，`tools/verify-site.py` 会验证规范数据与运行时清单数量一致、每类精选唯一、后台 Git 发布标记和不再调用 CloudBase 集合。初次迁移基线为 116 张摄影作品和 3 条视频，后续内容增删不应被固定数量阻断。
+- 当前后台 CSS 与脚本缓存版本均为 `20260724-content-studio-1`。前台视觉结构、摄影 Canvas 按需加载、视频播放数据字段和 CloudBase 三个既有视频文件均未改变。

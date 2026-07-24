@@ -1,0 +1,175 @@
+#!/usr/bin/env node
+
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const contentRoot = path.join(root, 'content');
+const galleryPath = path.join(contentRoot, 'gallery.json');
+const videoPath = path.join(contentRoot, 'videos.json');
+const galleryRuntimePath = path.join(root, 'gallery-data.js');
+const videoRuntimePath = path.join(root, 'video-data.js');
+const detailKeys = ['date', 'location', 'equipment', 'parameters', 'process', 'story', 'notes'];
+const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
+
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function stableJson(value, pretty = false) {
+  return `${JSON.stringify(value, null, pretty ? 2 : 0)}\n`;
+}
+
+function normalizeDetails(details = {}) {
+  return Object.fromEntries(detailKeys.map(key => [key, details[key] || '']));
+}
+
+function validateGallery(data) {
+  if (!data || data.version !== 1 || !data.categoryConfig || !Array.isArray(data.items)) {
+    throw new Error('content/gallery.json 格式无效');
+  }
+  const ids = new Set();
+  const featured = new Map();
+  data.items.forEach((item, index) => {
+    if (!item.id || ids.has(item.id)) throw new Error(`摄影作品 ID 重复或为空：${item.id || index}`);
+    if (!data.categoryConfig[item.category]) throw new Error(`摄影作品分类无效：${item.id}`);
+    if (!item.title || !item.src || !item.previewSrc) throw new Error(`摄影作品字段不完整：${item.id}`);
+    if (!Number.isFinite(item.width) || !Number.isFinite(item.height)) throw new Error(`摄影作品尺寸无效：${item.id}`);
+    if (!['published', 'hidden'].includes(item.status)) throw new Error(`摄影作品状态无效：${item.id}`);
+    if (!Number.isFinite(item.sortOrder)) throw new Error(`摄影作品排序无效：${item.id}`);
+    ids.add(item.id);
+    if (item.featured && item.status === 'published') {
+      if (featured.has(item.category)) throw new Error(`分类 ${item.category} 存在多个首页精选`);
+      featured.set(item.category, item.id);
+    }
+  });
+  for (const category of categoryOrder) {
+    if (!featured.has(category)) throw new Error(`分类 ${category} 缺少已发布的首页精选`);
+  }
+}
+
+function validateVideos(data) {
+  if (!data || data.version !== 1 || !Array.isArray(data.items)) throw new Error('content/videos.json 格式无效');
+  const ids = new Set();
+  data.items.forEach((item, index) => {
+    if (!item.id || ids.has(item.id)) throw new Error(`视频 ID 重复或为空：${item.id || index}`);
+    if (!item.title || !item.videoUrl || !item.posterUrl) throw new Error(`视频字段不完整：${item.id}`);
+    if (!['published', 'draft'].includes(item.status)) throw new Error(`视频状态无效：${item.id}`);
+    if (!Number.isFinite(item.sortOrder)) throw new Error(`视频排序无效：${item.id}`);
+    ids.add(item.id);
+  });
+}
+
+function galleryRuntime(data) {
+  const published = data.items
+    .filter(item => item.status === 'published')
+    .sort((a, b) => {
+      const categoryDelta = (data.categoryConfig[a.category]?.order || 99) - (data.categoryConfig[b.category]?.order || 99);
+      return categoryDelta || a.sortOrder - b.sortOrder || a.id.localeCompare(b.id);
+    })
+    .map(item => ({
+      id: item.id,
+      category: item.category,
+      title: item.title,
+      src: item.src,
+      previewSrc: item.previewSrc,
+      width: item.width,
+      height: item.height,
+      featured: Boolean(item.featured),
+      previewRotation: Number(item.previewRotation) || 0,
+      details: normalizeDetails(item.details),
+    }));
+  return `window.categoryConfig=${JSON.stringify(data.categoryConfig)};\nwindow.galleryData=${JSON.stringify(published)};\n`;
+}
+
+function videoRuntime(data) {
+  const items = data.items
+    .filter(item => item.status === 'published')
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
+    .map(item => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      summary: item.summary || '',
+      date: item.date || '',
+      location: item.location || '',
+      videoUrl: item.videoUrl,
+      posterUrl: item.posterUrl,
+      duration: Number(item.duration) || 0,
+      aspectRatio: Number(item.aspectRatio) || 16 / 9,
+      status: item.status,
+      sortOrder: item.sortOrder,
+    }));
+  return `window.localVideoData=${JSON.stringify(items)};\n`;
+}
+
+function migrate() {
+  fs.mkdirSync(contentRoot, { recursive: true });
+  if (!fs.existsSync(galleryPath)) {
+    const context = { window: {} };
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(galleryRuntimePath, 'utf8'), context);
+    const counters = {};
+    const items = context.window.galleryData.map(item => {
+      counters[item.category] = (counters[item.category] || 0) + 1;
+      return {
+        ...item,
+        status: 'published',
+        sortOrder: counters[item.category],
+        details: normalizeDetails(item.details),
+        updatedAt: '',
+      };
+    });
+    fs.writeFileSync(galleryPath, stableJson({
+      version: 1,
+      contentVersion: '20260724-migration-1',
+      categoryConfig: context.window.categoryConfig,
+      items,
+    }, true));
+  }
+  if (!fs.existsSync(videoPath)) {
+    const context = { window: {} };
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(videoRuntimePath, 'utf8'), context);
+    const items = context.window.localVideoData.map(item => ({
+      ...item,
+      summary: item.summary || '',
+      date: item.date || '',
+      location: item.location || '',
+      aspectRatio: Number(item.aspectRatio) || 16 / 9,
+      createdAt: '',
+      updatedAt: '',
+    }));
+    fs.writeFileSync(videoPath, stableJson({
+      version: 1,
+      contentVersion: '20260724-migration-1',
+      items,
+    }, true));
+  }
+}
+
+function build(checkOnly = false) {
+  const gallery = readJson(galleryPath);
+  const videos = readJson(videoPath);
+  validateGallery(gallery);
+  validateVideos(videos);
+  const outputs = [
+    [galleryRuntimePath, galleryRuntime(gallery)],
+    [videoRuntimePath, videoRuntime(videos)],
+  ];
+  if (checkOnly) {
+    for (const [file, expected] of outputs) {
+      if (fs.readFileSync(file, 'utf8') !== expected) throw new Error(`${path.basename(file)} 未由规范内容生成`);
+    }
+    return;
+  }
+  for (const [file, output] of outputs) fs.writeFileSync(file, output, 'utf8');
+}
+
+const args = new Set(process.argv.slice(2));
+if (args.has('--migrate')) migrate();
+build(args.has('--check'));
+console.log(args.has('--check') ? 'Content files are valid and current.' : 'Content runtime files generated.');
