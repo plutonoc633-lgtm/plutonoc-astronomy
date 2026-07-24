@@ -6,21 +6,20 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#0a0a0a">
   <title>PlutonoC Studio</title>
-  <link rel="stylesheet" href="admin.css?v=20260720-lighter-type-1">
+  <link rel="stylesheet" href="admin.css?v=20260724-admin-minimal-1">
 </head>
 <body>
-  <header class="studio-header"><a href="index.html">PlutonoC</a><span>PRIVATE FILM STUDIO</span><button type="button" data-sign-out hidden>退出</button></header>
+  <header class="studio-header"><a href="index.html">PlutonoC</a><button type="button" data-sign-out hidden>退出</button></header>
   <main>
     <section class="setup-panel" data-setup hidden>
-      <span>CONFIGURATION REQUIRED</span>
       <h1>尚未连接 CloudBase</h1>
       <p>先按 <a href="CLOUDBASE_SETUP.md">配置说明</a> 创建腾讯云环境，再将环境 ID 填入 <code>cloudbase-config.js</code>。页面不会保存腾讯云密钥。</p>
     </section>
 
     <section class="login-panel" data-login hidden>
-      <div><span>OWNER ACCESS</span><h1>私人影像管理</h1><p>此入口只用于 PlutonoC 上传、编辑和发布动态影像。</p></div>
+      <h1>登录</h1>
       <form data-login-form>
-        <label>账号<input name="username" autocomplete="username" required placeholder="邮箱或用户名"></label>
+        <label>账号<input name="username" autocomplete="username" required placeholder="用户名"></label>
         <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
         <button type="submit">登录 <span>→</span></button>
         <p class="form-message" data-login-message role="status"></p>
@@ -28,7 +27,7 @@
     </section>
 
     <section class="dashboard" data-dashboard hidden>
-      <div class="dashboard-head"><div><span>VIDEO PUBLISHER</span><h1>动态影像</h1></div><p>上传 MP4，生成封面，保存为草稿或直接发布。</p></div>
+      <div class="dashboard-head"><h1>动态影像</h1></div>
       <div class="dashboard-grid">
         <form class="video-form" data-video-form>
           <input type="hidden" name="recordId">

@@ -12,8 +12,8 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260724-header-admin-2"
-ADMIN_STYLE_CACHE_VERSION = "20260720-lighter-type-1"
+STYLE_CACHE_VERSION = "20260724-hidden-admin-3"
+ADMIN_STYLE_CACHE_VERSION = "20260724-admin-minimal-1"
 VIDEO_CACHE_VERSION = "20260720-pingfang-header-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
@@ -113,8 +113,7 @@ def verify_local(root: Path) -> None:
         'class="arrival-hero"',
         'class="arrival-outro"',
         'class="arrival-footer reveal"',
-        '<div class="header-actions">',
-        '<a class="admin-entry" href="admin.html" aria-label="管理员登录">管理</a>',
+        '<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>',
         'src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
         'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
         'src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
@@ -124,8 +123,14 @@ def verify_local(root: Path) -> None:
         require(token in index, f"Missing index marker: {token}")
     for token in ("官方账号", "FOLLOW PLUTONOC", "social-index", "account-heading"):
         require(token not in index, f"Obsolete account decoration remains: {token}")
+    for token in ('class="header-actions"', 'class="admin-entry"', '>管理</a>'):
+        require(token not in index, f"Visible admin entry remains: {token}")
     require("assets/gallery/earth/earth-007.jpg" not in index, "Homepage still references the 12 MB Everest original")
     require(f'admin.css?v={ADMIN_STYLE_CACHE_VERSION}' in admin, "Admin page has an old cache version")
+    for token in ("PRIVATE FILM STUDIO", "CONFIGURATION REQUIRED", "OWNER ACCESS", "私人影像管理", "VIDEO PUBLISHER"):
+        require(token not in admin, f"Obsolete admin annotation remains: {token}")
+    for token in ('<section class="login-panel" data-login hidden>', "<h1>登录</h1>", 'name="username"', 'name="password"', 'data-dashboard hidden', "<h1>动态影像</h1>"):
+        require(token in admin, f"Missing essential admin marker: {token}")
     runtime_sources = index + style + admin + admin_style
     for obsolete in (
         "source-han-serif-cn-vf.woff2",
@@ -162,8 +167,7 @@ def verify_local(root: Path) -> None:
         ".film-list.reveal.is-visible .film-card",
         ".archive-list.reveal.is-visible .archive-row",
         ".equipment-media.reveal.is-visible",
-        ".header-actions",
-        ".admin-entry",
+        ".footer-admin-entry",
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
@@ -245,8 +249,8 @@ def verify_remote(base_url: str) -> None:
             require(f"video-data.js?v={VIDEO_CACHE_VERSION}" in index, "Deployed video manifest has an old cache version")
             require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
-            require('<div class="header-actions">' in index, "Deployed header actions are missing")
-            require('<a class="admin-entry" href="admin.html" aria-label="管理员登录">管理</a>' in index, "Deployed admin entry is missing")
+            require('<a class="footer-admin-entry" href="admin.html">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
+            require('class="admin-entry"' not in index and ">管理</a>" not in index, "Deployed header still exposes the admin entry")
             require(CLOUDBASE_SDK_URL in index, "Homepage CloudBase SDK reference is missing")
             for relative, expected_type in REMOTE_TYPES.items():
                 body, actual_type = fetch(urljoin(base, relative))
@@ -260,6 +264,7 @@ def verify_remote(base_url: str) -> None:
             require(f"cloudbase-config.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old CloudBase config version")
             require(f"admin.js?v={CLOUDBASE_CACHE_VERSION}" in admin, "Deployed admin page has an old script version")
             require(CLOUDBASE_SDK_URL in admin, "Admin CloudBase SDK reference is missing")
+            require("OWNER ACCESS" not in admin and "VIDEO PUBLISHER" not in admin, "Deployed admin page still contains obsolete annotations")
 
             sdk_prefix, sdk_type, sdk_status = fetch_prefix(CLOUDBASE_SDK_URL)
             require(sdk_status in {200, 206}, f"Unexpected CloudBase SDK status: {sdk_status}")
