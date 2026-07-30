@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260730-gallery-index-1"
-ADMIN_STYLE_CACHE_VERSION = "20260730-utf8-admin-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260730-utf8-admin-1"
-SCRIPT_CACHE_VERSION = "20260730-gallery-index-1"
+STYLE_CACHE_VERSION = "20260730-gallery-links-1"
+ADMIN_STYLE_CACHE_VERSION = "20260730-thumbnails-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260730-thumbnails-1"
+SCRIPT_CACHE_VERSION = "20260730-gallery-links-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -123,6 +123,9 @@ def verify_local(root: Path) -> None:
         'data-gallery-continue',
         'data-gallery-seen-count',
         'data-gallery-directory-return',
+        'data-directory-category-select',
+        'data-directory-status-select',
+        'data-photo-copy-link',
     )
     for token in required_html:
         require(token in index, f"Missing index marker: {token}")
@@ -155,6 +158,7 @@ def verify_local(root: Path) -> None:
         'data-studio-tab="photos"',
         'data-studio-tab="videos"',
         'data-photo-form',
+        'name="existingThumbnailSrc"',
         'data-video-form',
         'data-publisher',
     ):
@@ -202,7 +206,10 @@ def verify_local(root: Path) -> None:
         and "--retry-count 5" in admin_deploy_script,
         "CloudBase static admin deployment must preserve UTF-8 bytes, verify dist and upload directly",
     )
-    require("3000" in admin_script and "1600" in admin_script, "Admin photo derivatives are not configured")
+    require(
+        all(marker in admin_script for marker in ("3000", "1600", "640", "thumbnailBlob", "thumbnailSrc")),
+        "Admin photo derivatives are not configured",
+    )
     runtime_sources = index + style + admin + admin_style
     for obsolete in (
         "source-han-serif-cn-vf.woff2",
@@ -225,6 +232,16 @@ def verify_local(root: Path) -> None:
     require(video_content.get("items"), "Canonical video archive must contain at least one video")
     featured = [item for item in gallery_content["items"] if item.get("featured") and item.get("status") == "published"]
     require(len(featured) == len(gallery_content.get("categoryConfig", {})), "Canonical gallery must retain one featured photo per category")
+    thumbnail_total = 0
+    for item in gallery_content["items"]:
+        thumbnail = item.get("thumbnailSrc")
+        require(thumbnail, f"Gallery item is missing thumbnailSrc: {item.get('id')}")
+        thumbnail_path = root / thumbnail
+        require(thumbnail_path.is_file(), f"Gallery thumbnail is missing: {thumbnail}")
+        require(thumbnail_path.read_bytes()[:4] == b"RIFF", f"Gallery thumbnail is not WebP: {thumbnail}")
+        require(thumbnail_path.stat().st_size <= 150_000, f"Gallery thumbnail is too large: {thumbnail}")
+        thumbnail_total += thumbnail_path.stat().st_size
+    require(thumbnail_total <= 8_000_000, "Gallery thumbnails exceed the total size budget")
     require(gallery_data.startswith("window.categoryConfig="), "Generated gallery runtime is invalid")
     require(video_data.startswith("window.localVideoData="), "Generated video runtime is invalid")
     gallery_runtime_match = re.search(r"window\.galleryData=(\[.*\]);\s*$", gallery_data, re.S)
@@ -236,6 +253,10 @@ def verify_local(root: Path) -> None:
     require(
         all(isinstance(item.get("sortOrder"), (int, float)) for item in gallery_runtime_items),
         "Gallery runtime is missing numeric sortOrder values",
+    )
+    require(
+        all(item.get("thumbnailSrc") for item in gallery_runtime_items),
+        "Gallery runtime is missing thumbnailSrc values",
     )
     require(
         len(gallery_runtime_items) == sum(item.get("status") == "published" for item in gallery_content["items"]),
@@ -261,6 +282,10 @@ def verify_local(root: Path) -> None:
         "function renderGalleryDirectory",
         "syncFocusedFromCenter",
         "directoryImageConcurrency = isMobile ? 4 : 6",
+        "work.thumbnailSrc || work.previewSrc || work.src",
+        "photoParamName = 'photo'",
+        "function openPhotoFromLocation()",
+        "data-photo-copy-link",
     ):
         require(marker in script, f"Missing performance marker: {marker}")
     for marker in (
@@ -272,6 +297,7 @@ def verify_local(root: Path) -> None:
         ".gallery-directory-grid",
         ".gallery-directory-card",
         ".photo-information-nav",
+        ".gallery-directory-mobile-filters",
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
@@ -446,10 +472,11 @@ def verify_remote(base_url: str) -> None:
             uploaded_gallery_assets = {
                 item[key]
                 for item in expected_gallery_items
-                for key in ("src", "previewSrc")
+                for key in ("src", "previewSrc", "thumbnailSrc")
                 if item.get(key, "").startswith((
                     "assets/gallery/uploads/",
                     "assets/gallery/previews/uploads/",
+                    "assets/gallery/thumbnails/uploads/",
                 ))
             }
             for relative in sorted(uploaded_gallery_assets):
@@ -457,6 +484,15 @@ def verify_remote(base_url: str) -> None:
                 require(status in {200, 206}, f"Uploaded gallery asset returned status {status}: {relative}")
                 require(prefix, f"Uploaded gallery asset returned an empty response: {relative}")
                 require(actual_type == "image/webp", f"Uploaded gallery asset has unexpected type: {relative} ({actual_type})")
+
+            category_thumbnails = {}
+            for item in expected_gallery_items:
+                category_thumbnails.setdefault(item["category"], item["thumbnailSrc"])
+            for relative in sorted(category_thumbnails.values()):
+                prefix, actual_type, status = fetch_prefix(urljoin(base, relative))
+                require(status in {200, 206}, f"Gallery thumbnail returned status {status}: {relative}")
+                require(prefix, f"Gallery thumbnail returned an empty response: {relative}")
+                require(actual_type == "image/webp", f"Gallery thumbnail has unexpected type: {relative} ({actual_type})")
 
             sdk_prefix, sdk_type, sdk_status = fetch_prefix(CLOUDBASE_SDK_URL)
             require(sdk_status in {200, 206}, f"Unexpected CloudBase SDK status: {sdk_status}")

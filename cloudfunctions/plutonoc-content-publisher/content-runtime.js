@@ -19,6 +19,7 @@ function galleryRuntime(data) {
       title: item.title,
       src: item.src,
       previewSrc: item.previewSrc,
+      thumbnailSrc: item.thumbnailSrc || item.previewSrc,
       width: item.width,
       height: item.height,
       featured: Boolean(item.featured),

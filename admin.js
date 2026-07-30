@@ -153,7 +153,7 @@
     data.items.forEach(item => {
       if (!item.id || ids.has(item.id)) throw new Error(`摄影作品 ID 重复：${item.id || '空'}`);
       if (!data.categoryConfig[item.category]) throw new Error(`摄影分类无效：${item.title}`);
-      if (!item.title || !item.src || !item.previewSrc) throw new Error(`摄影资料不完整：${item.title || item.id}`);
+      if (!item.title || !item.src || !item.previewSrc || !item.thumbnailSrc) throw new Error(`摄影资料不完整：${item.title || item.id}`);
       if (!['published', 'hidden'].includes(item.status)) throw new Error(`摄影状态无效：${item.title}`);
       ids.add(item.id);
       if (item.featured && item.status === 'published') {
@@ -360,9 +360,17 @@
     const image = await decodeImage(file);
     const display = await renderImage(image, 3000, .9);
     const preview = await renderImage(image, 1600, .84);
+    const thumbnail = await renderImage(image, 640, .76, 0, 500_000);
     image.close?.();
     const hash = await sha256(display.blob);
-    return { displayBlob: display.blob, previewBlob: preview.blob, width: display.width, height: display.height, hash };
+    return {
+      displayBlob: display.blob,
+      previewBlob: preview.blob,
+      thumbnailBlob: thumbnail.blob,
+      width: display.width,
+      height: display.height,
+      hash,
+    };
   }
 
   async function preparePosterFile(file) {
@@ -435,6 +443,7 @@
     photoForm.elements.recordId.value = '';
     photoForm.elements.existingSrc.value = '';
     photoForm.elements.existingPreviewSrc.value = '';
+    photoForm.elements.existingThumbnailSrc.value = '';
     photoForm.elements.sortOrder.value = Math.max(0, ...repoState.gallery.items.map(item => item.sortOrder || 0)) + 1;
     photoForm.elements.status.value = 'published';
     preparedPhoto = null;
@@ -452,6 +461,7 @@
     photoForm.elements.recordId.value = item.id;
     photoForm.elements.existingSrc.value = item.src;
     photoForm.elements.existingPreviewSrc.value = item.previewSrc;
+    photoForm.elements.existingThumbnailSrc.value = item.thumbnailSrc || item.previewSrc;
     photoForm.elements.title.value = item.title;
     photoForm.elements.category.value = item.category;
     photoForm.elements.date.value = item.details?.date || '';
@@ -487,7 +497,7 @@
     $('[data-photo-count]').textContent = `${items.length} / ${repoState.gallery.items.length}`;
     $('[data-photo-list]').innerHTML = items.length ? items.map(item => `
       <article class="manager-card ${item.status === 'hidden' ? 'is-hidden' : ''}" data-photo-id="${escapeHtml(item.id)}">
-        <img src="${escapeHtml(item.previewSrc)}" alt="" loading="lazy" decoding="async">
+        <img src="${escapeHtml(item.thumbnailSrc || item.previewSrc)}" alt="" loading="lazy" decoding="async">
         <div><h3>${escapeHtml(item.title)}${item.featured ? ' · 精选' : ''}</h3><p><span class="status">${item.status === 'published' ? '已发布' : '已隐藏'}</span> / ${categoryLabels[item.category]} / 排序 ${item.sortOrder}</p></div>
         <button type="button" data-edit-photo>编辑</button>
       </article>`).join('') : '<p>没有符合条件的作品</p>';
@@ -552,7 +562,7 @@
   }
 
   function isCmsPhotoPath(path) {
-    return /^assets\/gallery\/(uploads|previews\/uploads)\//.test(path);
+    return /^assets\/gallery\/(uploads|previews\/uploads|thumbnails\/uploads)\//.test(path);
   }
 
   function isReferencedOutsideGallery(path) {
@@ -560,7 +570,8 @@
   }
 
   function isReferencedByOtherPhoto(path, gallery, exceptId) {
-    return gallery.items.some(item => item.id !== exceptId && (item.src === path || item.previewSrc === path));
+    return gallery.items.some(item => item.id !== exceptId
+      && (item.src === path || item.previewSrc === path || item.thumbnailSrc === path));
   }
 
   function isReferencedByOtherVideo(path, videos, exceptId) {
@@ -630,6 +641,7 @@
         title: '',
         src: '',
         previewSrc: '',
+        thumbnailSrc: '',
         width: 0,
         height: 0,
         featured: false,
@@ -643,6 +655,7 @@
     }
     const oldSrc = item.src;
     const oldPreview = item.previewSrc;
+    const oldThumbnail = item.thumbnailSrc;
     item.title = photoForm.elements.title.value.trim();
     item.category = photoForm.elements.category.value;
     item.sortOrder = Number(photoForm.elements.sortOrder.value) || 0;
@@ -668,12 +681,18 @@
       const base = `assets/gallery/uploads/${item.category}/${item.id}-${preparedPhoto.hash.slice(0, 12)}`;
       item.src = `${base}.webp`;
       item.previewSrc = `assets/gallery/previews/uploads/${item.category}/${item.id}-${preparedPhoto.hash.slice(0, 12)}.webp`;
+      item.thumbnailSrc = `assets/gallery/thumbnails/uploads/${item.category}/${item.id}-${preparedPhoto.hash.slice(0, 12)}.webp`;
       item.width = preparedPhoto.width;
       item.height = preparedPhoto.height;
       item.previewRotation = 0;
-      files.push([item.src, preparedPhoto.displayBlob], [item.previewSrc, preparedPhoto.previewBlob]);
+      files.push(
+        [item.src, preparedPhoto.displayBlob],
+        [item.previewSrc, preparedPhoto.previewBlob],
+        [item.thumbnailSrc, preparedPhoto.thumbnailBlob],
+      );
       if (oldSrc && isCmsPhotoPath(oldSrc) && !isReferencedByOtherPhoto(oldSrc, next, item.id) && !isReferencedOutsideGallery(oldSrc)) deletions.push(oldSrc);
       if (oldPreview && isCmsPhotoPath(oldPreview) && !isReferencedByOtherPhoto(oldPreview, next, item.id) && !isReferencedOutsideGallery(oldPreview)) deletions.push(oldPreview);
+      if (oldThumbnail && isCmsPhotoPath(oldThumbnail) && !isReferencedByOtherPhoto(oldThumbnail, next, item.id) && !isReferencedOutsideGallery(oldThumbnail)) deletions.push(oldThumbnail);
     }
     ensureFeatured(next);
     try {
@@ -752,7 +771,7 @@
     ensureFeatured(next);
     const files = [];
     const deletions = [];
-    for (const path of [current.src, current.previewSrc]) {
+    for (const path of [current.src, current.previewSrc, current.thumbnailSrc]) {
       if (path && isCmsPhotoPath(path) && !isReferencedByOtherPhoto(path, next, current.id) && !isReferencedOutsideGallery(path)) deletions.push(path);
     }
     try {

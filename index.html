@@ -39,7 +39,7 @@
   <link rel="preload" href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchpriority="high">
   <link rel="preload" href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchpriority="high">
   <link rel="preload" href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css?v=20260730-gallery-index-1">
+  <link rel="stylesheet" href="style.css?v=20260730-gallery-links-1">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -334,6 +334,25 @@
         <button type="button" data-directory-status="unseen">未看</button>
         <button type="button" data-directory-status="seen">已看</button>
       </div>
+      <div class="gallery-directory-mobile-filters">
+        <label>分类
+          <select data-directory-category-select>
+            <option value="all">全部分类</option>
+            <option value="deepsky">深空</option>
+            <option value="sunmoon">日月</option>
+            <option value="planet">行星</option>
+            <option value="nightscape">星野</option>
+            <option value="earth">大地</option>
+          </select>
+        </label>
+        <label>浏览状态
+          <select data-directory-status-select>
+            <option value="all">全部作品</option>
+            <option value="unseen">未看</option>
+            <option value="seen">已看</option>
+          </select>
+        </label>
+      </div>
     </div>
     <div class="gallery-directory-grid" data-gallery-directory-grid></div>
     <footer class="gallery-directory-footer">
@@ -352,7 +371,10 @@
     <aside class="photo-information">
       <div class="photo-information-nav">
         <p class="photo-position"><span data-photo-current>01</span> / <span data-photo-total>117</span></p>
-        <button type="button" data-gallery-directory-return>返回目录</button>
+        <div class="photo-information-actions">
+          <button type="button" data-photo-copy-link>复制链接</button>
+          <button type="button" data-gallery-directory-return>返回目录</button>
+        </div>
       </div>
       <section data-detail-object><i>01 / <span data-object-label>OBJECT</span></i><h2 data-photo-title></h2><p data-photo-category></p></section>
       <section data-detail-capture hidden><i>02 / CAPTURE</i><dl><div data-detail-date hidden><dt>日期</dt><dd></dd></div><div data-detail-location hidden><dt>地点</dt><dd></dd></div></dl></section>
@@ -371,7 +393,7 @@
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script src="video-data.js?v=20260720-pingfang-header-1"></script>
-  <script src="gallery-data.js?v=20260724144602-742m"></script>
-  <script src="script.js?v=20260730-gallery-index-1"></script>
+  <script src="gallery-data.js?v=20260730-thumbnails-1"></script>
+  <script src="script.js?v=20260730-gallery-links-1"></script>
 </body>
 </html>

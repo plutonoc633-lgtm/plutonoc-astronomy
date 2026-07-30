@@ -23,6 +23,19 @@
   const categoryEnglish = category => categoryConfig[category]?.english || category.toUpperCase();
   const gallerySeenStorageKey = 'plutonoc.gallery.seen.v1';
   const galleryWorkIds = new Set(allWorks.map(work => String(work.id)));
+  const photoParamName = 'photo';
+
+  function photoIdFromUrl() {
+    return new URL(location.href).searchParams.get(photoParamName) || '';
+  }
+
+  function photoUrl(workId = '', hash = '#works') {
+    const url = new URL(location.href);
+    if (workId) url.searchParams.set(photoParamName, String(workId));
+    else url.searchParams.delete(photoParamName);
+    url.hash = hash;
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
 
   function loadSeenWorkIds() {
     try {
@@ -321,6 +334,13 @@
   });
 
   window.addEventListener('popstate', event => {
+    const linkedPhoto = photoIdFromUrl();
+    if (linkedPhoto && openPhotoFromLocation()) return;
+    if (!linkedPhoto && photoDialog?.open) {
+      photoHistoryEntryOwned = false;
+      photoClosingFromHistory = true;
+      photoDialog.close();
+    }
     const category = event.state?.category || null;
     finishNavigation(normalizeHash(location.hash), category, false);
   });
@@ -545,9 +565,12 @@
   }, { passive: true });
   window.addEventListener('resize', () => { layoutDirty = true; archiveCanvas?.resize(); requestMainFrame(); }, { passive: true });
   window.addEventListener('load', () => {
-    const initialHash = normalizeHash(location.hash);
-    if (location.hash !== initialHash) history.replaceState(history.state, '', initialHash);
+    const initialHash = photoIdFromUrl() ? '#works' : normalizeHash(location.hash);
+    if (location.hash !== initialHash) {
+      history.replaceState(history.state, '', `${location.pathname}${location.search}${initialHash}`);
+    }
     if (initialHash !== '#home') finishNavigation(initialHash, history.state?.category || null, false);
+    if (photoIdFromUrl()) requestAnimationFrame(openPhotoFromLocation);
     layoutDirty = true;
     scrollDirty = true;
     requestMainFrame();
@@ -1264,6 +1287,10 @@
     $$('[data-directory-status]', galleryDirectory).forEach(button => {
       button.classList.toggle('active', button.dataset.directoryStatus === galleryDirectoryState.status);
     });
+    const categorySelect = $('[data-directory-category-select]', galleryDirectory);
+    const statusSelect = $('[data-directory-status-select]', galleryDirectory);
+    if (categorySelect) categorySelect.value = galleryDirectoryState.category;
+    if (statusSelect) statusSelect.value = galleryDirectoryState.status;
     if (galleryDirectorySearch && galleryDirectorySearch.value !== galleryDirectoryState.search) {
       galleryDirectorySearch.value = galleryDirectoryState.search;
     }
@@ -1336,7 +1363,7 @@
     }
     galleryDirectoryGrid.innerHTML = works.map(work => {
       const seen = seenWorkIds.has(String(work.id));
-      const source = work.previewSrc || work.src;
+      const source = work.thumbnailSrc || work.previewSrc || work.src;
       return `
         <button class="gallery-directory-card${seen ? ' is-seen' : ''}" type="button" data-directory-card data-work-id="${escapeHtml(work.id)}">
           <span class="gallery-directory-card-visual"><img data-directory-src="${escapeHtml(source)}" alt="" decoding="async"></span>
@@ -1430,6 +1457,16 @@
     syncDirectoryControls();
     renderGalleryDirectory();
   }));
+  $('[data-directory-category-select]', galleryDirectory)?.addEventListener('change', event => {
+    galleryDirectoryState.category = event.currentTarget.value;
+    syncDirectoryControls();
+    renderGalleryDirectory();
+  });
+  $('[data-directory-status-select]', galleryDirectory)?.addEventListener('change', event => {
+    galleryDirectoryState.status = event.currentTarget.value;
+    syncDirectoryControls();
+    renderGalleryDirectory();
+  });
   galleryDirectoryGrid?.addEventListener('click', event => {
     const card = event.target.closest('[data-directory-card]');
     if (card) openDirectoryWork(card.dataset.workId);
@@ -1450,6 +1487,9 @@
   let photoReturnFocus = null;
   let photoSwipeStart = null;
   let returnToGalleryDirectory = false;
+  let photoHistoryEntryOwned = false;
+  let photoClosingFromHistory = false;
+  let photoCopyResetTimer = 0;
 
   function detailValue(work, key) {
     const value = work.details?.[key];
@@ -1505,12 +1545,25 @@
     else render();
   }
 
-  function openPhoto(index) {
+  function setPhotoHistory(work, mode) {
+    if (!work || mode === 'none') return;
+    const state = { ...(history.state || {}), photoId: work.id, photoOverlay: true };
+    const url = photoUrl(work.id);
+    if (mode === 'push') {
+      history.pushState(state, '', url);
+      photoHistoryEntryOwned = true;
+    } else {
+      history.replaceState(state, '', url);
+    }
+  }
+
+  function openPhoto(index, options = {}) {
     if (!archiveCanvas?.visibleWorks.length) return;
     photoIndex = mod(index, archiveCanvas.visibleWorks.length);
     photoReturnFocus = document.activeElement;
     updatePhotoDialog();
-    photoDialog.showModal();
+    setPhotoHistory(archiveCanvas.visibleWorks[photoIndex], options.historyMode || 'push');
+    if (!photoDialog.open) photoDialog.showModal();
     document.body.classList.add('dialog-open');
   }
 
@@ -1518,16 +1571,90 @@
     if (!archiveCanvas?.visibleWorks.length) return;
     photoIndex = mod(photoIndex + offset, archiveCanvas.visibleWorks.length);
     updatePhotoDialog(offset);
+    setPhotoHistory(archiveCanvas.visibleWorks[photoIndex], 'replace');
+  }
+
+  function openPhotoFromLocation() {
+    const id = photoIdFromUrl();
+    if (!id) return false;
+    const work = allWorks.find(item => String(item.id) === id);
+    if (!work) {
+      history.replaceState({ ...(history.state || {}), photoId: null, photoOverlay: false }, '', photoUrl('', '#works'));
+      return false;
+    }
+    const canvas = ensureArchiveCanvas();
+    canvas.setFilter('all', true);
+    const index = canvas.focusWorkById(work.id);
+    if (index < 0) {
+      history.replaceState({ ...(history.state || {}), photoId: null, photoOverlay: false }, '', photoUrl('', '#works'));
+      return false;
+    }
+    photoHistoryEntryOwned = false;
+    openPhoto(index, { historyMode: 'none' });
+    return true;
+  }
+
+  function requestPhotoClose({ returnDirectory = false } = {}) {
+    if (!photoDialog?.open) return;
+    returnToGalleryDirectory = returnDirectory;
+    if (photoHistoryEntryOwned && history.state?.photoOverlay) {
+      history.back();
+      return;
+    }
+    history.replaceState({ ...(history.state || {}), photoId: null, photoOverlay: false }, '', photoUrl('', '#works'));
+    photoClosingFromHistory = true;
+    photoDialog.close();
+  }
+
+  async function copyPhotoLink() {
+    const work = archiveCanvas?.visibleWorks[photoIndex];
+    if (!work) return;
+    const absolute = new URL(photoUrl(work.id), location.origin).href;
+    try {
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await Promise.race([
+            navigator.clipboard.writeText(absolute),
+            new Promise((_, reject) => window.setTimeout(() => reject(new Error('Clipboard timeout')), 1000)),
+          ]);
+          copied = true;
+        } catch {
+          copied = false;
+        }
+      }
+      if (!copied) {
+        const input = document.createElement('textarea');
+        input.value = absolute;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.append(input);
+        input.select();
+        copied = document.execCommand('copy');
+        input.remove();
+      }
+      if (!copied) throw new Error('Clipboard unavailable');
+      const button = $('[data-photo-copy-link]', photoDialog);
+      button.textContent = '已复制';
+      clearTimeout(photoCopyResetTimer);
+      photoCopyResetTimer = window.setTimeout(() => { button.textContent = '复制链接'; }, 3000);
+    } catch {
+      window.prompt('复制这张作品的链接', absolute);
+    }
   }
 
   $('.dialog-prev', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(-1); });
   $('.dialog-next', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(1); });
-  $('.dialog-close', photoDialog)?.addEventListener('click', () => photoDialog.close());
+  $('.dialog-close', photoDialog)?.addEventListener('click', () => requestPhotoClose());
+  $('[data-photo-copy-link]', photoDialog)?.addEventListener('click', copyPhotoLink);
   $('[data-gallery-directory-return]', photoDialog)?.addEventListener('click', () => {
-    returnToGalleryDirectory = true;
-    photoDialog.close();
+    requestPhotoClose({ returnDirectory: true });
   });
-  photoDialog?.addEventListener('click', event => { if (event.target === photoDialog) photoDialog.close(); });
+  photoDialog?.addEventListener('click', event => { if (event.target === photoDialog) requestPhotoClose(); });
+  photoDialog?.addEventListener('cancel', event => {
+    event.preventDefault();
+    requestPhotoClose();
+  });
   photoDialog?.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') photoSwipeStart = event.clientX; });
   photoDialog?.addEventListener('pointerup', event => {
     if (photoSwipeStart === null) return;
@@ -1538,6 +1665,8 @@
   photoDialog?.addEventListener('close', () => {
     const reopenDirectory = returnToGalleryDirectory;
     returnToGalleryDirectory = false;
+    photoHistoryEntryOwned = false;
+    photoClosingFromHistory = false;
     if (!galleryDirectory?.open) document.body.classList.remove('dialog-open');
     photoImage.removeAttribute('src');
     if (archiveCanvas) {

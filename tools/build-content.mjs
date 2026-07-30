@@ -32,7 +32,7 @@ function validateGallery(data) {
   data.items.forEach((item, index) => {
     if (!item.id || ids.has(item.id)) throw new Error(`摄影作品 ID 重复或为空：${item.id || index}`);
     if (!data.categoryConfig[item.category]) throw new Error(`摄影作品分类无效：${item.id}`);
-    if (!item.title || !item.src || !item.previewSrc) throw new Error(`摄影作品字段不完整：${item.id}`);
+    if (!item.title || !item.src || !item.previewSrc || !item.thumbnailSrc) throw new Error(`摄影作品字段不完整：${item.id}`);
     if (!Number.isFinite(item.width) || !Number.isFinite(item.height)) throw new Error(`摄影作品尺寸无效：${item.id}`);
     if (!['published', 'hidden'].includes(item.status)) throw new Error(`摄影作品状态无效：${item.id}`);
     if (!Number.isFinite(item.sortOrder)) throw new Error(`摄影作品排序无效：${item.id}`);

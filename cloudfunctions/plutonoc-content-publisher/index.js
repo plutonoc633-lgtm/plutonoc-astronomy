@@ -81,6 +81,7 @@ function isAllowedAssetPath(path) {
   return [
     /^assets\/gallery\/uploads\/(deepsky|sunmoon|planet|nightscape|earth)\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
     /^assets\/gallery\/previews\/uploads\/(deepsky|sunmoon|planet|nightscape|earth)\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
+    /^assets\/gallery\/thumbnails\/uploads\/(deepsky|sunmoon|planet|nightscape|earth)\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
     /^assets\/gallery\/hero\/(deepsky|sunmoon|planet|nightscape|earth)-[a-f0-9]{12}\.webp$/,
     /^assets\/video-posters\/uploads\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
   ].some(pattern => pattern.test(value));
@@ -94,7 +95,7 @@ function validateGallery(data) {
   const featured = new Set();
   for (const item of data.items) {
     if (!item.id || ids.has(item.id)) throw new PublisherError('INVALID_CONTENT', '摄影作品 ID 重复');
-    if (!categories.includes(item.category) || !item.title || !item.src || !item.previewSrc) {
+    if (!categories.includes(item.category) || !item.title || !item.src || !item.previewSrc || !item.thumbnailSrc) {
       throw new PublisherError('INVALID_CONTENT', `摄影资料不完整：${item.title || item.id}`);
     }
     if (!['published', 'hidden'].includes(item.status)) throw new PublisherError('INVALID_CONTENT', '摄影状态无效');

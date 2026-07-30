@@ -397,7 +397,7 @@ node tools/build-content.mjs --check
 ```
 
 - 摄影后台初次迁移 116 张作品；当前加入“云闪”后为 117 张。原分类、顺序、路径与每类唯一精选均保留。支持新增、编辑详情、替换、排序、精选、隐藏、恢复和永久删除；详情字段为 `date / location / equipment / parameters / process / story / notes`。
-- 新照片只生成最长边 3000px 的高质量 WebP 展示图和最长边 1600px 的 WebP 预览图，原片不进入 Git。上传路径带 SHA-256 内容哈希；精选变化时同步生成新的 2560px 分类首页封面。
+- 新照片生成最长边 3000px 的高质量 WebP 展示图、最长边 1600px 的 Canvas 预览图和最长边 640px 的目录缩略图，原片不进入 Git。上传路径带 SHA-256 内容哈希；精选变化时同步生成新的 2560px 分类首页封面。
 - 永久删除从当前 Git 树移除记录及不再引用的图片；如果旧素材仍被结尾背景、HTML、CSS、脚本或视频清单引用，则保留素材文件但删除摄影记录。Git 历史仍可用于恢复。
 - 视频后台改为维护 `content/videos.json`：支持标题、分类、简介、日期、地点、排序、状态、公开 MP4 地址和 1920×1080 WebP 封面。大型视频不进入 Git；先在 CloudBase 静态托管控制台上传，再把公开 MP4 地址填入后台。
 - 每次后台发布都会由云函数确认远端 `main` 仍是编辑时读取的提交，再通过 GitHub Git Data API 创建 blob、tree、commit 并以 `force: false` 更新分支。资料、衍生图片、运行时清单和 HTML 缓存版本在同一个提交中生效；远端冲突时拒绝覆盖并保留表单。图片先逐个创建 Git blob，最终树与内容清单仍只在一次原子提交中生效。
@@ -439,3 +439,21 @@ npx --yes --package @cloudbase/cli@3.6.3 tcb config update fn plutonoc-content-p
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/deploy-admin-cloudbase.ps1
 ```
+
+## 23. 2026-07-30 摄影轻量缩略图、永久链接与手机筛选
+
+- `content/gallery.json` 与 `gallery-data.js` 正式增加 `thumbnailSrc`。现有 117 张目录缩略图位于 `assets/gallery/thumbnails/`，最长边 640px、WebP 品质 76，总计约 2.71MB；旧 1600px `previewSrc` 合计约 22.26MB，继续只用于 Canvas，不再作为目录卡片资源。
+- 本地批量生成及检查命令为：
+
+```powershell
+python tools/build-gallery-thumbnails.py
+python tools/build-gallery-thumbnails.py --check
+node tools/build-content.mjs
+```
+
+- 管理后台新增或替换照片时会原地生成展示图、Canvas 预览图和目录缩略图三档资源。上传缩略图路径为 `assets/gallery/thumbnails/uploads/<分类>/...webp`；替换和永久删除会与另外两档图片一起清理不再引用的 CMS 资源。云函数路径白名单、共享运行时生成器和本地检查必须同时保留 `thumbnailSrc`。
+- 目录使用 `thumbnailSrc || previewSrc || src` 回退链，兼容尚未迁移的数据。手机和桌面仍分别限制同时加载 4 / 6 张；首页未打开目录时不会请求缩略图。
+- 单张作品地址为 `https://plutonoc.cn/?photo=<作品ID>#works`。带合法 `photo` 参数的直接访问和刷新会初始化摄影 Canvas、定位作品并打开灯箱；普通栏目 hash 刷新回首页规则不变。灯箱切换作品会替换当前 URL，前进/后退可以恢复或关闭灯箱，无效 ID 会清理参数并停留在摄影区。
+- 灯箱资料栏新增“复制链接”。优先使用 Clipboard API，失败时回退传统复制，再失败才显示可手动复制的浏览器提示；不得把作品链接写入站点日志或浏览记录以外的持久存储。
+- 760px 以下目录使用“分类 / 浏览状态”两个原生下拉框，桌面继续使用按钮。两套控件共享 `galleryDirectoryState`，搜索、已看状态与结果数量保持同步。
+- 当前公共 CSS / JS 缓存版本为 `20260730-gallery-links-1`，摄影数据版本为 `20260730-thumbnails-1`，后台 CSS / JS 版本为 `20260730-thumbnails-1`。发布函数与后台静态页面都必须在 Pages 推送后同步部署。

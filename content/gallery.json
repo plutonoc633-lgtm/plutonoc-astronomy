@@ -41,7 +41,7 @@
       "order": 2
     }
   },
-  "contentVersion": "20260724144602-742m",
+  "contentVersion": "20260730-thumbnails-1",
   "items": [
     {
       "category": "deepsky",
@@ -64,7 +64,8 @@
       "status": "published",
       "title": "LDN1622",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-01.webp"
     },
     {
       "category": "deepsky",
@@ -87,7 +88,8 @@
       "status": "published",
       "title": "M78星云",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-02.webp"
     },
     {
       "category": "deepsky",
@@ -110,7 +112,8 @@
       "status": "published",
       "title": "SH2-274 美杜莎星云",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-03.webp"
     },
     {
       "category": "deepsky",
@@ -133,7 +136,8 @@
       "status": "published",
       "title": "波德雪茄M81星系群",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-04.webp"
     },
     {
       "category": "deepsky",
@@ -156,7 +160,8 @@
       "status": "published",
       "title": "风车星系M101",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-05.webp"
     },
     {
       "category": "deepsky",
@@ -179,7 +184,8 @@
       "status": "published",
       "title": "鬼星团M44",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-06.webp"
     },
     {
       "category": "deepsky",
@@ -202,7 +208,8 @@
       "status": "published",
       "title": "猴头星云NGC2174",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-07.webp"
     },
     {
       "category": "deepsky",
@@ -225,7 +232,8 @@
       "status": "published",
       "title": "加州星云NGC1499",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-08.webp"
     },
     {
       "category": "deepsky",
@@ -248,7 +256,8 @@
       "status": "published",
       "title": "猎户座星云+跑步者星云",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-09.webp"
     },
     {
       "category": "deepsky",
@@ -271,7 +280,8 @@
       "status": "published",
       "title": "猎户座星云M42",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-10.webp"
     },
     {
       "category": "deepsky",
@@ -294,7 +304,8 @@
       "status": "published",
       "title": "灵魂星云",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-11.webp"
     },
     {
       "category": "deepsky",
@@ -317,7 +328,8 @@
       "status": "published",
       "title": "螺旋星云C63",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-12.webp"
     },
     {
       "category": "deepsky",
@@ -340,7 +352,8 @@
       "status": "published",
       "title": "马头星云IC434 (2)",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-13.webp"
     },
     {
       "category": "deepsky",
@@ -363,7 +376,8 @@
       "status": "published",
       "title": "马头星云IC434",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-14.webp"
     },
     {
       "category": "deepsky",
@@ -386,7 +400,8 @@
       "status": "published",
       "title": "昴星团（M45）",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-15.webp"
     },
     {
       "category": "deepsky",
@@ -409,7 +424,8 @@
       "status": "published",
       "title": "玫瑰星云",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-16.webp"
     },
     {
       "category": "deepsky",
@@ -432,7 +448,8 @@
       "status": "published",
       "title": "玫瑰星云HOO",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-17.webp"
     },
     {
       "category": "deepsky",
@@ -455,7 +472,8 @@
       "status": "published",
       "title": "玫瑰星云广域",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-18.webp"
     },
     {
       "category": "deepsky",
@@ -478,7 +496,8 @@
       "status": "published",
       "title": "眉月星云",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-19.webp"
     },
     {
       "category": "deepsky",
@@ -501,7 +520,8 @@
       "status": "published",
       "title": "欧米茄星云M17",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-20.webp"
     },
     {
       "category": "deepsky",
@@ -524,7 +544,8 @@
       "status": "published",
       "title": "圣诞树星团NGC2264",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-21.webp"
     },
     {
       "category": "deepsky",
@@ -547,7 +568,8 @@
       "status": "published",
       "title": "室女座星系团",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-22.webp"
     },
     {
       "category": "deepsky",
@@ -570,7 +592,8 @@
       "status": "published",
       "title": "水母星云IC443",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-23.webp"
     },
     {
       "category": "deepsky",
@@ -593,7 +616,8 @@
       "status": "published",
       "title": "涡状星系M51",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-24.webp"
     },
     {
       "category": "deepsky",
@@ -616,7 +640,8 @@
       "status": "published",
       "title": "仙女座星系M31",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-25.webp"
     },
     {
       "category": "deepsky",
@@ -639,7 +664,8 @@
       "status": "published",
       "title": "象鼻星云IC1396",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-26.webp"
     },
     {
       "category": "deepsky",
@@ -662,7 +688,8 @@
       "status": "published",
       "title": "蟹状星云M1",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-27.webp"
     },
     {
       "category": "deepsky",
@@ -685,7 +712,8 @@
       "status": "published",
       "title": "心脏星云IC1805",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-28.webp"
     },
     {
       "category": "deepsky",
@@ -708,7 +736,8 @@
       "status": "published",
       "title": "哑铃星云M27",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-29.webp"
     },
     {
       "category": "deepsky",
@@ -731,7 +760,8 @@
       "status": "published",
       "title": "鹰星云M16",
       "updatedAt": "",
-      "width": 1521
+      "width": 1521,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-30.webp"
     },
     {
       "category": "deepsky",
@@ -754,7 +784,8 @@
       "status": "published",
       "title": "鸢尾花星云C4",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/deepsky/deepsky-31.webp"
     },
     {
       "category": "sunmoon",
@@ -777,7 +808,8 @@
       "status": "published",
       "title": "渐盈凸月",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/planetary-01.webp"
     },
     {
       "category": "sunmoon",
@@ -800,7 +832,8 @@
       "status": "published",
       "title": "太阳黑子",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/planetary-03.webp"
     },
     {
       "category": "sunmoon",
@@ -823,7 +856,8 @@
       "status": "published",
       "title": "血月全食",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/planetary-04.webp"
     },
     {
       "category": "sunmoon",
@@ -846,7 +880,8 @@
       "status": "published",
       "title": "血月食甚",
       "updatedAt": "",
-      "width": 1284
+      "width": 1284,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/planetary-05.webp"
     },
     {
       "category": "sunmoon",
@@ -869,7 +904,8 @@
       "status": "published",
       "title": "月面部分地图",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/planetary-06.webp"
     },
     {
       "category": "sunmoon",
@@ -892,7 +928,8 @@
       "status": "published",
       "title": "月食重修",
       "updatedAt": "",
-      "width": 1000
+      "width": 1000,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/planetary-07.webp"
     },
     {
       "category": "sunmoon",
@@ -915,7 +952,8 @@
       "status": "published",
       "title": "盈凸月",
       "updatedAt": "",
-      "width": 4980
+      "width": 4980,
+      "thumbnailSrc": "assets/gallery/thumbnails/sunmoon/sunmoon-gibbous-moon.webp"
     },
     {
       "category": "planet",
@@ -938,7 +976,8 @@
       "status": "published",
       "title": "木星自转4小时",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/planet/planetary-02.webp"
     },
     {
       "category": "planet",
@@ -961,7 +1000,8 @@
       "status": "published",
       "title": "木星自转4小时",
       "updatedAt": "",
-      "width": 448
+      "width": 448,
+      "thumbnailSrc": "assets/gallery/thumbnails/planet/jupiter-motion.webp"
     },
     {
       "category": "planet",
@@ -984,7 +1024,8 @@
       "status": "published",
       "title": "木卫一凌木",
       "updatedAt": "",
-      "width": 448
+      "width": 448,
+      "thumbnailSrc": "assets/gallery/thumbnails/planet/jupiter-moon-transit.webp"
     },
     {
       "category": "planet",
@@ -1007,7 +1048,8 @@
       "status": "published",
       "title": "土星",
       "updatedAt": "",
-      "width": 640
+      "width": 640,
+      "thumbnailSrc": "assets/gallery/thumbnails/planet/planet-saturn.webp"
     },
     {
       "category": "nightscape",
@@ -1030,7 +1072,8 @@
       "status": "published",
       "title": "巴纳德环堆栈",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-01.webp"
     },
     {
       "category": "nightscape",
@@ -1053,7 +1096,8 @@
       "status": "published",
       "title": "北极星轨",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-02.webp"
     },
     {
       "category": "nightscape",
@@ -1076,7 +1120,8 @@
       "status": "published",
       "title": "不可名状",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-03.webp"
     },
     {
       "category": "nightscape",
@@ -1099,7 +1144,8 @@
       "status": "published",
       "title": "冬季银河接片带星云标识",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-04.webp"
     },
     {
       "category": "nightscape",
@@ -1122,7 +1168,8 @@
       "status": "published",
       "title": "贵州夏季银河",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-05.webp"
     },
     {
       "category": "nightscape",
@@ -1145,7 +1192,8 @@
       "status": "published",
       "title": "箕山星轨无水印",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-06.webp"
     },
     {
       "category": "nightscape",
@@ -1168,7 +1216,8 @@
       "status": "published",
       "title": "梅干岭银心",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-07.webp"
     },
     {
       "category": "nightscape",
@@ -1191,7 +1240,8 @@
       "status": "published",
       "title": "内蒙夏季银河",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-08.webp"
     },
     {
       "category": "nightscape",
@@ -1214,7 +1264,8 @@
       "status": "published",
       "title": "内蒙银拱二",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-09.webp"
     },
     {
       "category": "nightscape",
@@ -1237,7 +1288,8 @@
       "status": "published",
       "title": "内蒙银拱一",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-10.webp"
     },
     {
       "category": "nightscape",
@@ -1260,7 +1312,8 @@
       "status": "published",
       "title": "神农架冬季银河",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-11.webp"
     },
     {
       "category": "nightscape",
@@ -1283,7 +1336,8 @@
       "status": "published",
       "title": "双子座流星雨",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-12.webp"
     },
     {
       "category": "nightscape",
@@ -1306,7 +1360,8 @@
       "status": "published",
       "title": "下汰夏季银河",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-13.webp"
     },
     {
       "category": "nightscape",
@@ -1329,7 +1384,8 @@
       "status": "published",
       "title": "星轨",
       "updatedAt": "",
-      "width": 1800
+      "width": 1800,
+      "thumbnailSrc": "assets/gallery/thumbnails/nightscape/nightscape-14.webp"
     },
     {
       "category": "earth",
@@ -1352,7 +1408,8 @@
       "status": "published",
       "title": "DRIVE TO SURVIVE",
       "updatedAt": "",
-      "width": 1324
+      "width": 1324,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-001.webp"
     },
     {
       "category": "earth",
@@ -1375,7 +1432,8 @@
       "status": "published",
       "title": "P1091181",
       "updatedAt": "",
-      "width": 3368
+      "width": 3368,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-002.webp"
     },
     {
       "category": "earth",
@@ -1398,7 +1456,8 @@
       "status": "published",
       "title": "cyber",
       "updatedAt": "",
-      "width": 3068
+      "width": 3068,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-003.webp"
     },
     {
       "category": "earth",
@@ -1421,7 +1480,8 @@
       "status": "published",
       "title": "三阳",
       "updatedAt": "",
-      "width": 5472
+      "width": 5472,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-004.webp"
     },
     {
       "category": "earth",
@@ -1444,7 +1504,8 @@
       "status": "published",
       "title": "丹阳路",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-005.webp"
     },
     {
       "category": "earth",
@@ -1467,7 +1528,8 @@
       "status": "published",
       "title": "云隐嵩山",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-006.webp"
     },
     {
       "category": "earth",
@@ -1490,7 +1552,8 @@
       "status": "published",
       "title": "云隐珠峰",
       "updatedAt": "",
-      "width": 5405
+      "width": 5405,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-007.webp"
     },
     {
       "category": "earth",
@@ -1513,7 +1576,8 @@
       "status": "published",
       "title": "仰",
       "updatedAt": "",
-      "width": 1920
+      "width": 1920,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-008.webp"
     },
     {
       "category": "earth",
@@ -1536,7 +1600,8 @@
       "status": "published",
       "title": "保利其一",
       "updatedAt": "",
-      "width": 2560
+      "width": 2560,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-009.webp"
     },
     {
       "category": "earth",
@@ -1559,7 +1624,8 @@
       "status": "published",
       "title": "保利其七",
       "updatedAt": "",
-      "width": 948
+      "width": 948,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-010.webp"
     },
     {
       "category": "earth",
@@ -1582,7 +1648,8 @@
       "status": "published",
       "title": "保利其三",
       "updatedAt": "",
-      "width": 958
+      "width": 958,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-011.webp"
     },
     {
       "category": "earth",
@@ -1605,7 +1672,8 @@
       "status": "published",
       "title": "保利其二",
       "updatedAt": "",
-      "width": 2560
+      "width": 2560,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-012.webp"
     },
     {
       "category": "earth",
@@ -1628,7 +1696,8 @@
       "status": "published",
       "title": "保利其五",
       "updatedAt": "",
-      "width": 954
+      "width": 954,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-013.webp"
     },
     {
       "category": "earth",
@@ -1651,7 +1720,8 @@
       "status": "published",
       "title": "保利其六",
       "updatedAt": "",
-      "width": 958
+      "width": 958,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-014.webp"
     },
     {
       "category": "earth",
@@ -1674,7 +1744,8 @@
       "status": "published",
       "title": "保利其四",
       "updatedAt": "",
-      "width": 958
+      "width": 958,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-015.webp"
     },
     {
       "category": "earth",
@@ -1697,7 +1768,8 @@
       "status": "published",
       "title": "俯",
       "updatedAt": "",
-      "width": 1920
+      "width": 1920,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-016.webp"
     },
     {
       "category": "earth",
@@ -1720,7 +1792,8 @@
       "status": "published",
       "title": "冠宇",
       "updatedAt": "",
-      "width": 1984
+      "width": 1984,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-017.webp"
     },
     {
       "category": "earth",
@@ -1743,7 +1816,8 @@
       "status": "published",
       "title": "刀锋",
       "updatedAt": "",
-      "width": 1440
+      "width": 1440,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-018.webp"
     },
     {
       "category": "earth",
@@ -1766,7 +1840,8 @@
       "status": "published",
       "title": "十万沙丘",
       "updatedAt": "",
-      "width": 1620
+      "width": 1620,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-019.webp"
     },
     {
       "category": "earth",
@@ -1789,7 +1864,8 @@
       "status": "published",
       "title": "千厮门大桥",
       "updatedAt": "",
-      "width": 1080
+      "width": 1080,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-020.webp"
     },
     {
       "category": "earth",
@@ -1812,7 +1888,8 @@
       "status": "published",
       "title": "外滩",
       "updatedAt": "",
-      "width": 4000
+      "width": 4000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-021.webp"
     },
     {
       "category": "earth",
@@ -1835,7 +1912,8 @@
       "status": "published",
       "title": "大地之树",
       "updatedAt": "",
-      "width": 1920
+      "width": 1920,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-022.webp"
     },
     {
       "category": "earth",
@@ -1858,7 +1936,8 @@
       "status": "published",
       "title": "大雁塔",
       "updatedAt": "",
-      "width": 11760
+      "width": 11760,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-023.webp"
     },
     {
       "category": "earth",
@@ -1881,7 +1960,8 @@
       "status": "published",
       "title": "巴丹吉林",
       "updatedAt": "",
-      "width": 1397
+      "width": 1397,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-024.webp"
     },
     {
       "category": "earth",
@@ -1904,7 +1984,8 @@
       "status": "published",
       "title": "我在重庆",
       "updatedAt": "",
-      "width": 2147
+      "width": 2147,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-025.webp"
     },
     {
       "category": "earth",
@@ -1927,7 +2008,8 @@
       "status": "published",
       "title": "挖月亮",
       "updatedAt": "",
-      "width": 4000
+      "width": 4000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-026.webp"
     },
     {
       "category": "earth",
@@ -1950,7 +2032,8 @@
       "status": "published",
       "title": "新密雷暴",
       "updatedAt": "",
-      "width": 5623
+      "width": 5623,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-027.webp"
     },
     {
       "category": "earth",
@@ -1973,7 +2056,8 @@
       "status": "published",
       "title": "明珠",
       "updatedAt": "",
-      "width": 4000
+      "width": 4000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-028.webp"
     },
     {
       "category": "earth",
@@ -1996,7 +2080,8 @@
       "status": "published",
       "title": "晨昏布宫",
       "updatedAt": "",
-      "width": 1620
+      "width": 1620,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-029.webp"
     },
     {
       "category": "earth",
@@ -2019,7 +2104,8 @@
       "status": "published",
       "title": "楼宇三阳",
       "updatedAt": "",
-      "width": 1080
+      "width": 1080,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-030.webp"
     },
     {
       "category": "earth",
@@ -2042,7 +2128,8 @@
       "status": "published",
       "title": "江南晚樱",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-031.webp"
     },
     {
       "category": "earth",
@@ -2065,7 +2152,8 @@
       "status": "published",
       "title": "洱海",
       "updatedAt": "",
-      "width": 5997
+      "width": 5997,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-032.webp"
     },
     {
       "category": "earth",
@@ -2088,7 +2176,8 @@
       "status": "published",
       "title": "洱海边",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-033.webp"
     },
     {
       "category": "earth",
@@ -2111,7 +2200,8 @@
       "status": "published",
       "title": "海棠溪",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-034.webp"
     },
     {
       "category": "earth",
@@ -2134,7 +2224,8 @@
       "status": "published",
       "title": "海鸥",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-035.webp"
     },
     {
       "category": "earth",
@@ -2157,7 +2248,8 @@
       "status": "published",
       "title": "火壶其一",
       "updatedAt": "",
-      "width": 1440
+      "width": 1440,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-036.webp"
     },
     {
       "category": "earth",
@@ -2180,7 +2272,8 @@
       "status": "published",
       "title": "火壶其二",
       "updatedAt": "",
-      "width": 1160
+      "width": 1160,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-037.webp"
     },
     {
       "category": "earth",
@@ -2203,7 +2296,8 @@
       "status": "published",
       "title": "烟火",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-038.webp"
     },
     {
       "category": "earth",
@@ -2226,7 +2320,8 @@
       "status": "published",
       "title": "燎700水印",
       "updatedAt": "",
-      "width": 5701
+      "width": 5701,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-039.webp"
     },
     {
       "category": "earth",
@@ -2249,7 +2344,8 @@
       "status": "published",
       "title": "玉龙山脚",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-040.webp"
     },
     {
       "category": "earth",
@@ -2272,7 +2368,8 @@
       "status": "published",
       "title": "盐湖",
       "updatedAt": "",
-      "width": 1920
+      "width": 1920,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-041.webp"
     },
     {
       "category": "earth",
@@ -2295,7 +2392,8 @@
       "status": "published",
       "title": "秋意",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-042.webp"
     },
     {
       "category": "earth",
@@ -2318,7 +2416,8 @@
       "status": "published",
       "title": "程子卿",
       "updatedAt": "",
-      "width": 3266
+      "width": 3266,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-043.webp"
     },
     {
       "category": "earth",
@@ -2341,7 +2440,8 @@
       "status": "published",
       "title": "红宝石",
       "updatedAt": "",
-      "width": 1920
+      "width": 1920,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-044.webp"
     },
     {
       "category": "earth",
@@ -2364,7 +2464,8 @@
       "status": "published",
       "title": "绿洲",
       "updatedAt": "",
-      "width": 1440
+      "width": 1440,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-045.webp"
     },
     {
       "category": "earth",
@@ -2387,7 +2488,8 @@
       "status": "published",
       "title": "荷1",
       "updatedAt": "",
-      "width": 2797
+      "width": 2797,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-046.webp"
     },
     {
       "category": "earth",
@@ -2410,7 +2512,8 @@
       "status": "published",
       "title": "荷2",
       "updatedAt": "",
-      "width": 1865
+      "width": 1865,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-047.webp"
     },
     {
       "category": "earth",
@@ -2433,7 +2536,8 @@
       "status": "published",
       "title": "豫园站",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-048.webp"
     },
     {
       "category": "earth",
@@ -2456,7 +2560,8 @@
       "status": "published",
       "title": "越",
       "updatedAt": "",
-      "width": 1620
+      "width": 1620,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-049.webp"
     },
     {
       "category": "earth",
@@ -2479,7 +2584,8 @@
       "status": "published",
       "title": "逆转",
       "updatedAt": "",
-      "width": 2826
+      "width": 2826,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-050.webp"
     },
     {
       "category": "earth",
@@ -2502,7 +2608,8 @@
       "status": "published",
       "title": "钟楼",
       "updatedAt": "",
-      "width": 5906
+      "width": 5906,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-051.webp"
     },
     {
       "category": "earth",
@@ -2525,7 +2632,8 @@
       "status": "published",
       "title": "香格里拉",
       "updatedAt": "",
-      "width": 5471
+      "width": 5471,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-052.webp"
     },
     {
       "category": "earth",
@@ -2548,7 +2656,8 @@
       "status": "published",
       "title": "驻",
       "updatedAt": "",
-      "width": 4272
+      "width": 4272,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-053.webp"
     },
     {
       "category": "earth",
@@ -2571,7 +2680,8 @@
       "status": "published",
       "title": "鼋头渚",
       "updatedAt": "",
-      "width": 2160
+      "width": 2160,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-054.webp"
     },
     {
       "category": "earth",
@@ -2594,7 +2704,8 @@
       "status": "published",
       "title": "鼋渚一角",
       "updatedAt": "",
-      "width": 2160
+      "width": 2160,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-055.webp"
     },
     {
       "category": "earth",
@@ -2617,7 +2728,8 @@
       "status": "published",
       "title": "鼋渚日落",
       "updatedAt": "",
-      "width": 3368
+      "width": 3368,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-056.webp"
     },
     {
       "category": "earth",
@@ -2640,7 +2752,8 @@
       "status": "published",
       "title": "大地 001",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-057.webp"
     },
     {
       "category": "earth",
@@ -2663,7 +2776,8 @@
       "status": "published",
       "title": "大地 002",
       "updatedAt": "",
-      "width": 6000
+      "width": 6000,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-058.webp"
     },
     {
       "category": "earth",
@@ -2686,7 +2800,8 @@
       "status": "published",
       "title": "大地 003",
       "updatedAt": "",
-      "width": 2762
+      "width": 2762,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-059.webp"
     },
     {
       "category": "earth",
@@ -2709,7 +2824,8 @@
       "status": "published",
       "title": "大地 004",
       "updatedAt": "",
-      "width": 3872
+      "width": 3872,
+      "thumbnailSrc": "assets/gallery/thumbnails/earth/earth-060.webp"
     },
     {
       "category": "earth",
@@ -2732,7 +2848,8 @@
       "status": "published",
       "title": "云闪",
       "updatedAt": "2026-07-24T14:46:02.613Z",
-      "width": 3000
+      "width": 3000,
+      "thumbnailSrc": "assets/gallery/thumbnails/uploads/earth/earth-mrz1z0j9-d7321a-d7321a99d476.webp"
     }
   ],
   "version": 1
