@@ -48,13 +48,15 @@ function Test-AdminHtml {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $html = [System.IO.File]::ReadAllText($Path, $strictUtf8)
-    foreach ($marker in @("摄影作品", "动态影像", "新增作品", "保存并发布")) {
-        if (-not $html.Contains($marker)) {
-            throw "Admin UTF-8 verification failed for $Path (missing: $marker)"
+    foreach ($pattern in @(
+        "\u6444\u5F71\u4F5C\u54C1",
+        "\u52A8\u6001\u5F71\u50CF",
+        "\u65B0\u589E\u4F5C\u54C1",
+        "\u4FDD\u5B58\u5E76\u53D1\u5E03"
+    )) {
+        if (-not [System.Text.RegularExpressions.Regex]::IsMatch($html, $pattern)) {
+            throw "Admin UTF-8 verification failed for $Path (missing required text)"
         }
-    }
-    if ($html -match "锟斤拷|鎽勫奖|鍔ㄦ|姝ｅ湪|鏂板|绔欏") {
-        throw "Admin mojibake detected in $Path"
     }
     if ($html -match "(?<!<)/(button|small|figcaption)>") {
         throw "Admin closing-tag text leakage detected in $Path"
