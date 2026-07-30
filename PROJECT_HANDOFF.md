@@ -55,7 +55,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 
 ### Canvas 与灯箱
 
-- 真实照片数量：深空 31、日月 7、行星 4、星野 14、大地 60，总计 116。
+- 真实照片数量：深空 31、日月 7、行星 4、星野 14、大地 61，总计 117。
 - 视觉副本只用于填充无限画布，不改变计数，也不进入灯箱序列。
 - 支持鼠标拖拽、触摸、惯性、四向循环、键盘和点击阈值。
 - 卡片圆角、hover 阴影；点击后应先居中当前图、淡出其他图，再进入灯箱。
@@ -238,7 +238,7 @@ git status --short
 - INDEX 预览无黑边，大地之树/香格里拉正确
 - 手机首页高度与页脚安全区
 - 几何进度符号不会遮挡底部
-- Canvas 116 张计数和五类数量正确
+- Canvas 117 张计数和五类数量正确
 - 三条视频排序、封面、播放和关闭后资源释放
 - 控制台无错误、图片无 404、无横向溢出
 
@@ -277,7 +277,7 @@ https://plutonoc.cn/admin.html
 - 已发布三条记录：`星辰行梦`、`江南大学天文协会宣传片`、`木星观测`，排序为 1 / 2 / 3；简介、日期、地点均留空。
 - 三段 H.264/AAC 视频与三张独立封面已上传到 CloudBase 文件存储，并同步到公开静态托管的 `plutonoc/videos/` 与 `plutonoc/video-posters/`。
 - 体验版套餐拒绝修改文件存储规则和新增安全域名；前台因此启用 `staticManifest: true`，通过公开静态托管 URL 播放，数据库记录仍保留正式 `videoFileId` / `posterFileId`。
-- 已完成 1440px、390px、三条视频播放与资源释放、INDEX、Canvas 116 张计数、页脚安全区和无横向溢出的本地验收。
+- 已完成 1440px、390px、三条视频播放与资源释放、INDEX、Canvas 117 张计数、页脚安全区和无横向溢出的本地验收。
 
 ## 11. 2026-07-20 手机端体验修正
 
@@ -384,7 +384,7 @@ python tools/verify-site.py --url https://plutonoc.cn/
 ## 20. 2026-07-24 GitHub 摄影与视频内容后台
 
 - 正式管理后台不是 Pages 同域的 `/admin.html`，而是 CloudBase Web 应用根地址：`https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/`。官网结尾版权入口已指向这里；Web 应用域名处于 CloudBase 现有安全域名范围，可正常进行账号密码登录和云函数调用。
-- 后台页面源文件变化后，必须额外执行 `powershell -ExecutionPolicy Bypass -File tools/deploy-admin-cloudbase.ps1`。该脚本只生成已忽略的 `work/cloudbase-admin/` 临时目录并部署 `plutonoc-studio`，不会读取或写入 GitHub 令牌。
+- 后台页面源文件变化后，必须额外执行 `powershell -ExecutionPolicy Bypass -File tools/deploy-admin-cloudbase.ps1`。该脚本只生成已忽略的 `work/cloudbase-admin/` 临时目录，不会读取或写入 GitHub 令牌。临时目录包含无第三方依赖的最小 `package.json` 与 `build-static.cjs`，先在本机将 5 个后台静态文件确定性复制到 `dist/`，再用 `tcb hosting deploy` 直接上传。2026-07-30 的 CloudBase Web 应用云构建连续生成失败版本 `004–007` 且不返回失败原因，但同一静态托管根路径可正常更新正式 `webapps.tcloudbase.com` 域名，因此日常后台更新固定使用本脚本，不再等待云端构建。
 - `tools/verify-site.py --url https://plutonoc.cn/` 同时检查 Pages 中的后台副本和 CloudBase 正式后台，包括 HTML、CSS、脚本、CloudBase 配置、SDK、图片、视频与封面。正式后台任一关键资源不可访问时，部署检查与六小时巡检都会失败。
 - 管理后台仍以 CloudBase 账号密码登录作为第一层身份验证，但不再查询受体验版安全域名限制的 `videos` 数据库集合。体验版拒绝把 `plutonoc.cn` 加入安全域名，旧静态托管域名还会显示腾讯风险提醒，因此正式后台作为 CloudBase Web 应用部署在 `https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/`；官网结尾版权入口必须指向该地址，不能改回同域 `/admin.html`。
 - 后台已升级为纯 CloudBase 账号密码登录。登录后浏览器通过 Web SDK 调用 `plutonoc-content-publisher` 云函数，不再显示 GitHub 令牌输入框，也不在 `sessionStorage`、本地存储或前端代码中保存仓库凭据。
@@ -396,13 +396,13 @@ node tools/build-content.mjs
 node tools/build-content.mjs --check
 ```
 
-- 摄影后台已迁移全部 116 张作品，保留原分类、顺序、路径与每类唯一精选。支持新增、编辑详情、替换、排序、精选、隐藏、恢复和永久删除；详情字段为 `date / location / equipment / parameters / process / story / notes`。
+- 摄影后台初次迁移 116 张作品；当前加入“云闪”后为 117 张。原分类、顺序、路径与每类唯一精选均保留。支持新增、编辑详情、替换、排序、精选、隐藏、恢复和永久删除；详情字段为 `date / location / equipment / parameters / process / story / notes`。
 - 新照片只生成最长边 3000px 的高质量 WebP 展示图和最长边 1600px 的 WebP 预览图，原片不进入 Git。上传路径带 SHA-256 内容哈希；精选变化时同步生成新的 2560px 分类首页封面。
 - 永久删除从当前 Git 树移除记录及不再引用的图片；如果旧素材仍被结尾背景、HTML、CSS、脚本或视频清单引用，则保留素材文件但删除摄影记录。Git 历史仍可用于恢复。
 - 视频后台改为维护 `content/videos.json`：支持标题、分类、简介、日期、地点、排序、状态、公开 MP4 地址和 1920×1080 WebP 封面。大型视频不进入 Git；先在 CloudBase 静态托管控制台上传，再把公开 MP4 地址填入后台。
 - 每次后台发布都会由云函数确认远端 `main` 仍是编辑时读取的提交，再通过 GitHub Git Data API 创建 blob、tree、commit 并以 `force: false` 更新分支。资料、衍生图片、运行时清单和 HTML 缓存版本在同一个提交中生效；远端冲突时拒绝覆盖并保留表单。图片先逐个创建 Git blob，最终树与内容清单仍只在一次原子提交中生效。
 - 发布后后台轮询线上 `index.html` 的内容缓存版本，显示“部署中 / 已上线”。Pages 工作流新增 `node tools/build-content.mjs --check`，`tools/verify-site.py` 会验证规范数据与运行时清单数量一致、每类精选唯一、后台 Git 发布标记和不再调用 CloudBase 集合。初次迁移基线为 116 张摄影作品和 3 条视频，后续内容增删不应被固定数量阻断。
-- 当前后台 CSS 与脚本缓存版本均为 `20260724-server-publisher-1`。云函数源码位于 `cloudfunctions/plutonoc-content-publisher/`，部署配置为 `cloudbaserc.json`；配置只提交 `{{env.PLUTONOC_GITHUB_TOKEN}}` 占位符。前台视觉结构、摄影 Canvas 按需加载、视频播放数据字段和 CloudBase 三个既有视频文件均未改变。
+- 当前后台 CSS 与脚本缓存版本均为 `20260730-content-publish-fix-1`。云函数源码位于 `cloudfunctions/plutonoc-content-publisher/`，部署配置为 `cloudbaserc.json`；配置只提交 `{{env.PLUTONOC_GITHUB_TOKEN}}` 占位符。前台视觉结构、摄影 Canvas 按需加载、视频播放数据字段和 CloudBase 三个既有视频文件均未改变。
 
 服务器凭据更新命令不得直接把令牌写进命令行。应在当前 PowerShell 进程中私下设置 `PLUTONOC_GITHUB_TOKEN`，然后执行：
 
@@ -411,3 +411,16 @@ npx --yes --package @cloudbase/cli@3.6.3 tcb config update fn plutonoc-content-p
 ```
 
 选择合并环境变量，完成后立即清除当前进程变量。日常只更新函数代码时优先使用 `tcb fn code update`，避免无意覆盖服务器环境变量。
+
+## 21. 2026-07-30 “云闪”发布故障与修复
+
+- 后台提交 `ba76984d3863755fd31a3fafd3e07d210e852114` 已正确保存“云闪”的资料以及 3000px 展示图、1600px 预览图，但当次 Pages 工作流在 `node tools/build-content.mjs --check` 失败，因此官网仍停留在旧版。照片没有丢失，也没有回退。
+- 根因是云函数与本地构建脚本各自维护了一套运行时生成逻辑：云函数生成的 `gallery-data.js` 包含 `sortOrder`，本地检查生成器却遗漏该字段。现在唯一实现位于 `cloudfunctions/plutonoc-content-publisher/content-runtime.js`，云函数与 `tools/build-content.mjs` 共同调用；摄影发布不再无意义重写视频规范数据或视频运行时文件。
+- 后台发布状态改为检查 `https://plutonoc.cn/` 的实际内容缓存版本，并匿名读取对应提交的公开 GitHub Pages 检查结果。状态含义：
+  - “正在部署到网站”：Pages 检查仍在排队或运行。
+  - “Pages 已构建，等待官网缓存刷新”：构建成功，但自定义域名尚未返回新缓存版本。
+  - “Pages 已部署，内容已上线”：官网已返回本次摄影或视频缓存版本。
+  - “Pages 部署失败，网站尚未更新”：Pages 工作流失败，可通过状态栏详情链接查看公开 Actions 记录。
+  - “部署超时，网站尚未确认更新”：180 秒内未确认官网版本，不能视为已上线。
+- 六小时巡检现在精确比较仓库 `main` 与官网的摄影/视频缓存版本、已发布数量和全部 ID，并检查后台上传的 WebP 展示图与预览图。以后若 `main` 已有新内容但 Pages 仍是旧版，巡检必须失败并按既有规则创建或更新故障 Issue。
+- 当前规范数据与运行时均为 117 张。“云闪”ID 为 `earth-mrz1z0j9-d7321a`，分类“大地”，排序 61，状态 `published`。两张衍生图片继续使用内容哈希路径；本次修复不改摄影视觉、Canvas 清晰度、CloudBase 登录或视频内容。

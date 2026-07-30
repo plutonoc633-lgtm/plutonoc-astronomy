@@ -29,6 +29,7 @@ jobs:
           node --check script.js
           node --check admin.js
           node --check cloudfunctions/plutonoc-content-publisher/index.js
+          node --check cloudfunctions/plutonoc-content-publisher/content-runtime.js
           node tools/build-content.mjs --check
       - name: Verify static site
         run: python tools/verify-site.py --root .

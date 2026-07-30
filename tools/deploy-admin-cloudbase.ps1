@@ -18,17 +18,48 @@ foreach ($asset in @("admin.css", "admin.js", "cloudbase-config.js")) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $asset) -Destination (Join-Path $stageRoot $asset) -Force
 }
 
-Push-Location $projectRoot
+$buildScript = @'
+const fs = require("fs");
+const path = require("path");
+const output = path.join(process.cwd(), "dist");
+fs.mkdirSync(output, { recursive: true });
+for (const file of ["index.html", "admin.html", "admin.css", "admin.js", "cloudbase-config.js"]) {
+  fs.copyFileSync(path.join(process.cwd(), file), path.join(output, file));
+}
+'@
+[System.IO.File]::WriteAllText((Join-Path $stageRoot "build-static.cjs"), $buildScript, $utf8NoBom)
+$packageJson = @'
+{
+  "name": "plutonoc-studio-static",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build-static.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+'@
+[System.IO.File]::WriteAllText((Join-Path $stageRoot "package.json"), $packageJson, $utf8NoBom)
+
+Push-Location $stageRoot
 try {
-    npx --yes --package "@cloudbase/cli@3.6.3" tcb app deploy $ServiceName `
-        -e $EnvironmentId `
-        --framework static `
-        --cwd $stageRoot `
-        --output-dir "./" `
-        --deploy-path "/" `
-        --force `
-        --yes
+    node build-static.cjs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Admin static build failed with exit code $LASTEXITCODE"
+    }
 }
 finally {
     Pop-Location
+}
+
+$distRoot = Join-Path $stageRoot "dist"
+npx --yes --package "@cloudbase/cli@3.6.3" tcb hosting deploy $distRoot "/" `
+    -e $EnvironmentId `
+    --concurrency 5 `
+    --retry-count 5 `
+    --retry-interval 2000
+if ($LASTEXITCODE -ne 0) {
+    throw "CloudBase admin upload failed with exit code $LASTEXITCODE"
 }

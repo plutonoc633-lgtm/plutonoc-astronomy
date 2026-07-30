@@ -14,12 +14,13 @@ from urllib.request import Request, urlopen
 
 
 STYLE_CACHE_VERSION = "20260724-footer-visible-4"
-ADMIN_STYLE_CACHE_VERSION = "20260724-server-publisher-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260724-server-publisher-1"
+ADMIN_STYLE_CACHE_VERSION = "20260730-content-publish-fix-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260730-content-publish-fix-1"
 SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
@@ -84,7 +85,10 @@ def verify_local(root: Path) -> None:
     admin_style = (root / "admin.css").read_text(encoding="utf-8")
     admin_script = (root / "admin.js").read_text(encoding="utf-8")
     publisher_script = (root / "cloudfunctions/plutonoc-content-publisher/index.js").read_text(encoding="utf-8")
+    runtime_generator = (root / "cloudfunctions/plutonoc-content-publisher/content-runtime.js").read_text(encoding="utf-8")
+    build_script = (root / "tools/build-content.mjs").read_text(encoding="utf-8")
     cloudbase_rc = json.loads((root / "cloudbaserc.json").read_text(encoding="utf-8"))
+    admin_deploy_script = (root / "tools/deploy-admin-cloudbase.ps1").read_text(encoding="utf-8")
     video_data = (root / "video-data.js").read_text(encoding="utf-8")
     gallery_data = (root / "gallery-data.js").read_text(encoding="utf-8")
     gallery_content = json.loads((root / "content/gallery.json").read_text(encoding="utf-8"))
@@ -142,18 +146,41 @@ def verify_local(root: Path) -> None:
     require(f'admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}' in admin, "Admin script has an old cache version")
     require("data-github-form" not in admin, "Admin still asks the user for a GitHub token")
     require("sessionStorage" not in admin_script, "Admin still stores a GitHub credential in the browser")
-    require("api.github.com" not in admin_script, "Admin still calls GitHub directly from the browser")
+    require("https://plutonoc.cn/" in admin_script, "Admin deployment polling does not target the public site")
+    require("api.github.com/repos/${githubRepository}/commits/" in admin_script, "Admin Pages status lookup is missing")
+    require("check-runs" in admin_script and "check.name === 'deploy'" in admin_script, "Admin does not inspect the Pages check")
+    require("Authorization" not in admin_script and "github_pat_" not in admin_script, "Admin must not send a GitHub credential")
+    require("Pages 部署失败，网站尚未更新" in admin_script, "Admin does not report failed Pages deployments")
+    require("部署超时，网站尚未确认更新" in admin_script, "Admin deployment timeout is misleading")
     require("app.callFunction" in admin_script and "plutonoc-content-publisher" in admin_script, "Admin server publisher bridge is missing")
     require(".collection(" not in admin_script, "Admin still queries the blocked CloudBase database")
     require("/git/trees" in publisher_script and "force: false" in publisher_script, "Server atomic Git publishing is missing")
     require("app.auth.getUserInfo()" in publisher_script and "administratorUid" in publisher_script, "Publisher administrator check is missing")
     require("process.env.plutonoc_github_token" in publisher_script, "Publisher secret environment variable is missing")
+    require("require('./content-runtime')" in publisher_script, "Publisher does not use the shared content generator")
+    require(
+        "content-runtime.js" in build_script and "galleryRuntime" in build_script and "videoRuntime" in build_script,
+        "Local checks do not use the shared content generator",
+    )
+    require("sortOrder: Number(item.sortOrder) || 0" in runtime_generator, "Shared gallery runtime omits sortOrder")
+    require(
+        "['content/gallery.json'" in publisher_script and "['content/videos.json'" in publisher_script,
+        "Publisher does not scope content files by content type",
+    )
     publisher_config = next(
         item for item in cloudbase_rc.get("functions", []) if item.get("name") == "plutonoc-content-publisher"
     )
     require(
         publisher_config.get("envVariables", {}).get("plutonoc_github_token") == "{{env.PLUTONOC_GITHUB_TOKEN}}",
         "Publisher token must remain an environment placeholder",
+    )
+    require(
+        '"name": "plutonoc-studio-static"' in admin_deploy_script
+        and '"build": "node build-static.cjs"' in admin_deploy_script
+        and "node build-static.cjs" in admin_deploy_script
+        and "tcb hosting deploy" in admin_deploy_script
+        and "--retry-count 5" in admin_deploy_script,
+        "CloudBase static admin deployment must build dist locally and upload it directly",
     )
     require("3000" in admin_script and "1600" in admin_script, "Admin photo derivatives are not configured")
     runtime_sources = index + style + admin + admin_style
@@ -186,6 +213,10 @@ def verify_local(root: Path) -> None:
     require(video_runtime_match is not None, "Generated video runtime payload is missing")
     gallery_runtime_items = json.loads(gallery_runtime_match.group(1))
     video_runtime_items = json.loads(video_runtime_match.group(1))
+    require(
+        all(isinstance(item.get("sortOrder"), (int, float)) for item in gallery_runtime_items),
+        "Gallery runtime is missing numeric sortOrder values",
+    )
     require(
         len(gallery_runtime_items) == sum(item.get("status") == "published" for item in gallery_content["items"]),
         "Gallery runtime does not match published canonical records",
@@ -311,6 +342,19 @@ def verify_remote_admin(url: str, label: str) -> None:
 def verify_remote(base_url: str) -> None:
     base = base_url.rstrip("/") + "/"
     require(urlsplit(base).scheme == "https", f"Remote verification requires HTTPS: {base}")
+    local_index = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+    local_gallery = json.loads((PROJECT_ROOT / "content/gallery.json").read_text(encoding="utf-8"))
+    local_videos = json.loads((PROJECT_ROOT / "content/videos.json").read_text(encoding="utf-8"))
+    expected_gallery_reference_match = re.search(r'gallery-data\.js\?v=[A-Za-z0-9._-]+', local_index)
+    expected_video_reference_match = re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', local_index)
+    require(expected_gallery_reference_match is not None, "Repository gallery cache version is missing")
+    require(expected_video_reference_match is not None, "Repository video cache version is missing")
+    expected_gallery_reference = expected_gallery_reference_match.group(0)
+    expected_video_reference = expected_video_reference_match.group(0)
+    expected_gallery_items = [item for item in local_gallery["items"] if item.get("status") == "published"]
+    expected_video_items = [item for item in local_videos["items"] if item.get("status") == "published"]
+    expected_gallery_ids = {item["id"] for item in expected_gallery_items}
+    expected_video_ids = {item["id"] for item in expected_video_items}
     last_error: Exception | None = None
     for attempt in range(12):
         try:
@@ -318,8 +362,8 @@ def verify_remote(base_url: str) -> None:
             index = index_bytes.decode("utf-8")
             require(content_type == "text/html", f"Unexpected homepage type: {content_type}")
             require(f"style.css?v={STYLE_CACHE_VERSION}" in index, "Deployed homepage has an old cache version")
-            require(re.search(r'gallery-data\.js\?v=[A-Za-z0-9._-]+', index), "Deployed gallery cache version is missing")
-            require(re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index), "Deployed video cache version is missing")
+            require(expected_gallery_reference in index, "Deployed gallery cache version differs from main")
+            require(expected_video_reference in index, "Deployed video cache version differs from main")
             require(f"script.js?v={SCRIPT_CACHE_VERSION}" in index, "Deployed script has an old cache version")
             require("https://plutonoc.cn/assets/branding/plutonoc-share.jpg" in index, "Deployed sharing metadata is missing")
             require(f'<a class="footer-admin-entry" href="{CLOUDBASE_ADMIN_URL}">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
@@ -334,9 +378,23 @@ def verify_remote(base_url: str) -> None:
             verify_remote_admin(urljoin(base, "admin.html"), "Pages admin page")
             verify_remote_admin(CLOUDBASE_ADMIN_URL, "CloudBase admin page")
 
-            video_reference = re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index)
-            require(video_reference is not None, "Deployed video runtime reference is missing")
-            deployed_video_bytes, deployed_video_type = fetch(urljoin(base, video_reference.group(0)))
+            deployed_gallery_bytes, deployed_gallery_type = fetch(urljoin(base, expected_gallery_reference))
+            require(
+                deployed_gallery_type in {"application/javascript", "text/javascript"},
+                f"Unexpected gallery runtime type: {deployed_gallery_type}",
+            )
+            deployed_gallery_text = deployed_gallery_bytes.decode("utf-8")
+            deployed_gallery_match = re.search(r"window\.galleryData=(\[.*\]);\s*$", deployed_gallery_text, re.S)
+            require(deployed_gallery_match is not None, "Deployed gallery runtime payload is invalid")
+            deployed_gallery = json.loads(deployed_gallery_match.group(1))
+            require({item.get("id") for item in deployed_gallery} == expected_gallery_ids, "Deployed gallery IDs differ from main")
+            require(len(deployed_gallery) == len(expected_gallery_items), "Deployed gallery count differs from main")
+            require(
+                all(isinstance(item.get("sortOrder"), (int, float)) for item in deployed_gallery),
+                "Deployed gallery runtime is missing sortOrder",
+            )
+
+            deployed_video_bytes, deployed_video_type = fetch(urljoin(base, expected_video_reference))
             require(
                 deployed_video_type in {"application/javascript", "text/javascript"},
                 f"Unexpected video runtime type: {deployed_video_type}",
@@ -345,7 +403,23 @@ def verify_remote(base_url: str) -> None:
             deployed_video_match = re.search(r"window\.localVideoData=(\[.*\]);\s*$", deployed_video_text, re.S)
             require(deployed_video_match is not None, "Deployed video runtime payload is invalid")
             deployed_videos = json.loads(deployed_video_match.group(1))
-            require(deployed_videos, "Deployed video runtime is empty")
+            require({item.get("id") for item in deployed_videos} == expected_video_ids, "Deployed video IDs differ from main")
+            require(len(deployed_videos) == len(expected_video_items), "Deployed video count differs from main")
+
+            uploaded_gallery_assets = {
+                item[key]
+                for item in expected_gallery_items
+                for key in ("src", "previewSrc")
+                if item.get(key, "").startswith((
+                    "assets/gallery/uploads/",
+                    "assets/gallery/previews/uploads/",
+                ))
+            }
+            for relative in sorted(uploaded_gallery_assets):
+                prefix, actual_type, status = fetch_prefix(urljoin(base, relative))
+                require(status in {200, 206}, f"Uploaded gallery asset returned status {status}: {relative}")
+                require(prefix, f"Uploaded gallery asset returned an empty response: {relative}")
+                require(actual_type == "image/webp", f"Uploaded gallery asset has unexpected type: {relative} ({actual_type})")
 
             sdk_prefix, sdk_type, sdk_status = fetch_prefix(CLOUDBASE_SDK_URL)
             require(sdk_status in {200, 206}, f"Unexpected CloudBase SDK status: {sdk_status}")
@@ -368,7 +442,8 @@ def verify_remote(base_url: str) -> None:
 
             print(
                 f"Remote site verification passed: {base}; "
-                f"Pages/CloudBase admin, CloudBase SDK and {len(deployed_videos)} current videos/posters are reachable"
+                f"{len(deployed_gallery)} photos, Pages/CloudBase admin, CloudBase SDK and "
+                f"{len(deployed_videos)} current videos/posters are reachable"
             )
             return
         except Exception as error:  # Pages and CDN publication can lag briefly.

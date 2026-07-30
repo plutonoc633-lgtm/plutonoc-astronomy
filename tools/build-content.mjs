@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import contentRuntime from '../cloudfunctions/plutonoc-content-publisher/content-runtime.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contentRoot = path.join(root, 'content');
@@ -11,8 +12,8 @@ const galleryPath = path.join(contentRoot, 'gallery.json');
 const videoPath = path.join(contentRoot, 'videos.json');
 const galleryRuntimePath = path.join(root, 'gallery-data.js');
 const videoRuntimePath = path.join(root, 'video-data.js');
-const detailKeys = ['date', 'location', 'equipment', 'parameters', 'process', 'story', 'notes'];
 const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
+const { normalizeDetails, galleryRuntime, videoRuntime } = contentRuntime;
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -20,10 +21,6 @@ function readJson(file) {
 
 function stableJson(value, pretty = false) {
   return `${JSON.stringify(value, null, pretty ? 2 : 0)}\n`;
-}
-
-function normalizeDetails(details = {}) {
-  return Object.fromEntries(detailKeys.map(key => [key, details[key] || '']));
 }
 
 function validateGallery(data) {
@@ -60,50 +57,6 @@ function validateVideos(data) {
     if (!Number.isFinite(item.sortOrder)) throw new Error(`视频排序无效：${item.id}`);
     ids.add(item.id);
   });
-}
-
-function galleryRuntime(data) {
-  const published = data.items
-    .filter(item => item.status === 'published')
-    .sort((a, b) => {
-      const categoryDelta = (data.categoryConfig[a.category]?.order || 99) - (data.categoryConfig[b.category]?.order || 99);
-      return categoryDelta || a.sortOrder - b.sortOrder || a.id.localeCompare(b.id);
-    })
-    .map(item => ({
-      id: item.id,
-      category: item.category,
-      title: item.title,
-      src: item.src,
-      previewSrc: item.previewSrc,
-      width: item.width,
-      height: item.height,
-      featured: Boolean(item.featured),
-      previewRotation: Number(item.previewRotation) || 0,
-      details: normalizeDetails(item.details),
-    }));
-  return `window.categoryConfig=${JSON.stringify(data.categoryConfig)};\nwindow.galleryData=${JSON.stringify(published)};\n`;
-}
-
-function videoRuntime(data) {
-  const items = data.items
-    .filter(item => item.status === 'published')
-    .slice()
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
-    .map(item => ({
-      id: item.id,
-      title: item.title,
-      category: item.category,
-      summary: item.summary || '',
-      date: item.date || '',
-      location: item.location || '',
-      videoUrl: item.videoUrl,
-      posterUrl: item.posterUrl,
-      duration: Number(item.duration) || 0,
-      aspectRatio: Number(item.aspectRatio) || 16 / 9,
-      status: item.status,
-      sortOrder: item.sortOrder,
-    }));
-  return `window.localVideoData=${JSON.stringify(items)};\n`;
 }
 
 function migrate() {

@@ -1,13 +1,17 @@
 'use strict';
 
 const cloudbase = require('@cloudbase/js-sdk');
+const {
+  normalizeDetails,
+  galleryRuntime,
+  videoRuntime,
+} = require('./content-runtime');
 
 const app = cloudbase.init({ env: 'activity-book-web-d7djhe7bb1e834' });
 const repository = { owner: 'plutonoc633-lgtm', name: 'plutonoc-astronomy', branch: 'main' };
 const apiVersion = '2022-11-28';
 const administratorUid = '2066559012906586114';
 const categories = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
-const detailKeys = ['date', 'location', 'equipment', 'parameters', 'process', 'story', 'notes'];
 const maxBlobBase64Length = 5_000_000;
 
 class PublisherError extends Error {
@@ -82,10 +86,6 @@ function isAllowedAssetPath(path) {
   ].some(pattern => pattern.test(value));
 }
 
-function normalizeDetails(details = {}) {
-  return Object.fromEntries(detailKeys.map(key => [key, String(details[key] || '').trim()]));
-}
-
 function validateGallery(data) {
   if (data?.version !== 1 || !data.categoryConfig || !Array.isArray(data.items)) {
     throw new PublisherError('INVALID_CONTENT', '摄影数据格式无效');
@@ -119,50 +119,6 @@ function validateVideos(data) {
     if (!['published', 'draft'].includes(item.status)) throw new PublisherError('INVALID_CONTENT', '视频状态无效');
     ids.add(item.id);
   }
-}
-
-function galleryRuntime(data) {
-  const items = data.items
-    .filter(item => item.status === 'published')
-    .sort((a, b) => {
-      const categoryDelta = (data.categoryConfig[a.category]?.order || 99) - (data.categoryConfig[b.category]?.order || 99);
-      return categoryDelta || a.sortOrder - b.sortOrder || a.id.localeCompare(b.id);
-    })
-    .map(item => ({
-      id: item.id,
-      category: item.category,
-      title: item.title,
-      src: item.src,
-      previewSrc: item.previewSrc,
-      width: item.width,
-      height: item.height,
-      featured: Boolean(item.featured),
-      previewRotation: Number(item.previewRotation) || 0,
-      sortOrder: Number(item.sortOrder) || 0,
-      details: normalizeDetails(item.details),
-    }));
-  return `window.categoryConfig=${JSON.stringify(data.categoryConfig)};\nwindow.galleryData=${JSON.stringify(items)};\n`;
-}
-
-function videoRuntime(data) {
-  const items = data.items
-    .filter(item => item.status === 'published')
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
-    .map(item => ({
-      id: item.id,
-      title: item.title,
-      category: item.category,
-      summary: item.summary || '',
-      date: item.date || '',
-      location: item.location || '',
-      videoUrl: item.videoUrl,
-      posterUrl: item.posterUrl,
-      duration: Number(item.duration) || 0,
-      aspectRatio: Number(item.aspectRatio) || 16 / 9,
-      status: item.status,
-      sortOrder: Number(item.sortOrder) || 0,
-    }));
-  return `window.localVideoData=${JSON.stringify(items)};\n`;
 }
 
 async function createTextBlob(content) {
@@ -235,13 +191,17 @@ async function publish(data) {
     treeEntries.push({ path: entry.path, mode: '100644', type: 'blob', sha: entry.sha });
   }
 
-  const textFiles = [
-    ['content/gallery.json', `${JSON.stringify(gallery, null, 2)}\n`],
-    ['content/videos.json', `${JSON.stringify(videos, null, 2)}\n`],
-    ['gallery-data.js', galleryRuntime(gallery)],
-    ['video-data.js', videoRuntime(videos)],
-    ['index.html', nextIndex],
-  ];
+  const textFiles = changed === 'gallery'
+    ? [
+        ['content/gallery.json', `${JSON.stringify(gallery, null, 2)}\n`],
+        ['gallery-data.js', galleryRuntime(gallery)],
+        ['index.html', nextIndex],
+      ]
+    : [
+        ['content/videos.json', `${JSON.stringify(videos, null, 2)}\n`],
+        ['video-data.js', videoRuntime(videos)],
+        ['index.html', nextIndex],
+      ];
   for (const [path, content] of textFiles) {
     treeEntries.push({ path, mode: '100644', type: 'blob', sha: await createTextBlob(content) });
   }

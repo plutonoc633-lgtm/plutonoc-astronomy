@@ -127,6 +127,11 @@ button:disabled { opacity: .45; cursor: wait; }
 .publish-state.is-working { color: var(--accent); }
 .publish-state.is-success { color: var(--success); }
 .publish-state.is-error { color: var(--danger); }
+.publish-state a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .panel-heading {
   display: flex;

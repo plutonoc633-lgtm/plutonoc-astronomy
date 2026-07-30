@@ -5,6 +5,8 @@
   const $$ = (selector, root = document) => [...(root?.querySelectorAll(selector) || [])];
   const config = window.PLUTONOC_CLOUDBASE || {};
   const publisherFunction = 'plutonoc-content-publisher';
+  const publicSiteUrl = 'https://plutonoc.cn/';
+  const githubRepository = 'plutonoc633-lgtm/plutonoc-astronomy';
   const detailKeys = ['date', 'location', 'equipment', 'parameters', 'process', 'story', 'notes'];
   const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
   const categoryLabels = { deepsky: '深空', sunmoon: '日月', planet: '行星', nightscape: '星野', earth: '大地' };
@@ -32,8 +34,17 @@
     target.classList.toggle('is-error', isError);
   }
 
-  function setPublishState(text, state = '') {
-    publishState.textContent = text;
+  function setPublishState(text, state = '', detailsUrl = '') {
+    publishState.replaceChildren(document.createTextNode(text));
+    if (/^https:\/\/github\.com\/plutonoc633-lgtm\/plutonoc-astronomy\/actions\/runs\/\d+(?:\/job\/\d+)?$/.test(detailsUrl)) {
+      const separator = document.createTextNode(' / ');
+      const link = document.createElement('a');
+      link.href = detailsUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = '查看详情';
+      publishState.append(separator, link);
+    }
     publishState.className = `publish-state${state ? ` is-${state}` : ''}`;
   }
 
@@ -214,7 +225,7 @@
       };
       renderAll();
       setPublishState(`已提交 ${result.sha.slice(0, 7)}，等待 Pages 部署`, 'working');
-      pollDeployment(version, changed);
+      pollDeployment(version, changed, result.sha);
       return result.sha;
     } finally {
       publishing = false;
@@ -222,20 +233,50 @@
     }
   }
 
-  async function pollDeployment(version, changed) {
+  async function fetchDeploymentCheck(commitSha) {
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${githubRepository}/commits/${encodeURIComponent(commitSha)}/check-runs`,
+        {
+          cache: 'no-store',
+          headers: { Accept: 'application/vnd.github+json' },
+        },
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+      return (data.check_runs || []).find(check => check.name === 'deploy') || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function pollDeployment(version, changed, commitSha) {
     const marker = changed === 'gallery' ? `gallery-data.js?v=${version}` : `video-data.js?v=${version}`;
     const started = Date.now();
+    let lastCheck = null;
     while (Date.now() - started < 180000) {
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, 8000));
       try {
-        const response = await fetch(`index.html?studio-check=${Date.now()}`, { cache: 'no-store' });
+        const response = await fetch(`${publicSiteUrl}index.html?studio-check=${Date.now()}`, { cache: 'no-store' });
         if (response.ok && (await response.text()).includes(marker)) {
           setPublishState('Pages 已部署，内容已上线', 'success');
           return;
         }
       } catch {}
+
+      lastCheck = await fetchDeploymentCheck(commitSha) || lastCheck;
+      if (!lastCheck) continue;
+      if (lastCheck.status === 'completed' && lastCheck.conclusion !== 'success') {
+        setPublishState('Pages 部署失败，网站尚未更新', 'error', lastCheck.html_url);
+        return;
+      }
+      if (lastCheck.status === 'completed') {
+        setPublishState('Pages 已构建，等待官网缓存刷新', 'working', lastCheck.html_url);
+      } else {
+        setPublishState('正在部署到网站', 'working', lastCheck.html_url);
+      }
     }
-    setPublishState('提交已完成，Pages 仍在部署；可稍后刷新网站检查', 'working');
+    setPublishState('部署超时，网站尚未确认更新', 'error', lastCheck?.html_url || '');
   }
 
   async function decodeImage(blob) {
