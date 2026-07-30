@@ -23,6 +23,7 @@ CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
+    "assets/branding/per-aspera-ad-astra-handwritten-web.webp": 40_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
     "assets/branding/favicon-32.png": 20_000,
     "assets/branding/apple-touch-icon.png": 100_000,
@@ -36,6 +37,7 @@ REQUIRED_ASSETS = {
 }
 REMOTE_TYPES = {
     "assets/branding/plutonoc-watermark-web.png": "image/png",
+    "assets/branding/per-aspera-ad-astra-handwritten-web.webp": "image/webp",
     "assets/branding/plutonoc-share.jpg": "image/jpeg",
     "assets/branding/favicon-32.png": "image/png",
     "assets/branding/apple-touch-icon.png": "image/png",
@@ -108,7 +110,7 @@ def verify_local(root: Path) -> None:
         f'script.js?v={SCRIPT_CACHE_VERSION}',
         'href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)"',
         'href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)"',
-        'href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png" fetchpriority="high"',
+        'href="assets/branding/per-aspera-ad-astra-handwritten-web.webp" as="image" type="image/webp" fetchpriority="high"',
         '<picture data-home-picture="profile-earth">',
         '<source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
         '<img data-home-desktop src="assets/gallery/hero/earth.webp"',
@@ -370,7 +372,7 @@ def verify_local(root: Path) -> None:
 
     initial_owned = sum((root / relative).stat().st_size for relative in (
         "assets/gallery/hero/earth.webp",
-        "assets/branding/per-aspera-ad-astra-handwritten.png",
+        "assets/branding/per-aspera-ad-astra-handwritten-web.webp",
         "assets/branding/plutonoc-watermark-web.png",
     ))
     require(initial_owned <= 3_000_000, f"Owned first-view budget exceeded: {initial_owned} bytes")

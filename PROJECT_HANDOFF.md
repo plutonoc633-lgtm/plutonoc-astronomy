@@ -463,11 +463,11 @@ node tools/build-content.mjs
 - 首页主视觉和五个摄影分类卡均使用带 `data-home-picture` 标记的响应式 `<picture>`。手机读取当前精选作品的 1600px `previewSrc`，桌面读取 `categoryConfig.<分类>.homeCover`；大地主视觉和大地卡在手机端复用同一资源。不要移除这些内部标记，CloudBase 发布函数依靠它们同步精选图片。
 - 共享函数 `applyHomepageImages()` 位于 `cloudfunctions/plutonoc-content-publisher/content-runtime.js`。摄影发布时云函数会先依据五类唯一精选同步首页手机/桌面图片，再更新摄影运行时缓存版本；`node tools/build-content.mjs --check` 会阻止首页引用与规范摄影数据不一致的提交。
 - 公开首页在 `cloudbase-config.js` 的 `staticManifest: true` 模式下不再静态加载约 164KB 的 CloudBase SDK。`script.js` 只在未来显式关闭静态清单时动态加载 SDK；管理后台仍必须静态加载 SDK 以完成登录和云函数调用。
-- 首页手写口号的预载使用 `fetchpriority="high"`，初始以较高透明度直接参与绘制，再完成轻微淡入与清晰化，避免因等待 `.reveal` 触发而延迟 LCP。
+- 首页手写口号使用从原 PNG 确定性缩放得到的 1024px 无损透明 WebP `assets/branding/per-aspera-ad-astra-handwritten-web.webp`，预载设置 `fetchpriority="high"`，初始以较高透明度直接参与绘制，再完成轻微淡入与清晰化。原 PNG 继续保留给分享图构建和回滚。
 - 设备区网页图改为 `assets/equipment-web.webp`（约 92KB），原始 `assets/equipment.jpg`（约 865KB）保留。确定性重建命令为：
 
 ```powershell
-python tools/build-equipment-web.py
+python tools/build-first-view-assets.py
 ```
 
 - 后台照片和视频表单分别使用 `plutonoc.studio.draft.v1.photo` 与 `plutonoc.studio.draft.v1.video` 保存本机草稿。用户输入后 500ms 写入 `localStorage`，内容仅包括表单文字/选择、作品 ID、保存时间和编辑基线提交 SHA；不保存账号、密码、令牌、登录状态、图片或封面 Blob。
