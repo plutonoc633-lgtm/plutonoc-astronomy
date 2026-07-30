@@ -1489,6 +1489,7 @@
   let returnToGalleryDirectory = false;
   let photoHistoryEntryOwned = false;
   let photoClosingFromHistory = false;
+  let photoReturnScrollY = 0;
   let photoCopyResetTimer = 0;
 
   function detailValue(work, key) {
@@ -1550,6 +1551,11 @@
     const state = { ...(history.state || {}), photoId: work.id, photoOverlay: true };
     const url = photoUrl(work.id);
     if (mode === 'push') {
+      history.replaceState(
+        { ...(history.state || {}), photoId: null, photoOverlay: false },
+        '',
+        photoUrl('', '#works')
+      );
       history.pushState(state, '', url);
       photoHistoryEntryOwned = true;
     } else {
@@ -1559,12 +1565,16 @@
 
   function openPhoto(index, options = {}) {
     if (!archiveCanvas?.visibleWorks.length) return;
+    if (!photoDialog.open) photoReturnScrollY = scrollY;
     photoIndex = mod(index, archiveCanvas.visibleWorks.length);
     photoReturnFocus = document.activeElement;
     updatePhotoDialog();
     setPhotoHistory(archiveCanvas.visibleWorks[photoIndex], options.historyMode || 'push');
     if (!photoDialog.open) photoDialog.showModal();
     document.body.classList.add('dialog-open');
+    requestAnimationFrame(() => {
+      if (scrollY > 0) photoReturnScrollY = scrollY;
+    });
   }
 
   function movePhoto(offset) {
@@ -1597,6 +1607,7 @@
   function requestPhotoClose({ returnDirectory = false } = {}) {
     if (!photoDialog?.open) return;
     returnToGalleryDirectory = returnDirectory;
+    if (scrollY > 0) photoReturnScrollY = scrollY;
     if (photoHistoryEntryOwned && history.state?.photoOverlay) {
       history.back();
       return;
@@ -1674,7 +1685,10 @@
       archiveCanvas.requestDraw();
     }
     if (reopenDirectory) setTimeout(() => openGalleryDirectory(), 0);
-    else photoReturnFocus?.focus?.();
+    else {
+      requestAnimationFrame(() => scrollTo(0, photoReturnScrollY));
+      photoReturnFocus?.focus?.();
+    }
   });
 
   document.addEventListener('keydown', event => {

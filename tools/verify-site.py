@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 STYLE_CACHE_VERSION = "20260730-gallery-links-1"
 ADMIN_STYLE_CACHE_VERSION = "20260730-thumbnails-1"
 ADMIN_SCRIPT_CACHE_VERSION = "20260730-thumbnails-1"
-SCRIPT_CACHE_VERSION = "20260730-gallery-links-1"
+SCRIPT_CACHE_VERSION = "20260730-photo-close-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -268,6 +268,10 @@ def verify_local(root: Path) -> None:
     )
     require(re.search(r'gallery-data\.js\?v=[A-Za-z0-9._-]+', index), "Gallery cache version is missing")
     require(re.search(r'video-data\.js\?v=[A-Za-z0-9._-]+', index), "Video cache version is missing")
+    require(
+        "searchParams.has('photo')" in index,
+        "Photo permalink reloads must bypass the reload-to-home rule",
+    )
     for marker in (
         "function ensureArchiveCanvas()",
         "rootMargin: '800px 0px'",
@@ -285,6 +289,8 @@ def verify_local(root: Path) -> None:
         "work.thumbnailSrc || work.previewSrc || work.src",
         "photoParamName = 'photo'",
         "function openPhotoFromLocation()",
+        "photoReturnScrollY",
+        "photoUrl('', '#works')",
         "data-photo-copy-link",
     ):
         require(marker in script, f"Missing performance marker: {marker}")
