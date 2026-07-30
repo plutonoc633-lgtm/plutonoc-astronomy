@@ -27,6 +27,17 @@
   let photoPreviewUrl = '';
   let posterPreviewUrl = '';
   let publishing = false;
+  const draftKeys = {
+    photo: 'plutonoc.studio.draft.v1.photo',
+    video: 'plutonoc.studio.draft.v1.video',
+  };
+  const draftFieldNames = {
+    photo: ['recordId', 'title', 'category', 'date', 'location', 'sortOrder', 'equipment', 'parameters', 'process', 'story', 'notes', 'featured', 'status'],
+    video: ['recordId', 'videoUrl', 'title', 'category', 'summary', 'date', 'location', 'sortOrder', 'duration', 'aspectRatio', 'status'],
+  };
+  const draftTimers = { photo: 0, video: 0 };
+  const draftDirty = { photo: false, video: false };
+  let suppressDraftSave = false;
 
   function setMessage(target, text, isError = false) {
     if (!target) return;
@@ -56,6 +67,119 @@
 
   function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  function draftForm(kind) {
+    return kind === 'photo' ? photoForm : videoForm;
+  }
+
+  function draftNotice(kind) {
+    return $(`[data-${kind}-draft-notice]`);
+  }
+
+  function readDraft(kind) {
+    try {
+      const value = JSON.parse(localStorage.getItem(draftKeys[kind]) || 'null');
+      return value?.version === 1 && value.type === kind && value.fields ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function clearDraft(kind, hideNotice = true) {
+    clearTimeout(draftTimers[kind]);
+    draftDirty[kind] = false;
+    try { localStorage.removeItem(draftKeys[kind]); } catch {}
+    if (hideNotice) draftNotice(kind).hidden = true;
+  }
+
+  function formFields(kind) {
+    const form = draftForm(kind);
+    return Object.fromEntries(draftFieldNames[kind].map(name => {
+      const field = form.elements[name];
+      return [name, field?.type === 'checkbox' ? field.checked : String(field?.value || '')];
+    }));
+  }
+
+  function writeDraft(kind) {
+    if (suppressDraftSave || !repoState || !draftDirty[kind]) return;
+    const payload = {
+      version: 1,
+      type: kind,
+      recordId: String(draftForm(kind).elements.recordId.value || ''),
+      fields: formFields(kind),
+      savedAt: new Date().toISOString(),
+      baseHeadSha: repoState.headSha,
+      hadFile: kind === 'photo' ? Boolean(preparedPhoto) : Boolean(preparedPoster),
+    };
+    try { localStorage.setItem(draftKeys[kind], JSON.stringify(payload)); } catch {}
+  }
+
+  function markDraftDirty(kind) {
+    if (suppressDraftSave || !repoState) return;
+    draftDirty[kind] = true;
+    clearTimeout(draftTimers[kind]);
+    draftTimers[kind] = setTimeout(() => writeDraft(kind), 500);
+  }
+
+  function showDraftNotice(kind) {
+    const draft = readDraft(kind);
+    const notice = draftNotice(kind);
+    if (!draft) {
+      notice.hidden = true;
+      return;
+    }
+    const saved = new Date(draft.savedAt);
+    const savedLabel = Number.isNaN(saved.getTime()) ? '此前' : saved.toLocaleString('zh-CN', { hour12: false });
+    const remoteChanged = Boolean(draft.baseHeadSha && repoState?.headSha && draft.baseHeadSha !== repoState.headSha);
+    $(`[data-${kind}-draft-text]`).textContent = remoteChanged
+      ? `${savedLabel} 保存的草稿仍在，但网站内容已更新，恢复后请核对再发布。`
+      : `${savedLabel} 保存了一份未发布草稿。`;
+    notice.hidden = false;
+  }
+
+  function applyDraftFields(kind, fields) {
+    const form = draftForm(kind);
+    draftFieldNames[kind].forEach(name => {
+      const field = form.elements[name];
+      if (!field || !(name in fields)) return;
+      if (field.type === 'checkbox') field.checked = Boolean(fields[name]);
+      else field.value = String(fields[name] ?? '');
+    });
+  }
+
+  function restoreDraft(kind) {
+    const draft = readDraft(kind);
+    if (!draft || !repoState) return;
+    const source = kind === 'photo' ? repoState.gallery.items : repoState.videos.items;
+    const record = draft.recordId ? source.find(item => item.id === draft.recordId) : null;
+    const fields = { ...draft.fields };
+    if (draft.recordId && !record) fields.recordId = '';
+    suppressDraftSave = true;
+    try {
+      if (kind === 'photo') {
+        if (record) editPhoto(record, { clearStoredDraft: false, scroll: false });
+        else resetPhotoForm({ clearStoredDraft: false });
+      } else if (record) editVideo(record, { clearStoredDraft: false, scroll: false });
+      else resetVideoForm({ clearStoredDraft: false });
+      applyDraftFields(kind, fields);
+      preparedPhoto = kind === 'photo' ? null : preparedPhoto;
+      preparedPoster = kind === 'video' ? null : preparedPoster;
+      if (draft.hadFile && kind === 'photo') {
+        photoForm.elements.image.value = '';
+        $('[data-photo-file]').textContent = '草稿中的图片需重新选择';
+      }
+      if (draft.hadFile && kind === 'video') {
+        videoForm.elements.poster.value = '';
+        $('[data-poster-file]').textContent = '草稿中的封面需重新选择';
+      }
+    } finally {
+      suppressDraftSave = false;
+    }
+    draftDirty[kind] = true;
+    draftNotice(kind).hidden = true;
+    const fileText = draft.hadFile ? `；原${kind === 'photo' ? '图片' : '封面'}文件需重新选择` : '';
+    setMessage($(`[data-${kind}-message]`), `草稿已恢复${fileText}`);
   }
 
   function normalizeDetails(details = {}) {
@@ -438,7 +562,8 @@
     if (type === 'poster') posterPreviewUrl = '';
   }
 
-  function resetPhotoForm() {
+  function resetPhotoForm({ clearStoredDraft = true } = {}) {
+    suppressDraftSave = true;
     photoForm.reset();
     photoForm.elements.recordId.value = '';
     photoForm.elements.existingSrc.value = '';
@@ -454,10 +579,13 @@
     $('[data-photo-form-title]').textContent = '新增作品';
     $('[data-delete-photo]').hidden = true;
     setMessage($('[data-photo-message]'), '');
+    suppressDraftSave = false;
+    if (clearStoredDraft) clearDraft('photo');
   }
 
-  function editPhoto(item) {
-    resetPhotoForm();
+  function editPhoto(item, { clearStoredDraft = true, scroll = true } = {}) {
+    resetPhotoForm({ clearStoredDraft });
+    suppressDraftSave = true;
     photoForm.elements.recordId.value = item.id;
     photoForm.elements.existingSrc.value = item.src;
     photoForm.elements.existingPreviewSrc.value = item.previewSrc;
@@ -479,7 +607,8 @@
     $('[data-photo-file]').textContent = '保留现有图片；选择新文件可替换';
     $('[data-photo-form-title]').textContent = `编辑 / ${item.title}`;
     $('[data-delete-photo]').hidden = false;
-    photoForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    suppressDraftSave = false;
+    if (scroll) photoForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function renderPhotos() {
@@ -503,7 +632,8 @@
       </article>`).join('') : '<p>没有符合条件的作品</p>';
   }
 
-  function resetVideoForm() {
+  function resetVideoForm({ clearStoredDraft = true } = {}) {
+    suppressDraftSave = true;
     videoForm.reset();
     videoForm.elements.recordId.value = '';
     videoForm.elements.existingPosterUrl.value = '';
@@ -518,10 +648,13 @@
     $('[data-video-form-title]').textContent = '新增影像';
     $('[data-delete-video]').hidden = true;
     setMessage($('[data-video-message]'), '');
+    suppressDraftSave = false;
+    if (clearStoredDraft) clearDraft('video');
   }
 
-  function editVideo(item) {
-    resetVideoForm();
+  function editVideo(item, { clearStoredDraft = true, scroll = true } = {}) {
+    resetVideoForm({ clearStoredDraft });
+    suppressDraftSave = true;
     videoForm.elements.recordId.value = item.id;
     videoForm.elements.existingPosterUrl.value = item.posterUrl;
     videoForm.elements.videoUrl.value = item.videoUrl;
@@ -538,7 +671,8 @@
     $('[data-poster-file]').textContent = '保留现有封面；选择新文件可替换';
     $('[data-video-form-title]').textContent = `编辑 / ${item.title}`;
     $('[data-delete-video]').hidden = false;
-    videoForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    suppressDraftSave = false;
+    if (scroll) videoForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function renderVideos() {
@@ -590,9 +724,11 @@
   photoForm.elements.image.addEventListener('change', async () => {
     const file = photoForm.elements.image.files[0];
     if (!file) return;
+    markDraftDirty('photo');
     setMessage($('[data-photo-message]'), '正在生成网页图片');
     try {
       preparedPhoto = await preparePhotoFile(file);
+      markDraftDirty('photo');
       revokePreview('photo');
       photoPreviewUrl = URL.createObjectURL(preparedPhoto.displayBlob);
       $('[data-photo-preview]').src = photoPreviewUrl;
@@ -609,9 +745,11 @@
   videoForm.elements.poster.addEventListener('change', async () => {
     const file = videoForm.elements.poster.files[0];
     if (!file) return;
+    markDraftDirty('video');
     setMessage($('[data-video-message]'), '正在生成 16:9 封面');
     try {
       preparedPoster = await preparePosterFile(file);
+      markDraftDirty('video');
       revokePreview('poster');
       posterPreviewUrl = URL.createObjectURL(preparedPoster.blob);
       $('[data-poster-preview]').src = posterPreviewUrl;
@@ -783,6 +921,7 @@
         message: `[studio] 永久删除摄影作品：${current.title}`,
         changed: 'gallery',
       });
+      clearDraft('photo');
       resetPhotoForm();
     } catch (error) {
       setPublishState(formatError(error), 'error');
@@ -806,6 +945,7 @@
         message: `[studio] 永久删除动态影像：${current.title}`,
         changed: 'videos',
       });
+      clearDraft('video');
       resetVideoForm();
     } catch (error) {
       setPublishState(formatError(error), 'error');
@@ -836,6 +976,7 @@
       });
       videoForm.elements.duration.value = metadata.duration.toFixed(3);
       videoForm.elements.aspectRatio.value = metadata.aspectRatio.toFixed(4);
+      markDraftDirty('video');
       setMessage($('[data-video-message]'), '视频信息已读取');
     } catch (error) {
       setMessage($('[data-video-message]'), formatError(error), true);
@@ -849,6 +990,27 @@
   $('[data-video-list]').addEventListener('click', event => {
     const card = event.target.closest('[data-video-id]');
     if (card && event.target.matches('[data-edit-video]')) editVideo(repoState.videos.items.find(item => item.id === card.dataset.videoId));
+  });
+
+  for (const [kind, form] of [['photo', photoForm], ['video', videoForm]]) {
+    const onDraftInput = event => {
+      if (event.target.type !== 'file') markDraftDirty(kind);
+    };
+    form.addEventListener('input', onDraftInput);
+    form.addEventListener('change', onDraftInput);
+  }
+
+  for (const kind of ['photo', 'video']) {
+    $(`[data-${kind}-draft-restore]`).addEventListener('click', () => restoreDraft(kind));
+    $(`[data-${kind}-draft-discard]`).addEventListener('click', () => clearDraft(kind));
+  }
+
+  window.addEventListener('beforeunload', event => {
+    if (!publishing && !draftDirty.photo && !draftDirty.video) return;
+    writeDraft('photo');
+    writeDraft('video');
+    event.preventDefault();
+    event.returnValue = '';
   });
 
   $$('[data-studio-tab]').forEach(tab => tab.addEventListener('click', () => {
@@ -884,6 +1046,8 @@
   });
 
   signOutButton.addEventListener('click', async () => {
+    clearDraft('photo');
+    clearDraft('video');
     repoState = null;
     publisher.hidden = true;
     await auth.signOut();
@@ -899,8 +1063,10 @@
     publisher.hidden = false;
     try {
       await loadRepositoryContent();
-      resetPhotoForm();
-      resetVideoForm();
+      resetPhotoForm({ clearStoredDraft: false });
+      resetVideoForm({ clearStoredDraft: false });
+      showDraftNotice('photo');
+      showDraftNotice('video');
     } catch (error) {
       setPublishState(formatError(error), 'error');
     }

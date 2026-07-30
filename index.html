@@ -39,8 +39,8 @@
   </script>
   <link rel="preload" href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchpriority="high">
   <link rel="preload" href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchpriority="high">
-  <link rel="preload" href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css?v=20260730-gallery-links-1">
+  <link rel="preload" href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png" fetchpriority="high">
+  <link rel="stylesheet" href="style.css?v=20260730-first-view-1">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -141,9 +141,9 @@
     <section class="hero" id="home" data-section="01" data-section-name="首页">
       <div class="home-profile" id="profile">
         <figure class="profile-visual reveal">
-          <picture>
-            <source media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">
-            <img src="assets/gallery/hero/earth.webp" width="5405" height="3545" alt="云隐珠峰" decoding="async" fetchpriority="high">
+          <picture data-home-picture="profile-earth">
+            <source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">
+            <img data-home-desktop src="assets/gallery/hero/earth.webp" width="5405" height="3545" alt="云隐珠峰" decoding="async" fetchpriority="high">
           </picture>
         </figure>
         <div class="profile-copy reveal">
@@ -153,31 +153,46 @@
       </div>
       <nav class="descent-sheet" aria-label="摄影分类">
         <a class="descent-panel" href="#works" data-home-filter="deepsky" data-transition-link style="--panel-color:#9ec8ff">
-          <img src="assets/gallery/hero/deepsky.webp" width="1800" height="1214" alt="猎户座星云与跑步者星云" loading="lazy" decoding="async">
+          <picture data-home-picture="card-deepsky">
+            <source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/deepsky/deepsky-09.webp" type="image/webp">
+            <img data-home-desktop src="assets/gallery/hero/deepsky.webp" width="1800" height="1214" alt="猎户座星云与跑步者星云" loading="lazy" decoding="async">
+          </picture>
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">01</span>
           <span class="descent-panel-meta"><b>深空</b><i>DEEP SPACE</i><em data-category-count="deepsky">31</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="sunmoon" data-transition-link style="--panel-color:#e5edf4">
-          <img src="assets/gallery/hero/sunmoon.webp" width="1800" height="1262" alt="月面部分地图" loading="lazy" decoding="async">
+          <picture data-home-picture="card-sunmoon">
+            <source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/sunmoon/planetary-06.webp" type="image/webp">
+            <img data-home-desktop src="assets/gallery/hero/sunmoon.webp" width="1800" height="1262" alt="月面部分地图" loading="lazy" decoding="async">
+          </picture>
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">02</span>
           <span class="descent-panel-meta"><b>日月</b><i>SUN &amp; MOON</i><em data-category-count="sunmoon">7</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="planet" data-transition-link style="--panel-color:#edf0f2">
-          <img src="assets/gallery/hero/planet.webp" width="1800" height="1286" alt="木星自转四小时" loading="lazy" decoding="async">
+          <picture data-home-picture="card-planet">
+            <source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/planet/planetary-02.webp" type="image/webp">
+            <img data-home-desktop src="assets/gallery/hero/planet.webp" width="1800" height="1286" alt="木星自转四小时" loading="lazy" decoding="async">
+          </picture>
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">03</span>
           <span class="descent-panel-meta"><b>行星</b><i>PLANETS</i><em data-category-count="planet">4</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="nightscape" data-transition-link style="--panel-color:#f4f1e9">
-          <img src="assets/gallery/hero/nightscape.webp" width="1800" height="982" alt="冬季银河接片带星云标识" loading="lazy" decoding="async">
+          <picture data-home-picture="card-nightscape">
+            <source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/nightscape/nightscape-04.webp" type="image/webp">
+            <img data-home-desktop src="assets/gallery/hero/nightscape.webp" width="1800" height="982" alt="冬季银河接片带星云标识" loading="lazy" decoding="async">
+          </picture>
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">04</span>
           <span class="descent-panel-meta"><b>星野</b><i>NIGHTSCAPE</i><em data-category-count="nightscape">14</em></span>
         </a>
         <a class="descent-panel" href="#works" data-home-filter="earth" data-transition-link style="--panel-color:#ddb477">
-          <img src="assets/gallery/hero/earth.webp" width="2560" height="1679" alt="云隐珠峰" loading="lazy" decoding="async">
+          <picture data-home-picture="card-earth">
+            <source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">
+            <img data-home-desktop src="assets/gallery/hero/earth.webp" width="2560" height="1679" alt="云隐珠峰" loading="lazy" decoding="async">
+          </picture>
           <span class="descent-panel-shade"></span>
           <span class="descent-panel-index">05</span>
           <span class="descent-panel-meta"><b>大地</b><i>EARTH</i><em data-category-count="earth">60</em></span>
@@ -248,7 +263,7 @@
     <section class="equipment" id="equipment" data-section="05" data-section-name="设备">
       <div class="equipment-media reveal" aria-label="设备与观测现场">
         <div class="equipment-track" data-equipment-track>
-          <figure><img src="assets/equipment.jpg" alt="摄影与观测设备" loading="lazy"><figcaption>设备记录</figcaption></figure>
+          <figure><img src="assets/equipment-web.webp" alt="摄影与观测设备" loading="lazy" decoding="async"><figcaption>设备记录</figcaption></figure>
           <figure><img src="assets/equipment/previews/equipment-c925hd.webp" alt="C925HD 观测设备" loading="lazy"><figcaption>C925HD</figcaption></figure>
           <figure><img src="assets/equipment/previews/equipment-field-01.webp" alt="夜间观测现场" loading="lazy"><figcaption>观测现场</figcaption></figure>
           <figure><img src="assets/equipment/previews/equipment-field-02.webp" alt="观测现场与风机" loading="lazy"><figcaption>观测现场</figcaption></figure>
@@ -391,10 +406,9 @@
     <div class="video-caption"><h3></h3><p></p></div>
   </dialog>
 
-  <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script src="video-data.js?v=20260720-pingfang-header-1"></script>
   <script src="gallery-data.js?v=20260730-thumbnails-1"></script>
-  <script src="script.js?v=20260730-photo-close-1"></script>
+  <script src="script.js?v=20260730-first-view-1"></script>
 </body>
 </html>

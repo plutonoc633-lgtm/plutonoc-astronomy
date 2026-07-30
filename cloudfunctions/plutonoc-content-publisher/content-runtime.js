@@ -51,9 +51,52 @@ function videoRuntime(data) {
   return `window.localVideoData=${JSON.stringify(items)};\n`;
 }
 
+function replacePictureSources(index, pictureName, mobilePath, desktopPath) {
+  const picturePattern = new RegExp(
+    `(<picture\\b[^>]*\\bdata-home-picture="${pictureName}"[^>]*>)([\\s\\S]*?)(</picture>)`,
+  );
+  let found = false;
+  const output = index.replace(picturePattern, (picture, open, content, close) => {
+    found = true;
+    let next = content.replace(
+      /(<source\b[^>]*\bdata-home-mobile\b[^>]*\bsrcset=")[^"]*(")/,
+      `$1${mobilePath}$2`,
+    );
+    next = next.replace(
+      /(<img\b[^>]*\bdata-home-desktop\b[^>]*\bsrc=")[^"]*(")/,
+      `$1${desktopPath}$2`,
+    );
+    if (next === content && (!content.includes(mobilePath) || !content.includes(desktopPath))) {
+      throw new Error(`首页图片标记不完整：${pictureName}`);
+    }
+    return `${open}${next}${close}`;
+  });
+  if (!found) throw new Error(`首页图片标记缺失：${pictureName}`);
+  return output;
+}
+
+function applyHomepageImages(index, data) {
+  let output = String(index);
+  for (const category of ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth']) {
+    const featured = data.items.find(
+      item => item.category === category && item.featured && item.status === 'published',
+    );
+    const desktopPath = data.categoryConfig?.[category]?.homeCover;
+    if (!featured?.previewSrc || !desktopPath) {
+      throw new Error(`首页精选资料不完整：${category}`);
+    }
+    output = replacePictureSources(output, `card-${category}`, featured.previewSrc, desktopPath);
+    if (category === 'earth') {
+      output = replacePictureSources(output, 'profile-earth', featured.previewSrc, desktopPath);
+    }
+  }
+  return output;
+}
+
 module.exports = {
   detailKeys,
   normalizeDetails,
   galleryRuntime,
   videoRuntime,
+  applyHomepageImages,
 };

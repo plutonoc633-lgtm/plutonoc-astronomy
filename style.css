@@ -329,6 +329,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .descent-sheet .descent-panel:hover,
 .descent-sheet .descent-panel:focus-visible,
 .descent-sheet .descent-panel.is-active { filter: brightness(1) saturate(1); }
+.descent-panel picture { display: block; width: 100%; height: 100%; }
 .descent-panel img { width: 100%; height: 100%; object-fit: cover; opacity: .72; filter: saturate(.78) contrast(1.04); transform: scale(1.01); transform-origin: var(--zoom-x, 50%) var(--zoom-y, 50%); transition: opacity .55s ease, filter .55s ease, transform .9s var(--ease-cinematic); will-change: transform; }
 .descent-panel:hover img,
 .descent-panel:focus-visible img,
@@ -363,8 +364,10 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .profile-visual img { width: 100%; height: 100%; object-fit: cover; object-position: center 48%; transform: scale(1.055); transition: transform 1.4s var(--ease-cinematic); }
 .profile-visual.is-visible img { transform: scale(1); }
 .profile-copy { position: relative; z-index: 2; display: grid; justify-items: center; width: min(94vw, 1400px); padding: 40px 20px; text-align: center; text-shadow: 0 3px 26px rgba(0,0,0,.72); }
+.profile-copy.reveal { opacity: .88; filter: blur(.6px); transform: translate3d(0, 3px, 0); }
+.profile-copy.reveal.is-visible { opacity: 1; filter: blur(0); transform: none; }
 .profile-copy h1 { width: clamp(360px, 50vw, 720px); max-width: 90vw; }
-.profile-copy h1 img { display: block; width: 100%; height: auto; opacity: 0; filter: brightness(1.08) blur(2px) drop-shadow(0 3px 22px rgba(0,0,0,.72)); transform: translate3d(0, 5px, 0); transition: opacity .8s ease, filter .9s ease, transform .9s var(--ease-cinematic); }
+.profile-copy h1 img { display: block; width: 100%; height: auto; opacity: .78; filter: brightness(1.08) blur(.6px) drop-shadow(0 3px 22px rgba(0,0,0,.72)); transform: translate3d(0, 3px, 0); transition: opacity .8s ease, filter .9s ease, transform .9s var(--ease-cinematic); }
 .profile-copy.is-visible h1 img { opacity: .94; filter: brightness(1.12) blur(0) drop-shadow(0 3px 22px rgba(0,0,0,.72)); transform: none; }
 .profile-watermark { width: clamp(76px, 7vw, 105px); height: auto; margin-top: 20px; opacity: .86; filter: drop-shadow(0 3px 16px rgba(0,0,0,.68)); }
 

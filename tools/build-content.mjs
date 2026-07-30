@@ -13,7 +13,7 @@ const videoPath = path.join(contentRoot, 'videos.json');
 const galleryRuntimePath = path.join(root, 'gallery-data.js');
 const videoRuntimePath = path.join(root, 'video-data.js');
 const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
-const { normalizeDetails, galleryRuntime, videoRuntime } = contentRuntime;
+const { normalizeDetails, galleryRuntime, videoRuntime, applyHomepageImages } = contentRuntime;
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -107,6 +107,7 @@ function migrate() {
 function build(checkOnly = false) {
   const gallery = readJson(galleryPath);
   const videos = readJson(videoPath);
+  const indexPath = path.join(root, 'index.html');
   validateGallery(gallery);
   validateVideos(videos);
   const outputs = [
@@ -117,9 +118,16 @@ function build(checkOnly = false) {
     for (const [file, expected] of outputs) {
       if (fs.readFileSync(file, 'utf8') !== expected) throw new Error(`${path.basename(file)} 未由规范内容生成`);
     }
+    const index = fs.readFileSync(indexPath, 'utf8');
+    if (applyHomepageImages(index, gallery) !== index) {
+      throw new Error('index.html 首页精选图片未与规范摄影数据同步');
+    }
     return;
   }
   for (const [file, output] of outputs) fs.writeFileSync(file, output, 'utf8');
+  const index = fs.readFileSync(indexPath, 'utf8');
+  const nextIndex = applyHomepageImages(index, gallery);
+  if (nextIndex !== index) fs.writeFileSync(indexPath, nextIndex, 'utf8');
 }
 
 const args = new Set(process.argv.slice(2));

@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC 管理后台</title>
-  <link rel="stylesheet" href="admin.css?v=20260730-thumbnails-1">
+  <link rel="stylesheet" href="admin.css?v=20260730-drafts-1">
 </head>
 <body>
   <header class="studio-header">
@@ -53,6 +53,10 @@
               <input type="hidden" name="existingPreviewSrc">
               <input type="hidden" name="existingThumbnailSrc">
               <div class="form-heading"><h2 data-photo-form-title>新增作品</h2><button type="button" data-reset-photo>清空</button></div>
+              <div class="draft-notice" data-photo-draft-notice hidden>
+                <p data-photo-draft-text></p>
+                <div><button type="button" data-photo-draft-discard>放弃草稿</button><button type="button" class="primary" data-photo-draft-restore>恢复草稿</button></div>
+              </div>
               <label class="file-zone">图片
                 <small>JPEG / PNG / WebP；发布时自动生成网页版本，原片不会上传</small>
                 <input name="image" type="file" accept="image/jpeg,image/png,image/webp">
@@ -114,6 +118,10 @@
               <input type="hidden" name="recordId">
               <input type="hidden" name="existingPosterUrl">
               <div class="form-heading"><h2 data-video-form-title>新增影像</h2><button type="button" data-reset-video>清空</button></div>
+              <div class="draft-notice" data-video-draft-notice hidden>
+                <p data-video-draft-text></p>
+                <div><button type="button" data-video-draft-discard>放弃草稿</button><button type="button" class="primary" data-video-draft-restore>恢复草稿</button></div>
+              </div>
               <label>公开 MP4 地址或站内路径
                 <small>大视频先上传至 CloudBase 静态托管，再粘贴公开地址</small>
                 <input name="videoUrl" type="text" required placeholder="https://…/video.mp4">
@@ -166,6 +174,6 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin.js?v=20260730-thumbnails-1"></script>
+  <script src="admin.js?v=20260730-drafts-1"></script>
 </body>
 </html>

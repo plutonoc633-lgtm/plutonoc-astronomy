@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260730-gallery-links-1"
-ADMIN_STYLE_CACHE_VERSION = "20260730-thumbnails-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260730-thumbnails-1"
-SCRIPT_CACHE_VERSION = "20260730-photo-close-1"
+STYLE_CACHE_VERSION = "20260730-first-view-1"
+ADMIN_STYLE_CACHE_VERSION = "20260730-drafts-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260730-drafts-1"
+SCRIPT_CACHE_VERSION = "20260730-first-view-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -32,6 +32,7 @@ REQUIRED_ASSETS = {
     "favicon.ico": 100_000,
     "assets/gallery/previews/earth/earth-007.webp": 400_000,
     "assets/gallery/hero/earth.webp": 700_000,
+    "assets/equipment-web.webp": 150_000,
 }
 REMOTE_TYPES = {
     "assets/branding/plutonoc-watermark-web.png": "image/png",
@@ -43,6 +44,7 @@ REMOTE_TYPES = {
     "assets/branding/avatar-xiaohongshu.webp": "image/webp",
     "assets/gallery/previews/earth/earth-007.webp": "image/webp",
     "assets/gallery/hero/earth.webp": "image/webp",
+    "assets/equipment-web.webp": "image/webp",
 }
 
 
@@ -106,7 +108,16 @@ def verify_local(root: Path) -> None:
         f'script.js?v={SCRIPT_CACHE_VERSION}',
         'href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)"',
         'href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)"',
-        '<source media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
+        'href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png" fetchpriority="high"',
+        '<picture data-home-picture="profile-earth">',
+        '<source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
+        '<img data-home-desktop src="assets/gallery/hero/earth.webp"',
+        '<picture data-home-picture="card-deepsky">',
+        '<picture data-home-picture="card-sunmoon">',
+        '<picture data-home-picture="card-planet">',
+        '<picture data-home-picture="card-nightscape">',
+        '<picture data-home-picture="card-earth">',
+        'src="assets/equipment-web.webp"',
         'src="assets/branding/plutonoc-watermark-web.png"',
         'class="brand" href="#home" data-transition-link aria-label="PlutonoC，返回首页"><img src="assets/branding/plutonoc-watermark-web.png" width="640" height="175"',
         'preload="none" data-home-motion',
@@ -135,6 +146,8 @@ def verify_local(root: Path) -> None:
         require(token not in index, f"Visible admin entry remains: {token}")
     require('class="arrival-footer reveal"' not in index, "Footer must not be hidden by the reveal observer")
     require("assets/gallery/earth/earth-007.jpg" not in index, "Homepage still references the 12 MB Everest original")
+    require("assets/equipment.jpg" not in index, "Public page still references the large equipment JPEG")
+    require(CLOUDBASE_SDK_URL not in index, "Static-manifest homepage still loads the CloudBase SDK")
     require(f'admin.css?v={ADMIN_STYLE_CACHE_VERSION}' in admin, "Admin page has an old cache version")
     for token in (
         "PRIVATE FILM STUDIO",
@@ -161,6 +174,8 @@ def verify_local(root: Path) -> None:
         'name="existingThumbnailSrc"',
         'data-video-form',
         'data-publisher',
+        'data-photo-draft-notice',
+        'data-video-draft-notice',
     ):
         require(token in admin, f"Missing essential admin marker: {token}")
     require(f'admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}' in admin, "Admin script has an old cache version")
@@ -170,6 +185,18 @@ def verify_local(root: Path) -> None:
     require("api.github.com/repos/${githubRepository}/commits/" in admin_script, "Admin Pages status lookup is missing")
     require("check-runs" in admin_script and "check.name === 'deploy'" in admin_script, "Admin does not inspect the Pages check")
     require("Authorization" not in admin_script and "github_pat_" not in admin_script, "Admin must not send a GitHub credential")
+    for marker in (
+        "plutonoc.studio.draft.v1.photo",
+        "plutonoc.studio.draft.v1.video",
+        "localStorage",
+        "baseHeadSha",
+        "beforeunload",
+        "恢复草稿",
+        "草稿中的图片需重新选择",
+        "草稿中的封面需重新选择",
+    ):
+        require(marker in admin + admin_script, f"Admin draft protection is missing: {marker}")
+    require("sessionStorage" not in admin_script, "Admin draft protection must not use session credential storage")
     require("Pages 部署失败，网站尚未更新" in admin_script, "Admin does not report failed Pages deployments")
     require("部署超时，网站尚未确认更新" in admin_script, "Admin deployment timeout is misleading")
     require("app.callFunction" in admin_script and "plutonoc-content-publisher" in admin_script, "Admin server publisher bridge is missing")
@@ -183,6 +210,15 @@ def verify_local(root: Path) -> None:
         "Local checks do not use the shared content generator",
     )
     require("sortOrder: Number(item.sortOrder) || 0" in runtime_generator, "Shared gallery runtime omits sortOrder")
+    require("applyHomepageImages" in runtime_generator, "Shared homepage image generator is missing")
+    require(
+        "applyHomepageImages(nextIndex, gallery)" in publisher_script,
+        "Publisher does not synchronize featured homepage images",
+    )
+    require(
+        "applyHomepageImages(index, gallery) !== index" in build_script,
+        "Local checks do not validate featured homepage images",
+    )
     require(
         "['content/gallery.json'" in publisher_script and "['content/videos.json'" in publisher_script,
         "Publisher does not scope content files by content type",
@@ -292,6 +328,8 @@ def verify_local(root: Path) -> None:
         "photoReturnScrollY",
         "photoUrl('', '#works')",
         "data-photo-copy-link",
+        "function ensureCloudBaseSdk()",
+        "if (config.staticManifest) return []",
     ):
         require(marker in script, f"Missing performance marker: {marker}")
     for marker in (
@@ -438,7 +476,7 @@ def verify_remote(base_url: str) -> None:
             require(f'<a class="footer-admin-entry" href="{CLOUDBASE_ADMIN_URL}">© 2026 PLUTONOC</a>' in index, "Deployed hidden admin entry is missing")
             require('class="admin-entry"' not in index and ">管理</a>" not in index, "Deployed header still exposes the admin entry")
             require('class="arrival-footer reveal"' not in index, "Deployed footer is still controlled by the reveal observer")
-            require(CLOUDBASE_SDK_URL in index, "Homepage CloudBase SDK reference is missing")
+            require(CLOUDBASE_SDK_URL not in index, "Homepage still loads the unused CloudBase SDK")
             for relative, expected_type in REMOTE_TYPES.items():
                 body, actual_type = fetch(urljoin(base, relative))
                 require(body, f"Empty remote asset: {relative}")

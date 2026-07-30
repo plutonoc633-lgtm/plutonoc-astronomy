@@ -5,6 +5,7 @@ const {
   normalizeDetails,
   galleryRuntime,
   videoRuntime,
+  applyHomepageImages,
 } = require('./content-runtime');
 
 const app = cloudbase.init({ env: 'activity-book-web-d7djhe7bb1e834' });
@@ -179,7 +180,10 @@ async function publish(data) {
   let nextIndex = await readRepositoryText('index.html');
   const version = changed === 'gallery' ? gallery.contentVersion : videos.contentVersion;
   if (!version || version.length > 80) throw new PublisherError('INVALID_CONTENT', '内容版本无效');
-  if (changed === 'gallery') nextIndex = nextIndex.replace(/gallery-data\.js\?v=[^"]+/g, `gallery-data.js?v=${version}`);
+  if (changed === 'gallery') {
+    nextIndex = applyHomepageImages(nextIndex, gallery);
+    nextIndex = nextIndex.replace(/gallery-data\.js\?v=[^"]+/g, `gallery-data.js?v=${version}`);
+  }
   if (changed === 'videos') nextIndex = nextIndex.replace(/video-data\.js\?v=[^"]+/g, `video-data.js?v=${version}`);
 
   const fileEntries = Array.isArray(data.fileEntries) ? data.fileEntries : [];

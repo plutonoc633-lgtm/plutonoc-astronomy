@@ -1881,14 +1881,30 @@
     const total = Math.max(0, Math.round(Number(seconds) || 0));
     return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
   }
+  let cloudBaseSdkPromise = null;
+  function ensureCloudBaseSdk() {
+    if (window.cloudbase) return Promise.resolve(window.cloudbase);
+    if (cloudBaseSdkPromise) return cloudBaseSdkPromise;
+    cloudBaseSdkPromise = new Promise((resolve, reject) => {
+      const sdk = document.createElement('script');
+      sdk.src = 'https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js';
+      sdk.async = true;
+      sdk.onload = () => window.cloudbase ? resolve(window.cloudbase) : reject(new Error('CloudBase SDK 未初始化'));
+      sdk.onerror = () => reject(new Error('CloudBase SDK 加载失败'));
+      document.head.append(sdk);
+    });
+    return cloudBaseSdkPromise;
+  }
+
   async function loadCloudFilms() {
     const config = window.PLUTONOC_CLOUDBASE || {};
     if (config.staticManifest) return [];
-    if (!config.envId || !window.cloudbase) return [];
+    if (!config.envId) return [];
+    const cloudbase = await ensureCloudBaseSdk();
     const options = { env: config.envId, region: config.region || 'ap-shanghai' };
     if (config.clientId) options.clientId = config.clientId;
     if (config.accessKey) options.accessKey = config.accessKey;
-    const app = window.cloudbase.init(options);
+    const app = cloudbase.init(options);
     const result = await app.database().collection(config.collection || 'videos').where({ status: 'published' }).orderBy('sortOrder', 'asc').get();
     const records = result.data || [];
     const fileIds = [...new Set(records.flatMap(record => [record.videoFileId, record.posterFileId]).filter(fileId => /^cloud:\/\//.test(fileId)))];
