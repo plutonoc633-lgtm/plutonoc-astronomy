@@ -21,6 +21,44 @@
   const categoryCounts = Object.fromEntries(categoryOrder.map(category => [category, allWorks.filter(work => work.category === category).length]));
   const categoryLabel = category => categoryConfig[category]?.label || category;
   const categoryEnglish = category => categoryConfig[category]?.english || category.toUpperCase();
+  const gallerySeenStorageKey = 'plutonoc.gallery.seen.v1';
+  const galleryWorkIds = new Set(allWorks.map(work => String(work.id)));
+
+  function loadSeenWorkIds() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(gallerySeenStorageKey) || '[]');
+      if (!Array.isArray(stored)) return new Set();
+      return new Set(stored.map(String).filter(id => galleryWorkIds.has(id)));
+    } catch {
+      return new Set();
+    }
+  }
+
+  let seenWorkIds = loadSeenWorkIds();
+
+  function persistSeenWorkIds() {
+    try {
+      localStorage.setItem(gallerySeenStorageKey, JSON.stringify([...seenWorkIds]));
+    } catch {
+      // Browsing progress remains available for this page when storage is unavailable.
+    }
+  }
+
+  function syncSeenProgress() {
+    $$('[data-gallery-seen-count]').forEach(node => { node.textContent = seenWorkIds.size; });
+    $$('[data-gallery-seen-total]').forEach(node => { node.textContent = allWorks.length; });
+  }
+
+  function markWorkSeen(work) {
+    const id = String(work?.id || '');
+    if (!id || seenWorkIds.has(id)) return;
+    seenWorkIds.add(id);
+    persistSeenWorkIds();
+    syncSeenProgress();
+  }
+
+  persistSeenWorkIds();
+  syncSeenProgress();
 
   let frameRequested = false;
   let scrollDirty = true;
@@ -835,6 +873,48 @@
         || null;
     }
 
+    setFocusedIndex(index, announce = false) {
+      if (!this.visibleWorks.length) return;
+      this.focusedIndex = mod(index, this.visibleWorks.length);
+      const work = this.visibleWorks[this.focusedIndex];
+      this.currentElement.textContent = pad(this.focusedIndex + 1);
+      if (announce && work) {
+        this.live.textContent = `${work.title}，${categoryLabel(work.category)}，第 ${this.focusedIndex + 1} 张，共 ${this.visibleWorks.length} 张`;
+      }
+    }
+
+    centerOnIndex(index, announce = true) {
+      const node = this.primaryNodeForIndex(mod(index, this.visibleWorks.length));
+      if (!node) return -1;
+      this.setFocusedIndex(node.index, announce);
+      this.camera.x = mod(node.x, this.tile.width);
+      this.camera.y = mod(node.y, this.tile.height);
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      this.requestDraw();
+      return node.index;
+    }
+
+    focusWorkById(workId, announce = true) {
+      const index = this.visibleWorks.findIndex(work => String(work.id) === String(workId));
+      if (index < 0) return -1;
+      return this.centerOnIndex(index, announce);
+    }
+
+    syncFocusedFromCenter() {
+      if (this.opening || !this.rendered.length) return;
+      let closest = null;
+      let closestDistance = Infinity;
+      for (const item of this.rendered) {
+        const distance = (item.x - this.width / 2) ** 2 + (item.y - this.height / 2) ** 2;
+        if (distance < closestDistance) {
+          closest = item;
+          closestDistance = distance;
+        }
+      }
+      if (closest && closest.node.index !== this.focusedIndex) this.setFocusedIndex(closest.node.index);
+    }
+
     requestDraw() {
       this.needsDraw = true;
       requestMainFrame();
@@ -907,6 +987,7 @@
         }
       }
       this.cache.protect(this.frameSources);
+      this.syncFocusedFromCenter();
     }
 
     roundedRect(context, x, y, width, height, radius) {
@@ -1095,25 +1176,12 @@
       }
       event.preventDefault();
       const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
-      this.focusedIndex = mod(this.focusedIndex + direction, this.visibleWorks.length);
-      const node = this.primaryNodeForIndex(this.focusedIndex);
-      if (!node) return;
-      this.camera.x = mod(node.x, this.tile.width);
-      this.camera.y = mod(node.y, this.tile.height);
-      this.currentElement.textContent = pad(this.focusedIndex + 1);
-      this.live.textContent = `${node.work.title}，${categoryLabel(node.work.category)}，第 ${this.focusedIndex + 1} 张，共 ${this.visibleWorks.length} 张`;
-      this.requestDraw();
+      this.centerOnIndex(this.focusedIndex + direction);
     }
 
     go(offset) {
       if (!this.nodes.length) return;
-      this.focusedIndex = mod(this.focusedIndex + offset, this.visibleWorks.length);
-      const node = this.primaryNodeForIndex(this.focusedIndex);
-      if (!node) return;
-      this.camera.x = mod(node.x, this.tile.width);
-      this.camera.y = mod(node.y, this.tile.height);
-      this.currentElement.textContent = pad(this.focusedIndex + 1);
-      this.requestDraw();
+      this.centerOnIndex(this.focusedIndex + offset);
     }
   }
 
@@ -1151,12 +1219,237 @@
   $('.gallery-prev')?.addEventListener('click', () => ensureArchiveCanvas()?.go(-1));
   $('.gallery-next')?.addEventListener('click', () => ensureArchiveCanvas()?.go(1));
 
+  /* Searchable photography directory */
+  const galleryDirectory = $('[data-gallery-directory]');
+  const galleryDirectoryGrid = $('[data-gallery-directory-grid]', galleryDirectory);
+  const galleryDirectorySearch = $('[data-gallery-directory-search]', galleryDirectory);
+  const galleryDirectorySummary = $('[data-gallery-directory-summary]', galleryDirectory);
+  const galleryDirectoryResult = $('[data-gallery-directory-result]', galleryDirectory);
+  const galleryDirectoryState = { search: '', category: 'all', status: 'all' };
+  let galleryDirectoryReturnFocus = null;
+  let galleryDirectoryRestoreFocus = true;
+  let directoryImageObserver = null;
+  let directoryImageQueue = [];
+  let directoryImageActive = 0;
+  let directoryImageGeneration = 0;
+  const directoryImageConcurrency = isMobile ? 4 : 6;
+
+  function directorySearchText(work) {
+    const details = work.details || {};
+    return [
+      work.title,
+      categoryLabel(work.category),
+      categoryEnglish(work.category),
+      details.location,
+      details.equipment,
+      details.parameters
+    ].flat().filter(Boolean).join(' ').toLocaleLowerCase('zh-CN');
+  }
+
+  function directoryWorks() {
+    const term = galleryDirectoryState.search.trim().toLocaleLowerCase('zh-CN');
+    return allWorks.filter(work => {
+      if (galleryDirectoryState.category !== 'all' && work.category !== galleryDirectoryState.category) return false;
+      const seen = seenWorkIds.has(String(work.id));
+      if (galleryDirectoryState.status === 'seen' && !seen) return false;
+      if (galleryDirectoryState.status === 'unseen' && seen) return false;
+      return !term || directorySearchText(work).includes(term);
+    });
+  }
+
+  function syncDirectoryControls() {
+    $$('[data-directory-category]', galleryDirectory).forEach(button => {
+      button.classList.toggle('active', button.dataset.directoryCategory === galleryDirectoryState.category);
+    });
+    $$('[data-directory-status]', galleryDirectory).forEach(button => {
+      button.classList.toggle('active', button.dataset.directoryStatus === galleryDirectoryState.status);
+    });
+    if (galleryDirectorySearch && galleryDirectorySearch.value !== galleryDirectoryState.search) {
+      galleryDirectorySearch.value = galleryDirectoryState.search;
+    }
+  }
+
+  function resetDirectoryImageLoader() {
+    directoryImageGeneration += 1;
+    directoryImageObserver?.disconnect();
+    directoryImageObserver = null;
+    directoryImageQueue = [];
+  }
+
+  function pumpDirectoryImages() {
+    while (directoryImageActive < directoryImageConcurrency && directoryImageQueue.length) {
+      const task = directoryImageQueue.shift();
+      directoryImageActive += 1;
+      const preload = new Image();
+      preload.decoding = 'async';
+      const finish = () => {
+        directoryImageActive = Math.max(0, directoryImageActive - 1);
+        pumpDirectoryImages();
+      };
+      preload.onload = () => {
+        if (task.generation === directoryImageGeneration && task.image.isConnected) {
+          task.image.src = task.source;
+          task.image.classList.add('is-loaded');
+        }
+        finish();
+      };
+      preload.onerror = finish;
+      preload.src = task.source;
+    }
+  }
+
+  function observeDirectoryImages(generation) {
+    const images = $$('img[data-directory-src]', galleryDirectoryGrid);
+    if (!images.length) return;
+    const enqueue = image => {
+      const source = image.dataset.directorySrc;
+      if (!source) return;
+      delete image.dataset.directorySrc;
+      directoryImageQueue.push({ image, source, generation });
+      pumpDirectoryImages();
+    };
+    if (!('IntersectionObserver' in window)) {
+      images.forEach(enqueue);
+      return;
+    }
+    directoryImageObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        directoryImageObserver?.unobserve(entry.target);
+        enqueue(entry.target);
+      });
+    }, { root: galleryDirectory, rootMargin: '320px 0px', threshold: 0 });
+    images.forEach(image => directoryImageObserver.observe(image));
+  }
+
+  function renderGalleryDirectory() {
+    if (!galleryDirectoryGrid) return;
+    resetDirectoryImageLoader();
+    const generation = directoryImageGeneration;
+    const works = directoryWorks();
+    const resultText = `${works.length} / ${allWorks.length} 张作品`;
+    galleryDirectorySummary.textContent = resultText;
+    galleryDirectoryResult.textContent = resultText;
+    if (!works.length) {
+      galleryDirectoryGrid.innerHTML = '<p class="gallery-directory-empty">没有符合条件的作品</p>';
+      return;
+    }
+    galleryDirectoryGrid.innerHTML = works.map(work => {
+      const seen = seenWorkIds.has(String(work.id));
+      const source = work.previewSrc || work.src;
+      return `
+        <button class="gallery-directory-card${seen ? ' is-seen' : ''}" type="button" data-directory-card data-work-id="${escapeHtml(work.id)}">
+          <span class="gallery-directory-card-visual"><img data-directory-src="${escapeHtml(source)}" alt="" decoding="async"></span>
+          <span class="gallery-directory-card-copy">
+            <strong>${escapeHtml(work.title)}</strong>
+            <small>${escapeHtml(categoryLabel(work.category))} / ${escapeHtml(categoryEnglish(work.category))}</small>
+            <em>${seen ? '已看' : '未看'}</em>
+          </span>
+        </button>
+      `;
+    }).join('');
+    observeDirectoryImages(generation);
+  }
+
+  function openGalleryDirectory(options = {}) {
+    if (!galleryDirectory) return;
+    if (options.status) galleryDirectoryState.status = options.status;
+    if (options.category) galleryDirectoryState.category = options.category;
+    if (typeof options.search === 'string') galleryDirectoryState.search = options.search;
+    galleryDirectoryReturnFocus = document.activeElement;
+    galleryDirectoryRestoreFocus = true;
+    syncDirectoryControls();
+    renderGalleryDirectory();
+    if (!galleryDirectory.open) galleryDirectory.showModal();
+    document.body.classList.add('dialog-open');
+    setTimeout(() => galleryDirectorySearch?.focus(), reducedMotion ? 0 : 100);
+  }
+
+  function closeGalleryDirectory({ restoreFocus = true } = {}) {
+    if (!galleryDirectory?.open) return;
+    galleryDirectoryRestoreFocus = restoreFocus;
+    galleryDirectory.close();
+  }
+
+  function openDirectoryWork(workId) {
+    const work = allWorks.find(item => String(item.id) === String(workId));
+    if (!work) return;
+    const canvas = ensureArchiveCanvas();
+    const targetFilter = galleryDirectoryState.category === 'all' ? 'all' : galleryDirectoryState.category;
+    canvas.setFilter(targetFilter, true);
+    let index = canvas.focusWorkById(work.id);
+    if (index < 0) {
+      canvas.setFilter('all', true);
+      index = canvas.focusWorkById(work.id);
+    }
+    if (index < 0) return;
+    closeGalleryDirectory({ restoreFocus: false });
+    openPhoto(index);
+  }
+
+  $('[data-gallery-directory-open]')?.addEventListener('click', event => {
+    openGalleryDirectory({ status: 'all', search: '' });
+    galleryDirectoryReturnFocus = event.currentTarget;
+  });
+  $('[data-gallery-unseen]')?.addEventListener('click', event => {
+    openGalleryDirectory({ status: 'unseen', search: '' });
+    galleryDirectoryReturnFocus = event.currentTarget;
+  });
+  $('[data-gallery-continue]')?.addEventListener('click', () => {
+    const nextWork = allWorks.find(work => !seenWorkIds.has(String(work.id)));
+    if (!nextWork) {
+      openGalleryDirectory({ status: 'all', search: '' });
+      return;
+    }
+    const canvas = ensureArchiveCanvas();
+    canvas.setFilter('all', true);
+    const index = canvas.focusWorkById(nextWork.id);
+    if (index >= 0) openPhoto(index);
+  });
+  $('[data-gallery-directory-close]', galleryDirectory)?.addEventListener('click', () => closeGalleryDirectory());
+  galleryDirectory?.addEventListener('click', event => {
+    if (event.target === galleryDirectory) closeGalleryDirectory();
+  });
+  galleryDirectory?.addEventListener('close', () => {
+    if (!photoDialog?.open) document.body.classList.remove('dialog-open');
+    resetDirectoryImageLoader();
+    galleryDirectoryGrid.replaceChildren();
+    if (galleryDirectoryRestoreFocus) galleryDirectoryReturnFocus?.focus?.();
+  });
+  galleryDirectorySearch?.addEventListener('input', () => {
+    galleryDirectoryState.search = galleryDirectorySearch.value;
+    renderGalleryDirectory();
+  });
+  $$('[data-directory-category]', galleryDirectory).forEach(button => button.addEventListener('click', () => {
+    galleryDirectoryState.category = button.dataset.directoryCategory;
+    syncDirectoryControls();
+    renderGalleryDirectory();
+  }));
+  $$('[data-directory-status]', galleryDirectory).forEach(button => button.addEventListener('click', () => {
+    galleryDirectoryState.status = button.dataset.directoryStatus;
+    syncDirectoryControls();
+    renderGalleryDirectory();
+  }));
+  galleryDirectoryGrid?.addEventListener('click', event => {
+    const card = event.target.closest('[data-directory-card]');
+    if (card) openDirectoryWork(card.dataset.workId);
+  });
+  $('[data-gallery-clear-seen]', galleryDirectory)?.addEventListener('click', () => {
+    if (!seenWorkIds.size) return;
+    if (!window.confirm('确定清除当前浏览器中的摄影浏览记录吗？')) return;
+    seenWorkIds = new Set();
+    persistSeenWorkIds();
+    syncSeenProgress();
+    renderGalleryDirectory();
+  });
+
   /* Photo dialog */
   const photoDialog = $('[data-photo-dialog]');
   const photoImage = $('.photo-stage img', photoDialog);
   let photoIndex = 0;
   let photoReturnFocus = null;
   let photoSwipeStart = null;
+  let returnToGalleryDirectory = false;
 
   function detailValue(work, key) {
     const value = work.details?.[key];
@@ -1174,6 +1467,7 @@
   function updatePhotoDialog(direction = 0) {
     const work = archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
+    markWorkSeen(work);
     if (direction) {
       photoDialog.style.setProperty('--photo-direction', `${direction * 20}px`);
       photoDialog.classList.add('is-switching');
@@ -1229,6 +1523,10 @@
   $('.dialog-prev', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(-1); });
   $('.dialog-next', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(1); });
   $('.dialog-close', photoDialog)?.addEventListener('click', () => photoDialog.close());
+  $('[data-gallery-directory-return]', photoDialog)?.addEventListener('click', () => {
+    returnToGalleryDirectory = true;
+    photoDialog.close();
+  });
   photoDialog?.addEventListener('click', event => { if (event.target === photoDialog) photoDialog.close(); });
   photoDialog?.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') photoSwipeStart = event.clientX; });
   photoDialog?.addEventListener('pointerup', event => {
@@ -1238,13 +1536,16 @@
     if (Math.abs(delta) > 55) movePhoto(delta < 0 ? 1 : -1);
   });
   photoDialog?.addEventListener('close', () => {
-    document.body.classList.remove('dialog-open');
+    const reopenDirectory = returnToGalleryDirectory;
+    returnToGalleryDirectory = false;
+    if (!galleryDirectory?.open) document.body.classList.remove('dialog-open');
     photoImage.removeAttribute('src');
     if (archiveCanvas) {
       archiveCanvas.opening = null;
       archiveCanvas.requestDraw();
     }
-    photoReturnFocus?.focus?.();
+    if (reopenDirectory) setTimeout(() => openGalleryDirectory(), 0);
+    else photoReturnFocus?.focus?.();
   });
 
   document.addEventListener('keydown', event => {

@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260724-footer-visible-4"
-ADMIN_STYLE_CACHE_VERSION = "20260730-content-publish-fix-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260730-content-publish-fix-1"
-SCRIPT_CACHE_VERSION = "20260722-scroll-reveal-1"
+STYLE_CACHE_VERSION = "20260730-gallery-index-1"
+ADMIN_STYLE_CACHE_VERSION = "20260730-utf8-admin-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260730-utf8-admin-1"
+SCRIPT_CACHE_VERSION = "20260730-gallery-index-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -118,6 +118,11 @@ def verify_local(root: Path) -> None:
         'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
         'src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
         'href="https://www.xiaohongshu.com/user/profile/60e62ebb0000000001007f48"',
+        'class="gallery-directory" data-gallery-directory',
+        'data-gallery-unseen',
+        'data-gallery-continue',
+        'data-gallery-seen-count',
+        'data-gallery-directory-return',
     )
     for token in required_html:
         require(token in index, f"Missing index marker: {token}")
@@ -128,8 +133,19 @@ def verify_local(root: Path) -> None:
     require('class="arrival-footer reveal"' not in index, "Footer must not be hidden by the reveal observer")
     require("assets/gallery/earth/earth-007.jpg" not in index, "Homepage still references the 12 MB Everest original")
     require(f'admin.css?v={ADMIN_STYLE_CACHE_VERSION}' in admin, "Admin page has an old cache version")
-    for token in ("PRIVATE FILM STUDIO", "CONFIGURATION REQUIRED", "OWNER ACCESS", "私人影像管理", "VIDEO PUBLISHER"):
+    for token in (
+        "PRIVATE FILM STUDIO",
+        "CONFIGURATION REQUIRED",
+        "OWNER ACCESS",
+        "私人影像管理",
+        "VIDEO PUBLISHER",
+        "PHOTOGRAPHY",
+        "FILMS",
+    ):
         require(token not in admin, f"Obsolete admin annotation remains: {token}")
+    for token in ("锟斤拷", "鎽勫奖", "鍔ㄦ", "姝ｅ湪", "鏂板", "绔欏"):
+        require(token not in admin, f"Admin mojibake remains: {token}")
+    require(not re.search(r"(?<!<)/(button|small|figcaption)>", admin), "Admin contains closing-tag text leakage")
     for token in (
         '<section class="login-panel" data-login hidden>',
         "<h1>登录</h1>",
@@ -178,9 +194,13 @@ def verify_local(root: Path) -> None:
         '"name": "plutonoc-studio-static"' in admin_deploy_script
         and '"build": "node build-static.cjs"' in admin_deploy_script
         and "node build-static.cjs" in admin_deploy_script
+        and "Copy-Item -LiteralPath $adminSource" in admin_deploy_script
+        and "Assert-SameFile" in admin_deploy_script
+        and "Test-AdminHtml" in admin_deploy_script
+        and "Get-Content -LiteralPath (Join-Path $projectRoot \"admin.html\")" not in admin_deploy_script
         and "tcb hosting deploy" in admin_deploy_script
         and "--retry-count 5" in admin_deploy_script,
-        "CloudBase static admin deployment must build dist locally and upload it directly",
+        "CloudBase static admin deployment must preserve UTF-8 bytes, verify dist and upload directly",
     )
     require("3000" in admin_script and "1600" in admin_script, "Admin photo derivatives are not configured")
     runtime_sources = index + style + admin + admin_style
@@ -236,6 +256,11 @@ def verify_local(root: Path) -> None:
         "threshold: [0, .08, .35]",
         "is-reveal-before",
         "is-reveal-after",
+        "plutonoc.gallery.seen.v1",
+        "function openGalleryDirectory",
+        "function renderGalleryDirectory",
+        "syncFocusedFromCenter",
+        "directoryImageConcurrency = isMobile ? 4 : 6",
     ):
         require(marker in script, f"Missing performance marker: {marker}")
     for marker in (
@@ -244,6 +269,9 @@ def verify_local(root: Path) -> None:
         ".archive-list.reveal.is-visible .archive-row",
         ".equipment-media.reveal.is-visible",
         ".footer-admin-entry",
+        ".gallery-directory-grid",
+        ".gallery-directory-card",
+        ".photo-information-nav",
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
@@ -323,7 +351,16 @@ def verify_remote_admin(url: str, label: str) -> None:
     )
     require(f"admin.js?v={ADMIN_SCRIPT_CACHE_VERSION}" in admin, f"{label} has an old script version")
     require(CLOUDBASE_SDK_URL in admin, f"{label} CloudBase SDK reference is missing")
-    require("OWNER ACCESS" not in admin and "VIDEO PUBLISHER" not in admin, f"{label} contains obsolete annotations")
+    require(
+        all(token not in admin for token in ("OWNER ACCESS", "VIDEO PUBLISHER", "PHOTOGRAPHY", "FILMS")),
+        f"{label} contains obsolete annotations",
+    )
+    require(
+        all(token not in admin for token in ("锟斤拷", "鎽勫奖", "鍔ㄦ", "姝ｅ湪", "鏂板", "绔欏")),
+        f"{label} contains mojibake",
+    )
+    require(not re.search(r"(?<!<)/(button|small|figcaption)>", admin), f"{label} contains closing-tag text leakage")
+    require(all(token in admin for token in ("摄影作品", "动态影像", "新增作品", "保存并发布")), f"{label} Chinese UI is incomplete")
     require('data-photo-form' in admin and 'data-publisher' in admin, f"{label} photo studio is missing")
     require('data-github-form' not in admin, f"{label} still asks for a GitHub token")
 

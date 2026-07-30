@@ -39,7 +39,7 @@
   <link rel="preload" href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchpriority="high">
   <link rel="preload" href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchpriority="high">
   <link rel="preload" href="assets/branding/per-aspera-ad-astra-handwritten.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css?v=20260724-footer-visible-4">
+  <link rel="stylesheet" href="style.css?v=20260730-gallery-index-1">
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -203,6 +203,12 @@
           <button type="button" data-filter="nightscape">星野 <i data-filter-count="nightscape">14</i></button>
           <button type="button" data-filter="earth">大地 <i data-filter-count="earth">61</i></button>
         </div>
+        <div class="gallery-discovery">
+          <span class="gallery-seen-progress">已看 <b data-gallery-seen-count>0</b> / <i data-gallery-seen-total>117</i></span>
+          <button type="button" data-gallery-unseen>未看</button>
+          <button type="button" data-gallery-continue>继续浏览</button>
+          <button type="button" data-gallery-directory-open>目录</button>
+        </div>
         <div class="gallery-controls">
           <span><b class="gallery-current">01</b> / <i class="gallery-total">117</i></span>
           <button class="gallery-prev" type="button" aria-label="上一张">←</button>
@@ -301,19 +307,59 @@
     </section>
   </main>
 
+  <dialog class="gallery-directory" data-gallery-directory aria-labelledby="gallery-directory-title">
+    <header class="gallery-directory-header">
+      <div>
+        <p>PHOTOGRAPHY INDEX</p>
+        <h2 id="gallery-directory-title">摄影目录</h2>
+      </div>
+      <p class="gallery-directory-summary" data-gallery-directory-summary>117 张作品</p>
+      <button class="gallery-directory-close" type="button" aria-label="关闭摄影目录" data-gallery-directory-close>×</button>
+    </header>
+    <div class="gallery-directory-tools">
+      <label class="gallery-directory-search">
+        <span>搜索作品</span>
+        <input type="search" data-gallery-directory-search placeholder="标题、地点、设备或参数" autocomplete="off">
+      </label>
+      <div class="gallery-directory-filter" aria-label="摄影分类">
+        <button class="active" type="button" data-directory-category="all">全部</button>
+        <button type="button" data-directory-category="deepsky">深空</button>
+        <button type="button" data-directory-category="sunmoon">日月</button>
+        <button type="button" data-directory-category="planet">行星</button>
+        <button type="button" data-directory-category="nightscape">星野</button>
+        <button type="button" data-directory-category="earth">大地</button>
+      </div>
+      <div class="gallery-directory-filter status-filter" aria-label="浏览状态">
+        <button class="active" type="button" data-directory-status="all">全部</button>
+        <button type="button" data-directory-status="unseen">未看</button>
+        <button type="button" data-directory-status="seen">已看</button>
+      </div>
+    </div>
+    <div class="gallery-directory-grid" data-gallery-directory-grid></div>
+    <footer class="gallery-directory-footer">
+      <p data-gallery-directory-result>117 张作品</p>
+      <button type="button" data-gallery-clear-seen>清除浏览记录</button>
+    </footer>
+  </dialog>
+
   <dialog class="photo-dialog" data-photo-dialog>
     <button class="dialog-close" type="button" aria-label="关闭">×</button>
-    <button class="dialog-prev" type="button" aria-label="上一张">←</button>
-    <div class="photo-stage"><img alt=""></div>
+    <div class="photo-stage">
+      <button class="dialog-prev" type="button" aria-label="上一张">←</button>
+      <img alt="">
+      <button class="dialog-next" type="button" aria-label="下一张">→</button>
+    </div>
     <aside class="photo-information">
-      <p class="photo-position"><span data-photo-current>01</span> / <span data-photo-total>117</span></p>
+      <div class="photo-information-nav">
+        <p class="photo-position"><span data-photo-current>01</span> / <span data-photo-total>117</span></p>
+        <button type="button" data-gallery-directory-return>返回目录</button>
+      </div>
       <section data-detail-object><i>01 / <span data-object-label>OBJECT</span></i><h2 data-photo-title></h2><p data-photo-category></p></section>
       <section data-detail-capture hidden><i>02 / CAPTURE</i><dl><div data-detail-date hidden><dt>日期</dt><dd></dd></div><div data-detail-location hidden><dt>地点</dt><dd></dd></div></dl></section>
       <section data-detail-system hidden><i>03 / SYSTEM</i><dl><div data-detail-equipment hidden><dt>设备</dt><dd></dd></div><div data-detail-parameters hidden><dt>参数</dt><dd></dd></div></dl></section>
       <section data-detail-process hidden><i>04 / PROCESS</i><p></p></section>
       <section data-detail-notes hidden><i>05 / NOTES</i><p data-detail-story hidden></p><p data-detail-note hidden></p></section>
     </aside>
-    <button class="dialog-next" type="button" aria-label="下一张">→</button>
   </dialog>
 
   <dialog class="video-dialog" data-video-dialog>
@@ -326,6 +372,6 @@
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script src="video-data.js?v=20260720-pingfang-header-1"></script>
   <script src="gallery-data.js?v=20260724144602-742m"></script>
-  <script src="script.js?v=20260722-scroll-reveal-1"></script>
+  <script src="script.js?v=20260730-gallery-index-1"></script>
 </body>
 </html>

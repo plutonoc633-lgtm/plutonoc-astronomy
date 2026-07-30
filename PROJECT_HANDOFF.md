@@ -424,3 +424,18 @@ npx --yes --package @cloudbase/cli@3.6.3 tcb config update fn plutonoc-content-p
   - “部署超时，网站尚未确认更新”：180 秒内未确认官网版本，不能视为已上线。
 - 六小时巡检现在精确比较仓库 `main` 与官网的摄影/视频缓存版本、已发布数量和全部 ID，并检查后台上传的 WebP 展示图与预览图。以后若 `main` 已有新内容但 Pages 仍是旧版，巡检必须失败并按既有规则创建或更新故障 Issue。
 - 当前规范数据与运行时均为 117 张。“云闪”ID 为 `earth-mrz1z0j9-d7321a`，分类“大地”，排序 61，状态 `published`。两张衍生图片继续使用内容哈希路径；本次修复不改摄影视觉、Canvas 清晰度、CloudBase 登录或视频内容。
+
+## 22. 2026-07-30 摄影目录、浏览进度与后台 UTF-8 修复
+
+- 摄影 Canvas 继续作为默认视觉入口，工具栏新增“目录 / 未看 / 继续浏览 / 已看数量”。目录仅在用户打开时生成，使用现有 `previewSrc`、视口观察和手机 4 / 桌面 6 张并发加载，不增加首页摄影请求。
+- 目录支持按标题、分类、地点、设备和参数搜索，支持五类摄影筛选及“全部 / 未看 / 已看”。点击结果会把 Canvas 切到可包含该作品的分类、定位真实作品并打开灯箱；“继续浏览”打开排序最靠前的未看作品。
+- 作品只有在灯箱实际显示后才记为已看。记录键为 `plutonoc.gallery.seen.v1`，仅保存作品 ID 到当前浏览器 `localStorage`；无效或已删除 ID 会自动丢弃，目录底部可二次确认后清空记录。该记录不上传、不与管理员账号同步。
+- Canvas 每次绘制后以画面中心最近的渲染项同步真实作品索引，重复平铺的视觉副本仍映射到同一个作品，不重复计数。灯箱新增“返回目录”。
+- 灯箱前后按钮已移入 `.photo-stage`，桌面与手机均以图片区域为定位边界。右侧资料栏不再参与按钮位置估算，也不会被“下一张”遮挡。
+- CloudBase 后台乱码根因是 Windows PowerShell 使用默认编码读取 UTF-8 `admin.html` 后再写回 UTF-8，导致中文和结束标签损坏。`tools/deploy-admin-cloudbase.ps1` 现改为逐字节复制 HTML，并在本地构建和上传前校验 UTF-8、中文关键字、乱码特征、裸露结束标签及源文件/暂存文件 SHA-256 一致性。
+- 后台删除 `PHOTOGRAPHY / FILMS` 装饰眉题，保留全中文内容管理界面和必要的 JPEG、WebP、MP4、CloudBase 技术说明。公开 CSS / JS 缓存版本为 `20260730-gallery-index-1`，后台 CSS / JS 版本为 `20260730-utf8-admin-1`。
+- `tools/verify-site.py` 会阻止摄影目录、已看存储、4/6目录图片并发、灯箱舞台按钮、后台字节复制验证、乱码扫描或新缓存版本缺失。后台页面更新后仍必须额外运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/deploy-admin-cloudbase.ps1
+```
