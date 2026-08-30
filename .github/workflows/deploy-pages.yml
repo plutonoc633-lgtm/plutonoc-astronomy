@@ -24,6 +24,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic image builder
+        run: python -m pip install Pillow==12.2.0
       - name: Verify JavaScript
         run: |
           node --check script.js
@@ -31,6 +37,7 @@ jobs:
           node --check cloudfunctions/plutonoc-content-publisher/index.js
           node --check cloudfunctions/plutonoc-content-publisher/content-runtime.js
           node tools/build-content.mjs --check
+          python tools/build-first-view-assets.py --check
       - name: Verify static site
         run: python tools/verify-site.py --root .
       - name: Configure Pages

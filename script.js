@@ -15,6 +15,49 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
 
+  function hydrateDeferredMedia(element) {
+    if (!element || element.dataset.mediaHydrated === 'true') return;
+    const picture = element.closest?.('picture');
+    $$('source[data-deferred-srcset]', picture).forEach(source => {
+      source.srcset = source.dataset.deferredSrcset;
+      delete source.dataset.deferredSrcset;
+    });
+    if (element.dataset.deferredSrc) {
+      element.src = element.dataset.deferredSrc;
+      delete element.dataset.deferredSrc;
+    }
+    if (element.dataset.deferredPoster) {
+      element.poster = element.dataset.deferredPoster;
+      delete element.dataset.deferredPoster;
+    }
+    element.dataset.mediaHydrated = 'true';
+  }
+
+  const deferredObserverCallback = (entries, observer) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          hydrateDeferredMedia(entry.target);
+          observer.unobserve(entry.target);
+        });
+      };
+  const deferredMediaObserver = 'IntersectionObserver' in window
+    ? new IntersectionObserver(deferredObserverCallback, { rootMargin: '600px 0px', threshold: 0 })
+    : null;
+  const deferredNearMediaObserver = 'IntersectionObserver' in window
+    ? new IntersectionObserver(deferredObserverCallback, { rootMargin: '0px 0px -5% 0px', threshold: 0 })
+    : null;
+
+  function registerDeferredMedia(root = document) {
+    $$('[data-deferred-src]:not([data-deferred-manual]), [data-deferred-poster]:not([data-deferred-manual])', root).forEach(element => {
+      if (element.dataset.mediaHydrated === 'true') return;
+      const observer = element.hasAttribute('data-deferred-near') ? deferredNearMediaObserver : deferredMediaObserver;
+      if (observer) observer.observe(element);
+      else hydrateDeferredMedia(element);
+    });
+  }
+
+  registerDeferredMedia();
+
   const allWorks = [...(window.galleryData || [])];
   const categoryConfig = window.categoryConfig || {};
   const categoryOrder = ['deepsky', 'sunmoon', 'planet', 'nightscape', 'earth'];
@@ -110,7 +153,7 @@
   }
 
   function syncTimecode() {
-    const shouldRun = filmSectionVisible && !reducedMotion && !document.hidden;
+    const shouldRun = filmSectionVisible && !isMobile && !reducedMotion && !document.hidden;
     if (!shouldRun) {
       clearInterval(timecodeTimer);
       timecodeTimer = 0;
@@ -206,6 +249,7 @@
 
   function openIndex(event) {
     indexReturnFocus = event?.currentTarget || document.activeElement;
+    if (!isMobile) hydrateDeferredMedia(indexPreview);
     siteIndex.classList.add('is-open');
     siteIndex.setAttribute('aria-hidden', 'false');
     document.body.classList.add('index-open');
@@ -300,7 +344,7 @@
     if (!target) return;
     if (normalizedHash === '#works' || category) ensureArchiveCanvas();
     if (category && archiveCanvas) archiveCanvas.setFilter(category, true);
-    target.scrollIntoView({ block: 'start', behavior: 'auto' });
+    target.scrollIntoView({ block: 'start', behavior: 'instant' });
     if (pushHistory && location.hash !== normalizedHash) history.pushState({ category }, '', normalizedHash);
     scrollDirty = true;
     requestMainFrame();
@@ -1730,7 +1774,8 @@
   if (equipmentTrack && equipmentOriginals.length > 1) {
     const before = document.createDocumentFragment();
     const after = document.createDocumentFragment();
-    equipmentOriginals.forEach(item => {
+    equipmentOriginals.forEach((item, logicalIndex) => {
+      item.dataset.equipmentLogical = String(logicalIndex);
       const beforeClone = item.cloneNode(true);
       const afterClone = item.cloneNode(true);
       beforeClone.setAttribute('aria-hidden', 'true');
@@ -1749,6 +1794,17 @@
   let equipmentWheelAccumulator = 0;
   let equipmentWheelIdleTimer = 0;
   let equipmentNormalizeTimer = 0;
+  let equipmentMediaReady = false;
+
+  function hydrateEquipmentAround() {
+    if (!equipmentMediaReady || !equipmentOriginals.length) return;
+    const center = equipmentLogicalIndex();
+    const wanted = new Set([mod(center - 1, equipmentOriginals.length), center, mod(center + 1, equipmentOriginals.length)]);
+    equipmentItems.forEach(item => {
+      if (!wanted.has(Number(item.dataset.equipmentLogical))) return;
+      hydrateDeferredMedia($('[data-equipment-media]', item));
+    });
+  }
 
   function equipmentStep() {
     const mediaWidth = equipmentTrack?.parentElement?.clientWidth || innerWidth;
@@ -1771,6 +1827,7 @@
       item.classList.toggle('is-hidden', Math.abs(distance) > 1);
     });
     if (equipmentPosition) equipmentPosition.textContent = `${pad(equipmentLogicalIndex() + 1)} / ${pad(equipmentOriginals.length)}`;
+    hydrateEquipmentAround();
     if (instant) requestAnimationFrame(() => equipmentTrack?.classList.remove('is-jumping'));
   }
 
@@ -1847,6 +1904,19 @@
   $('[data-equipment-next]')?.addEventListener('click', () => moveEquipment(1));
   window.addEventListener('resize', () => updateEquipmentTrack(0, true), { passive: true });
   updateEquipmentTrack(0, true);
+  const equipmentSection = $('#equipment');
+  if (equipmentSection && 'IntersectionObserver' in window) {
+    const equipmentMediaObserver = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      equipmentMediaReady = true;
+      hydrateEquipmentAround();
+      equipmentMediaObserver.disconnect();
+    }, { rootMargin: '600px 0px', threshold: 0 });
+    equipmentMediaObserver.observe(equipmentSection);
+  } else {
+    equipmentMediaReady = true;
+    hydrateEquipmentAround();
+  }
 
   /* Film visibility */
   if ('IntersectionObserver' in window) {
@@ -1923,7 +1993,7 @@
   }
   function filmCard(film, index) {
     return `<figure class="film-card" data-film-index="${index}">
-      <img src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" loading="lazy" decoding="async">
+      <picture><source media="(max-width: 760px)" data-deferred-srcset="${escapeHtml(film.posterPreviewUrl || film.posterUrl)}"><img data-deferred-src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" decoding="async"></picture>
       <video class="film-preview" muted loop playsinline preload="none" aria-hidden="true"></video>
       <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
       <figcaption><h3>${escapeHtml(film.title)}</h3><p>${escapeHtml(film.date || '')}<br>${formatDuration(film.duration)}</p></figcaption>
@@ -1978,6 +2048,8 @@
     feature.innerHTML = filmCard(films[0], 0);
     list.innerHTML = films.slice(1).map((film, index) => filmCard(film, index + 1)).join('');
     status.textContent = `${pad(films.length)} / MOTION`;
+    registerDeferredMedia(feature);
+    registerDeferredMedia(list);
     wireFilmPreviews();
     layoutDirty = true;
     requestMainFrame();

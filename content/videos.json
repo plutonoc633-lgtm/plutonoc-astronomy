@@ -1,5 +1,5 @@
 {
-  "contentVersion": "20260724-migration-1",
+  "contentVersion": "20260830-responsive-1",
   "items": [
     {
       "aspectRatio": 1.7777777777777777,
@@ -15,7 +15,8 @@
       "summary": "",
       "title": "星辰行梦",
       "updatedAt": "",
-      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/star-dream.mp4"
+      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/star-dream.mp4",
+      "posterPreviewUrl": "assets/video-posters/previews/star-dream.webp"
     },
     {
       "aspectRatio": 1.7777777777777777,
@@ -31,7 +32,8 @@
       "summary": "",
       "title": "江南大学天文协会宣传片",
       "updatedAt": "",
-      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/tianjian-promo.mp4"
+      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/tianjian-promo.mp4",
+      "posterPreviewUrl": "assets/video-posters/previews/tianjian-promo.webp"
     },
     {
       "aspectRatio": 1.7777777777777777,
@@ -47,7 +49,8 @@
       "summary": "",
       "title": "木星观测",
       "updatedAt": "",
-      "videoUrl": "assets/videos/jupiter.mp4"
+      "videoUrl": "assets/videos/jupiter.mp4",
+      "posterPreviewUrl": "assets/video-posters/previews/local-jupiter-observation.webp"
     }
   ],
   "version": 1

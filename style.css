@@ -461,11 +461,12 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .film-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .film-card { position: relative; min-height: min(70vw, 760px); overflow: hidden; background: #000; }
 .film-list .film-card { min-height: 380px; }
-.film-card > img,
+.film-card > picture,
 .film-card > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .35s ease, transform .8s var(--ease-cinematic); }
+.film-card > picture img { width: 100%; height: 100%; object-fit: contain; }
 .film-card > video { opacity: 0; }
 .film-card.is-previewing > video { opacity: 1; }
-.film-card.is-previewing > img { opacity: 0; }
+.film-card.is-previewing > picture { opacity: 0; }
 .film-card button { position: absolute; z-index: 3; inset: 0; width: 100%; cursor: pointer; }
 .film-card .play { display: grid; place-items: center; width: 72px; height: 72px; margin: auto; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: rgba(0,0,0,.2); transition: transform .35s var(--ease-cinematic), background .3s ease; }
 .film-card:hover .play,
@@ -498,7 +499,9 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .equipment-track.is-jumping figure { transition: none; }
 .equipment-track figure.is-neighbor { opacity: .58; transform: translate3d(calc(-50% + var(--equipment-x, 0px) + var(--equipment-drag, 0px)), -50%, 0) scale(.72); filter: brightness(.7) saturate(.78); }
 .equipment-track figure.is-center { z-index: 2; opacity: 1; transform: translate3d(calc(-50% + var(--equipment-x, 0px) + var(--equipment-drag, 0px)), -50%, 0) scale(1); filter: none; pointer-events: auto; }
-.equipment-track img { width: 100%; height: 100%; object-fit: contain; }
+.equipment-track picture,
+.equipment-track img { display: block; width: 100%; height: 100%; }
+.equipment-track img { object-fit: contain; }
 .equipment-track figcaption { position: absolute; left: 22px; bottom: 20px; padding: 8px 10px; color: var(--muted-bright); background: rgba(5,6,9,.74); font: 10px/1 var(--font-meta); letter-spacing: .1em; }
 .equipment-controls { position: absolute; left: var(--page-gutter); right: 28px; bottom: 22px; display: flex; align-items: center; gap: 10px; }
 .equipment-controls button { width: 42px; height: 42px; cursor: pointer; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--foreground); background: rgba(5,6,9,.72); transition: background .25s ease, transform .2s ease; }
@@ -723,7 +726,7 @@ dialog { color: inherit; }
   .canvas-stage { height: 78svh; min-height: 560px; max-height: 760px; }
   .archive-canvas { touch-action: pan-y; }
   .canvas-coordinate { display: none; }
-  .timecode { top: 210px; font-size: 16vw; }
+  .timecode { display: none; }
   .film-card { min-height: 65svh; }
   .film-card h3,
   .film-list .film-card h3 { max-width: calc(100% - 56px); font-size: clamp(20px, 5.8vw, 24px); line-height: 1.12; }

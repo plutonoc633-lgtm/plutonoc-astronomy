@@ -474,3 +474,22 @@ python tools/build-first-view-assets.py
 - 刷新或重新进入后台时会提供“恢复草稿 / 放弃草稿”。若仓库提交已变化会提示核对；若草稿曾选择图片或封面，恢复文字后必须重新选择文件。有未发布修改或正在发布时关闭页面会触发浏览器原生离开提醒。
 - 发布成功、主动清空、永久删除或退出登录会清除对应草稿；发布失败和远端冲突不会清除。CloudBase 后台和 Pages 后台分属不同域名，`localStorage` 草稿不会跨域同步，正式维护应始终使用 CloudBase Web 应用地址。
 - 当前公共 CSS / JS 缓存版本为 `20260730-first-view-1`，后台 CSS / JS 缓存版本为 `20260730-drafts-1`。摄影与视频数据缓存版本没有因本轮性能优化而改写。
+
+## 25. 2026-08-30 弱网首屏与响应式内容资源
+
+- 手机首页主视觉及五类精选均有独立 1280px、质量 80 的 WebP：`categoryConfig.<分类>.homeMobileCover`。首屏只立即请求珠峰、手写口号和 256px 页头水印；五栏图片在实际进入视口后才赋值，桌面仍读取高清 `homeCover`。当前本机冷启动实测约 354KB，Lighthouse 三次中位数为 Performance 95、LCP 2.955s、TBT 44ms、CLS 0、传输量约 354KB。
+- 视频规范数据增加可选 `posterPreviewUrl`，当前三条视频均有 960×540 WebP 手机封面。公开页面在动态影像区距视口约 600px 时才加载，手机读取轻量封面，桌面与播放弹窗继续读取 `posterUrl` 高清封面。
+- 设备图位于 `assets/equipment/responsive/`，每张包含 720px 与 1280px 两档。设备区接近视口前不会请求图片；进入后仅水合当前项及左右相邻项，切换时再补下一张。结尾照片、社交头像和首页木星入口封面也统一使用 600px 的自定义延迟加载，公开首页继续不请求 CloudBase SDK。
+- `critical.css` 是首屏必需样式的唯一源文件，由 `tools/build-first-view-assets.py` 原样嵌入 `index.html` 的 `CRITICAL_CSS_START / END` 标记之间；完整 `style.css` 使用 preload + `media="print"` 异步加载。不要直接编辑 HTML 中的内联副本。构建与检查命令为：
+
+```powershell
+python tools/build-first-view-assets.py
+python tools/build-first-view-assets.py --check
+node tools/build-content.mjs
+node tools/build-content.mjs --check
+```
+
+- 后台新增/替换视频封面时同时生成 1920×1080 高清 WebP 与 960×540 预览；更换摄影首页精选时同时生成 2560px 桌面封面与 1280px 手机封面，二者使用内容哈希路径。共享运行时生成器对旧内容仍分别回退 `posterUrl` 与精选作品 `previewSrc`，但当前规范内容和 Pages 构建检查要求轻量资源实际存在。
+- CloudBase 云函数允许的新增路径为 `assets/gallery/hero/<分类>-mobile-<hash>.webp` 与 `assets/video-posters/previews/uploads/<id>-<hash>.webp`。更新本节代码后，除推送 Pages 外还必须执行云函数代码更新与 `tools/deploy-admin-cloudbase.ps1`，否则后台不会生成新档位。
+- 手机端装饰性时间码不再渲染或运行计时器；桌面时间码保持 100ms 节流。INDEX 大预览只在桌面打开 INDEX 后加载，直接进入 `#films`、`#contact` 使用瞬时定位，避免滚动穿越中间栏目而误触发其资源。
+- 当前公共 CSS / JS 缓存版本为 `20260830-weak-network-1`，摄影与视频内容版本均为 `20260830-responsive-1`，后台 CSS / JS 版本为 `20260830-responsive-1`。Pages 工作流固定使用 Pillow 12.2.0，并在上传前执行响应式资源与内联关键 CSS 的确定性检查。

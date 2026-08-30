@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC 管理后台</title>
-  <link rel="stylesheet" href="admin.css?v=20260730-drafts-1">
+  <link rel="stylesheet" href="admin.css?v=20260830-responsive-1">
 </head>
 <body>
   <header class="studio-header">
@@ -117,6 +117,7 @@
             <form class="content-form" data-video-form>
               <input type="hidden" name="recordId">
               <input type="hidden" name="existingPosterUrl">
+              <input type="hidden" name="existingPosterPreviewUrl">
               <div class="form-heading"><h2 data-video-form-title>新增影像</h2><button type="button" data-reset-video>清空</button></div>
               <div class="draft-notice" data-video-draft-notice hidden>
                 <p data-video-draft-text></p>
@@ -142,7 +143,7 @@
               </div>
               <button type="button" class="secondary probe-button" data-probe-video>从视频地址读取时长与画幅</button>
               <label class="file-zone">替换封面
-                <small>可不选；选择后自动生成 1920×1080 WebP</small>
+                <small>可不选；选择后自动生成高清封面和 960px 手机预览</small>
                 <input name="poster" type="file" accept="image/jpeg,image/png,image/webp">
                 <span data-poster-file>保留现有封面</span>
               </label>
@@ -174,6 +175,6 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin.js?v=20260730-drafts-1"></script>
+  <script src="admin.js?v=20260830-responsive-1"></script>
 </body>
 </html>

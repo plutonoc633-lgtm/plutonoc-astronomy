@@ -501,15 +501,22 @@
     if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) throw new Error('只接受 JPEG、PNG 或 WebP 封面');
     const image = await decodeImage(file);
     const poster = await renderImage(image, 1920, .9, 16 / 9);
+    const preview = await renderImage(image, 960, .8, 16 / 9, 900_000);
     image.close?.();
-    return { blob: poster.blob, hash: await sha256(poster.blob) };
+    return { posterBlob: poster.blob, previewBlob: preview.blob, hash: await sha256(poster.blob) };
   }
 
   async function heroFromBlob(blob) {
     const image = await decodeImage(blob);
-    const hero = await renderImage(image, 2560, .9);
+    const desktop = await renderImage(image, 2560, .9);
+    const mobile = await renderImage(image, 1280, .8, 0, 1_500_000);
     image.close?.();
-    return { blob: hero.blob, hash: await sha256(hero.blob) };
+    return {
+      desktopBlob: desktop.blob,
+      mobileBlob: mobile.blob,
+      desktopHash: await sha256(desktop.blob),
+      mobileHash: await sha256(mobile.blob),
+    };
   }
 
   async function fetchAsset(path, pendingFiles) {
@@ -547,11 +554,15 @@
       if (before[category] === after[category] && !forcedCategories.includes(category)) continue;
       const item = next.items.find(candidate => candidate.id === after[category]);
       const hero = await heroFromBlob(await fetchAsset(item.src, files));
-      const heroPath = `assets/gallery/hero/${category}-${hero.hash.slice(0, 12)}.webp`;
-      files.push([heroPath, hero.blob]);
+      const heroPath = `assets/gallery/hero/${category}-${hero.desktopHash.slice(0, 12)}.webp`;
+      const mobilePath = `assets/gallery/hero/${category}-mobile-${hero.mobileHash.slice(0, 12)}.webp`;
+      files.push([heroPath, hero.desktopBlob], [mobilePath, hero.mobileBlob]);
       const oldHero = next.categoryConfig[category].homeCover;
+      const oldMobile = next.categoryConfig[category].homeMobileCover;
       next.categoryConfig[category].homeCover = heroPath;
+      next.categoryConfig[category].homeMobileCover = mobilePath;
       if (/^assets\/gallery\/hero\/[^/]+-[a-f0-9]{12}\.webp$/.test(oldHero)) deletions.push(oldHero);
+      if (/^assets\/gallery\/hero\/[^/]+-[a-f0-9]{12}\.webp$/.test(oldMobile)) deletions.push(oldMobile);
     }
   }
 
@@ -637,6 +648,7 @@
     videoForm.reset();
     videoForm.elements.recordId.value = '';
     videoForm.elements.existingPosterUrl.value = '';
+    videoForm.elements.existingPosterPreviewUrl.value = '';
     videoForm.elements.sortOrder.value = Math.max(0, ...repoState.videos.items.map(item => item.sortOrder || 0)) + 1;
     videoForm.elements.aspectRatio.value = '1.7778';
     videoForm.elements.status.value = 'published';
@@ -657,6 +669,7 @@
     suppressDraftSave = true;
     videoForm.elements.recordId.value = item.id;
     videoForm.elements.existingPosterUrl.value = item.posterUrl;
+    videoForm.elements.existingPosterPreviewUrl.value = item.posterPreviewUrl || item.posterUrl;
     videoForm.elements.videoUrl.value = item.videoUrl;
     videoForm.elements.title.value = item.title;
     videoForm.elements.category.value = item.category;
@@ -667,7 +680,7 @@
     videoForm.elements.duration.value = item.duration;
     videoForm.elements.aspectRatio.value = item.aspectRatio || 16 / 9;
     videoForm.elements.status.value = item.status;
-    $('[data-poster-preview]').src = item.posterUrl;
+    $('[data-poster-preview]').src = item.posterPreviewUrl || item.posterUrl;
     $('[data-poster-file]').textContent = '保留现有封面；选择新文件可替换';
     $('[data-video-form-title]').textContent = `编辑 / ${item.title}`;
     $('[data-delete-video]').hidden = false;
@@ -680,7 +693,7 @@
     $('[data-video-count]').textContent = items.length;
     $('[data-video-list]').innerHTML = items.length ? items.map(item => `
       <article class="manager-card ${item.status === 'draft' ? 'is-hidden' : ''}" data-video-id="${escapeHtml(item.id)}">
-        <img src="${escapeHtml(item.posterUrl)}" alt="" loading="lazy" decoding="async">
+        <img src="${escapeHtml(item.posterPreviewUrl || item.posterUrl)}" alt="" loading="lazy" decoding="async">
         <div><h3>${escapeHtml(item.title)}</h3><p><span class="status">${item.status === 'published' ? '已发布' : '草稿'}</span> / ${escapeHtml(item.category)} / 排序 ${item.sortOrder}</p></div>
         <button type="button" data-edit-video>编辑</button>
       </article>`).join('') : '<p>暂无影像</p>';
@@ -709,7 +722,7 @@
   }
 
   function isReferencedByOtherVideo(path, videos, exceptId) {
-    return videos.items.some(item => item.id !== exceptId && item.posterUrl === path);
+    return videos.items.some(item => item.id !== exceptId && (item.posterUrl === path || item.posterPreviewUrl === path));
   }
 
   async function confirmPermanent(title) {
@@ -751,7 +764,7 @@
       preparedPoster = await preparePosterFile(file);
       markDraftDirty('video');
       revokePreview('poster');
-      posterPreviewUrl = URL.createObjectURL(preparedPoster.blob);
+      posterPreviewUrl = URL.createObjectURL(preparedPoster.posterBlob);
       $('[data-poster-preview]').src = posterPreviewUrl;
       $('[data-poster-file]').textContent = `${file.name} / 已生成 WebP`;
       setMessage($('[data-video-message]'), '封面已准备');
@@ -864,6 +877,7 @@
     const title = videoForm.elements.title.value.trim();
     if (!item.id) item.id = `${slug(title) || 'film'}-${Date.now().toString(36)}`;
     const oldPoster = item.posterUrl || '';
+    const oldPosterPreview = item.posterPreviewUrl || '';
     item.title = title;
     item.category = videoForm.elements.category.value;
     item.summary = videoForm.elements.summary.value.trim();
@@ -877,10 +891,13 @@
     item.updatedAt = new Date().toISOString();
     if (preparedPoster) {
       item.posterUrl = `assets/video-posters/uploads/${item.id}-${preparedPoster.hash.slice(0, 12)}.webp`;
-      files.push([item.posterUrl, preparedPoster.blob]);
+      item.posterPreviewUrl = `assets/video-posters/previews/uploads/${item.id}-${preparedPoster.hash.slice(0, 12)}.webp`;
+      files.push([item.posterUrl, preparedPoster.posterBlob], [item.posterPreviewUrl, preparedPoster.previewBlob]);
       if (/^assets\/video-posters\/uploads\//.test(oldPoster) && !isReferencedByOtherVideo(oldPoster, next, item.id)) deletions.push(oldPoster);
+      if (/^assets\/video-posters\/previews\/uploads\//.test(oldPosterPreview) && !isReferencedByOtherVideo(oldPosterPreview, next, item.id)) deletions.push(oldPosterPreview);
     } else {
       item.posterUrl = oldPoster || videoForm.elements.existingPosterUrl.value;
+      item.posterPreviewUrl = oldPosterPreview || videoForm.elements.existingPosterPreviewUrl.value || item.posterUrl;
     }
     if (!item.posterUrl) return setMessage($('[data-video-message]'), '新增影像必须选择封面', true);
     try {
@@ -935,9 +952,9 @@
     if (!current || !(await confirmPermanent(current.title))) return;
     const next = deepClone(repoState.videos);
     next.items = next.items.filter(item => item.id !== id);
-    const deletions = /^assets\/video-posters\/uploads\//.test(current.posterUrl) && !isReferencedByOtherVideo(current.posterUrl, next, current.id)
-      ? [current.posterUrl]
-      : [];
+    const deletions = [current.posterUrl, current.posterPreviewUrl]
+      .filter((path, index, values) => path && values.indexOf(path) === index)
+      .filter(path => /^assets\/video-posters\/(previews\/)?uploads\//.test(path) && !isReferencedByOtherVideo(path, next, current.id));
     try {
       await publishChanges({
         videos: next,

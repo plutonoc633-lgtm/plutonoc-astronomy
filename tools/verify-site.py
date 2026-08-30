@@ -13,16 +13,17 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260730-first-view-1"
-ADMIN_STYLE_CACHE_VERSION = "20260730-drafts-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260730-drafts-1"
-SCRIPT_CACHE_VERSION = "20260730-first-view-1"
+STYLE_CACHE_VERSION = "20260830-weak-network-1"
+ADMIN_STYLE_CACHE_VERSION = "20260830-responsive-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260830-responsive-1"
+SCRIPT_CACHE_VERSION = "20260830-weak-network-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_ASSETS = {
     "assets/branding/plutonoc-watermark-web.png": 100_000,
+    "assets/branding/plutonoc-watermark-header.webp": 20_000,
     "assets/branding/per-aspera-ad-astra-handwritten-web.webp": 40_000,
     "assets/branding/plutonoc-share.jpg": 400_000,
     "assets/branding/favicon-32.png": 20_000,
@@ -33,10 +34,18 @@ REQUIRED_ASSETS = {
     "favicon.ico": 100_000,
     "assets/gallery/previews/earth/earth-007.webp": 400_000,
     "assets/gallery/hero/earth.webp": 700_000,
+    "assets/gallery/hero/earth-mobile.webp": 160_000,
+    "assets/gallery/hero/deepsky-mobile.webp": 160_000,
+    "assets/gallery/hero/sunmoon-mobile.webp": 160_000,
+    "assets/gallery/hero/planet-mobile.webp": 160_000,
+    "assets/gallery/hero/nightscape-mobile.webp": 160_000,
     "assets/equipment-web.webp": 150_000,
+    "assets/equipment/responsive/equipment-720.webp": 80_000,
+    "assets/equipment/responsive/equipment-1280.webp": 140_000,
 }
 REMOTE_TYPES = {
     "assets/branding/plutonoc-watermark-web.png": "image/png",
+    "assets/branding/plutonoc-watermark-header.webp": "image/webp",
     "assets/branding/per-aspera-ad-astra-handwritten-web.webp": "image/webp",
     "assets/branding/plutonoc-share.jpg": "image/jpeg",
     "assets/branding/favicon-32.png": "image/png",
@@ -46,7 +55,14 @@ REMOTE_TYPES = {
     "assets/branding/avatar-xiaohongshu.webp": "image/webp",
     "assets/gallery/previews/earth/earth-007.webp": "image/webp",
     "assets/gallery/hero/earth.webp": "image/webp",
+    "assets/gallery/hero/earth-mobile.webp": "image/webp",
+    "assets/gallery/hero/deepsky-mobile.webp": "image/webp",
+    "assets/gallery/hero/sunmoon-mobile.webp": "image/webp",
+    "assets/gallery/hero/planet-mobile.webp": "image/webp",
+    "assets/gallery/hero/nightscape-mobile.webp": "image/webp",
     "assets/equipment-web.webp": "image/webp",
+    "assets/equipment/responsive/equipment-720.webp": "image/webp",
+    "assets/equipment/responsive/equipment-1280.webp": "image/webp",
 }
 
 
@@ -98,6 +114,7 @@ def verify_local(root: Path) -> None:
     gallery_content = json.loads((root / "content/gallery.json").read_text(encoding="utf-8"))
     video_content = json.loads((root / "content/videos.json").read_text(encoding="utf-8"))
     script = (root / "script.js").read_text(encoding="utf-8")
+    critical = (root / "critical.css").read_text(encoding="utf-8").strip()
     monitor_workflow = (root / ".github/workflows/monitor-production.yml").read_text(encoding="utf-8")
     device_qa = (root / "REAL_DEVICE_QA.md").read_text(encoding="utf-8")
 
@@ -108,28 +125,27 @@ def verify_local(root: Path) -> None:
         'href="assets/branding/favicon-32.png"',
         f'style.css?v={STYLE_CACHE_VERSION}',
         f'script.js?v={SCRIPT_CACHE_VERSION}',
-        'href="assets/gallery/previews/earth/earth-007.webp" as="image" type="image/webp" media="(max-width: 767px)"',
+        'href="assets/gallery/hero/earth-mobile.webp" as="image" type="image/webp" media="(max-width: 767px)"',
         'href="assets/gallery/hero/earth.webp" as="image" type="image/webp" media="(min-width: 768px)"',
         'href="assets/branding/per-aspera-ad-astra-handwritten-web.webp" as="image" type="image/webp" fetchpriority="high"',
         '<picture data-home-picture="profile-earth">',
-        '<source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/previews/earth/earth-007.webp" type="image/webp">',
+        '<source data-home-mobile media="(max-width: 767px)" srcset="assets/gallery/hero/earth-mobile.webp" type="image/webp">',
         '<img data-home-desktop src="assets/gallery/hero/earth.webp"',
         '<picture data-home-picture="card-deepsky">',
         '<picture data-home-picture="card-sunmoon">',
         '<picture data-home-picture="card-planet">',
         '<picture data-home-picture="card-nightscape">',
         '<picture data-home-picture="card-earth">',
-        'src="assets/equipment-web.webp"',
-        'src="assets/branding/plutonoc-watermark-web.png"',
-        'class="brand" href="#home" data-transition-link aria-label="PlutonoC，返回首页"><img src="assets/branding/plutonoc-watermark-web.png" width="640" height="175"',
-        'preload="none" data-home-motion',
+        'data-deferred-src="assets/equipment/responsive/equipment-1280.webp"',
+        'class="brand" href="#home" data-transition-link aria-label="PlutonoC，返回首页"><img src="assets/branding/plutonoc-watermark-header.webp" width="256" height="70"',
+        'data-deferred-poster="assets/video-posters/previews/local-jupiter-observation.webp"',
         'class="arrival-hero"',
         'class="arrival-outro"',
         'class="arrival-footer"',
         f'<a class="footer-admin-entry" href="{CLOUDBASE_ADMIN_URL}">© 2026 PLUTONOC</a>',
-        'src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
-        'src="assets/branding/avatar-douyin.webp" width="256" height="256"',
-        'src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
+        'data-deferred-src="assets/branding/avatar-bilibili.webp" width="256" height="256"',
+        'data-deferred-src="assets/branding/avatar-douyin.webp" width="256" height="256"',
+        'data-deferred-src="assets/branding/avatar-xiaohongshu.webp" width="256" height="256"',
         'href="https://www.xiaohongshu.com/user/profile/60e62ebb0000000001007f48"',
         'class="gallery-directory" data-gallery-directory',
         'data-gallery-unseen',
@@ -142,6 +158,13 @@ def verify_local(root: Path) -> None:
     )
     for token in required_html:
         require(token in index, f"Missing index marker: {token}")
+    critical_match = re.search(r'<style data-critical-css>\s*([\s\S]*?)\s*</style>', index)
+    require(critical_match is not None and critical_match.group(1).strip() == critical, "Inline critical CSS is stale")
+    require(
+        f'<link rel="preload" href="style.css?v={STYLE_CACHE_VERSION}" as="style">' in index
+        and f'<link rel="stylesheet" href="style.css?v={STYLE_CACHE_VERSION}" media="print" onload="this.media=\'all\'">' in index,
+        "Full stylesheet is not loaded asynchronously",
+    )
     for token in ("官方账号", "FOLLOW PLUTONOC", "social-index", "account-heading"):
         require(token not in index, f"Obsolete account decoration remains: {token}")
     for token in ('class="header-actions"', 'class="admin-entry"', '>管理</a>'):
@@ -174,6 +197,7 @@ def verify_local(root: Path) -> None:
         'data-studio-tab="videos"',
         'data-photo-form',
         'name="existingThumbnailSrc"',
+        'name="existingPosterPreviewUrl"',
         'data-video-form',
         'data-publisher',
         'data-photo-draft-notice',
@@ -212,6 +236,8 @@ def verify_local(root: Path) -> None:
         "Local checks do not use the shared content generator",
     )
     require("sortOrder: Number(item.sortOrder) || 0" in runtime_generator, "Shared gallery runtime omits sortOrder")
+    require("posterPreviewUrl: item.posterPreviewUrl || item.posterUrl" in runtime_generator, "Shared video runtime omits posterPreviewUrl")
+    require("config?.homeMobileCover || featured?.previewSrc" in runtime_generator, "Homepage mobile cover fallback is missing")
     require("applyHomepageImages" in runtime_generator, "Shared homepage image generator is missing")
     require(
         "applyHomepageImages(nextIndex, gallery)" in publisher_script,
@@ -245,7 +271,7 @@ def verify_local(root: Path) -> None:
         "CloudBase static admin deployment must preserve UTF-8 bytes, verify dist and upload directly",
     )
     require(
-        all(marker in admin_script for marker in ("3000", "1600", "640", "thumbnailBlob", "thumbnailSrc")),
+        all(marker in admin_script for marker in ("3000", "1600", "1280", "960", "640", "thumbnailBlob", "thumbnailSrc", "posterPreviewUrl", "homeMobileCover")),
         "Admin photo derivatives are not configured",
     )
     runtime_sources = index + style + admin + admin_style
@@ -270,6 +296,19 @@ def verify_local(root: Path) -> None:
     require(video_content.get("items"), "Canonical video archive must contain at least one video")
     featured = [item for item in gallery_content["items"] if item.get("featured") and item.get("status") == "published"]
     require(len(featured) == len(gallery_content.get("categoryConfig", {})), "Canonical gallery must retain one featured photo per category")
+    for category, config in gallery_content["categoryConfig"].items():
+        mobile_cover = config.get("homeMobileCover")
+        require(mobile_cover, f"Category is missing homeMobileCover: {category}")
+        mobile_path = root / mobile_cover
+        require(mobile_path.is_file(), f"Category mobile cover is missing: {mobile_cover}")
+        require(mobile_path.stat().st_size <= 160_000, f"Category mobile cover is too large: {mobile_cover}")
+    for item in video_content["items"]:
+        preview = item.get("posterPreviewUrl")
+        require(preview, f"Video is missing posterPreviewUrl: {item.get('id')}")
+        if not preview.startswith(("http://", "https://")):
+            preview_path = root / preview
+            require(preview_path.is_file(), f"Video preview poster is missing: {preview}")
+            require(preview_path.stat().st_size <= 180_000, f"Video preview poster is too large: {preview}")
     thumbnail_total = 0
     for item in gallery_content["items"]:
         thumbnail = item.get("thumbnailSrc")
@@ -332,6 +371,10 @@ def verify_local(root: Path) -> None:
         "data-photo-copy-link",
         "function ensureCloudBaseSdk()",
         "if (config.staticManifest) return []",
+        "rootMargin: '600px 0px'",
+        "function hydrateDeferredMedia(element)",
+        "function hydrateEquipmentAround()",
+        "film.posterPreviewUrl || film.posterUrl",
     ):
         require(marker in script, f"Missing performance marker: {marker}")
     for marker in (
@@ -344,6 +387,7 @@ def verify_local(root: Path) -> None:
         ".gallery-directory-card",
         ".photo-information-nav",
         ".gallery-directory-mobile-filters",
+        ".timecode { display: none; }",
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
@@ -370,14 +414,24 @@ def verify_local(root: Path) -> None:
     require(png_size(root / "assets/branding/favicon-32.png") == (32, 32), "PNG favicon must be 32x32")
     require(png_size(root / "assets/branding/apple-touch-icon.png") == (180, 180), "Apple icon must be 180x180")
 
-    initial_owned = sum((root / relative).stat().st_size for relative in (
-        "assets/gallery/hero/earth.webp",
+    mobile_initial_files = (
+        "index.html",
+        "style.css",
+        "script.js",
+        "gallery-data.js",
+        "video-data.js",
+        "assets/gallery/hero/earth-mobile.webp",
+        "assets/gallery/hero/deepsky-mobile.webp",
+        "assets/gallery/hero/sunmoon-mobile.webp",
+        "assets/gallery/hero/planet-mobile.webp",
+        "assets/gallery/hero/nightscape-mobile.webp",
         "assets/branding/per-aspera-ad-astra-handwritten-web.webp",
-        "assets/branding/plutonoc-watermark-web.png",
-    ))
-    require(initial_owned <= 3_000_000, f"Owned first-view budget exceeded: {initial_owned} bytes")
+        "assets/branding/plutonoc-watermark-header.webp",
+    )
+    initial_owned = sum((root / relative).stat().st_size for relative in mobile_initial_files)
+    require(initial_owned <= 900_000, f"Mobile first-view transfer source budget exceeded: {initial_owned} bytes")
 
-    referenced = set(re.findall(r'(?:src|href|poster|data-preview)="([^"#]+)"', index))
+    referenced = set(re.findall(r'(?:src|href|poster|data-preview|data-deferred-src|data-deferred-poster|data-deferred-srcset)="([^"#]+)"', index))
     for reference in sorted(referenced):
         if reference.startswith(("http://", "https://", "mailto:", "javascript:")):
             continue
@@ -540,6 +594,14 @@ def verify_remote(base_url: str) -> None:
                 require(prefix, f"Gallery thumbnail returned an empty response: {relative}")
                 require(actual_type == "image/webp", f"Gallery thumbnail has unexpected type: {relative} ({actual_type})")
 
+            for category, config in local_gallery["categoryConfig"].items():
+                for key in ("homeCover", "homeMobileCover"):
+                    relative = config[key]
+                    prefix, actual_type, status = fetch_prefix(urljoin(base, relative))
+                    require(status in {200, 206}, f"{category} {key} returned status {status}: {relative}")
+                    require(prefix, f"{category} {key} returned an empty response: {relative}")
+                    require(actual_type == "image/webp", f"{category} {key} has unexpected type: {actual_type}")
+
             sdk_prefix, sdk_type, sdk_status = fetch_prefix(CLOUDBASE_SDK_URL)
             require(sdk_status in {200, 206}, f"Unexpected CloudBase SDK status: {sdk_status}")
             require(sdk_prefix, "CloudBase SDK returned an empty response")
@@ -547,11 +609,12 @@ def verify_remote(base_url: str) -> None:
 
             for video in deployed_videos:
                 label = video.get("title") or video.get("id") or "Video"
-                target = urljoin(base, video["posterUrl"])
-                prefix, actual_type, status = fetch_prefix(target)
-                require(status in {200, 206}, f"{label} poster returned status {status}")
-                require(prefix, f"{label} poster returned an empty response")
-                require(actual_type in {"image/jpeg", "image/png", "image/webp"}, f"{label} poster has unexpected type: {actual_type}")
+                for key in ("posterUrl", "posterPreviewUrl"):
+                    target = urljoin(base, video[key])
+                    prefix, actual_type, status = fetch_prefix(target)
+                    require(status in {200, 206}, f"{label} {key} returned status {status}")
+                    require(prefix, f"{label} {key} returned an empty response")
+                    require(actual_type in {"image/jpeg", "image/png", "image/webp"}, f"{label} {key} has unexpected type: {actual_type}")
 
                 target = urljoin(base, video["videoUrl"])
                 prefix, actual_type, status = fetch_prefix(target)

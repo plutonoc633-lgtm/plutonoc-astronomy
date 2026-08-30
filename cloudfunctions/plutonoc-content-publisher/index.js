@@ -84,7 +84,9 @@ function isAllowedAssetPath(path) {
     /^assets\/gallery\/previews\/uploads\/(deepsky|sunmoon|planet|nightscape|earth)\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
     /^assets\/gallery\/thumbnails\/uploads\/(deepsky|sunmoon|planet|nightscape|earth)\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
     /^assets\/gallery\/hero\/(deepsky|sunmoon|planet|nightscape|earth)-[a-f0-9]{12}\.webp$/,
+    /^assets\/gallery\/hero\/(deepsky|sunmoon|planet|nightscape|earth)-mobile-[a-f0-9]{12}\.webp$/,
     /^assets\/video-posters\/uploads\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
+    /^assets\/video-posters\/previews\/uploads\/[a-z0-9-]+-[a-f0-9]{12}\.webp$/,
   ].some(pattern => pattern.test(value));
 }
 

@@ -43,6 +43,7 @@ function videoRuntime(data) {
       location: item.location || '',
       videoUrl: item.videoUrl,
       posterUrl: item.posterUrl,
+      posterPreviewUrl: item.posterPreviewUrl || item.posterUrl,
       duration: Number(item.duration) || 0,
       aspectRatio: Number(item.aspectRatio) || 16 / 9,
       status: item.status,
@@ -59,11 +60,11 @@ function replacePictureSources(index, pictureName, mobilePath, desktopPath) {
   const output = index.replace(picturePattern, (picture, open, content, close) => {
     found = true;
     let next = content.replace(
-      /(<source\b[^>]*\bdata-home-mobile\b[^>]*\bsrcset=")[^"]*(")/,
+      /(<source\b[^>]*\bdata-home-mobile\b[^>]*\b(?:data-deferred-)?srcset=")[^"]*(")/,
       `$1${mobilePath}$2`,
     );
     next = next.replace(
-      /(<img\b[^>]*\bdata-home-desktop\b[^>]*\bsrc=")[^"]*(")/,
+      /(<img\b[^>]*\bdata-home-desktop\b[^>]*\b(?:data-deferred-)?src=")[^"]*(")/,
       `$1${desktopPath}$2`,
     );
     if (next === content && (!content.includes(mobilePath) || !content.includes(desktopPath))) {
@@ -81,13 +82,15 @@ function applyHomepageImages(index, data) {
     const featured = data.items.find(
       item => item.category === category && item.featured && item.status === 'published',
     );
-    const desktopPath = data.categoryConfig?.[category]?.homeCover;
-    if (!featured?.previewSrc || !desktopPath) {
+    const config = data.categoryConfig?.[category];
+    const desktopPath = config?.homeCover;
+    const mobilePath = config?.homeMobileCover || featured?.previewSrc;
+    if (!mobilePath || !desktopPath) {
       throw new Error(`首页精选资料不完整：${category}`);
     }
-    output = replacePictureSources(output, `card-${category}`, featured.previewSrc, desktopPath);
+    output = replacePictureSources(output, `card-${category}`, mobilePath, desktopPath);
     if (category === 'earth') {
-      output = replacePictureSources(output, 'profile-earth', featured.previewSrc, desktopPath);
+      output = replacePictureSources(output, 'profile-earth', mobilePath, desktopPath);
     }
   }
   return output;
