@@ -493,3 +493,4 @@ node tools/build-content.mjs --check
 - CloudBase 云函数允许的新增路径为 `assets/gallery/hero/<分类>-mobile-<hash>.webp` 与 `assets/video-posters/previews/uploads/<id>-<hash>.webp`。更新本节代码后，除推送 Pages 外还必须执行云函数代码更新与 `tools/deploy-admin-cloudbase.ps1`，否则后台不会生成新档位。
 - 手机端装饰性时间码不再渲染或运行计时器；桌面时间码保持 100ms 节流。INDEX 大预览只在桌面打开 INDEX 后加载，直接进入 `#films`、`#contact` 使用瞬时定位，避免滚动穿越中间栏目而误触发其资源。
 - 当前公共 CSS / JS 缓存版本为 `20260830-weak-network-1`，摄影与视频内容版本均为 `20260830-responsive-1`，后台 CSS / JS 版本为 `20260830-responsive-1`。Pages 工作流固定使用 Pillow 12.2.0，并在上传前执行响应式资源与内联关键 CSS 的确定性检查。
+- 2026-08-30 已用腾讯云账号 `PlutonoC` 对正式环境完成云函数代码更新和后台静态文件部署；随后执行 `python tools/verify-site.py --url https://plutonoc.cn/`，117 张摄影作品、Pages/CloudBase 后台、CloudBase SDK 及 3 条视频和封面全部通过线上检查。首次 Pages 运行仅因 CloudBase 尚未同步而在最终核验阶段失败，完成同步后以本条交接更新重新触发工作流。
