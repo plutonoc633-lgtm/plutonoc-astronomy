@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 STYLE_CACHE_VERSION = "20260904-bilibili-1"
 ADMIN_STYLE_CACHE_VERSION = "20260904-bilibili-1"
 ADMIN_SCRIPT_CACHE_VERSION = "20260904-bilibili-1"
-SCRIPT_CACHE_VERSION = "20260904-bilibili-1"
+SCRIPT_CACHE_VERSION = "20260904-media-honors-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -155,6 +155,9 @@ def verify_local(root: Path) -> None:
         'data-directory-category-select',
         'data-directory-status-select',
         'data-photo-copy-link',
+        '<b>媒体与荣誉</b><em>MEDIA &amp; HONORS</em>',
+        'id="records" data-section="04" data-section-name="媒体与荣誉"',
+        '<p>MEDIA &amp; HONORS</p><h2>媒体与荣誉</h2>',
     )
     for token in required_html:
         require(token in index, f"Missing index marker: {token}")
@@ -167,6 +170,9 @@ def verify_local(root: Path) -> None:
     )
     for token in ("官方账号", "FOLLOW PLUTONOC", "social-index", "account-heading"):
         require(token not in index, f"Obsolete account decoration remains: {token}")
+    for token in ("可公开的情报", "DECLASSIFIED"):
+        require(token not in index, f"Obsolete records label remains: {token}")
+    require("'#records': ['PUBLIC RECORDS', 'MEDIA & HONORS', '']" in script, "Records transition label is stale")
     for token in ('class="header-actions"', 'class="admin-entry"', '>管理</a>'):
         require(token not in index, f"Visible admin entry remains: {token}")
     require('class="arrival-footer reveal"' not in index, "Footer must not be hidden by the reveal observer")

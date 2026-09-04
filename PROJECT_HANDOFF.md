@@ -16,7 +16,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 1. 首页
 2. 摄影作品
 3. 动态影像
-4. 可公开的情报
+4. 媒体与荣誉
 5. 设备
 6. 结尾
 
@@ -68,7 +68,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 - 大地预览固定为 `assets/gallery/previews/earth/earth-022.webp`（大地之树）。
 - 结尾预览固定为 `assets/gallery/previews/earth/earth-052.webp`（香格里拉）。
 - 手机端隐藏大预览图，仅保留栏目列表。
-- “可公开的情报”INDEX 过场使用英文：小字 `ARCHIVE OPENED`，大字 `DECLASSIFIED`。
+- “媒体与荣誉”INDEX 过场使用英文：小字 `PUBLIC RECORDS`，大字 `MEDIA & HONORS`；栏目地址仍为 `#records`。
 
 ### 结尾
 

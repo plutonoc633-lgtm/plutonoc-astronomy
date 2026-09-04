@@ -326,7 +326,7 @@
     const destinations = {
       '#home': ['PLUTONOC', 'HOME', ''],
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
-      '#records': ['ARCHIVE OPENED', 'DECLASSIFIED', ''],
+      '#records': ['PUBLIC RECORDS', 'MEDIA & HONORS', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
       '#contact': ['PLUTONOC', '择日成星', '']
     };
