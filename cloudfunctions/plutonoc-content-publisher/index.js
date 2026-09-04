@@ -119,7 +119,11 @@ function validateVideos(data) {
   const ids = new Set();
   for (const item of data.items) {
     if (!item.id || ids.has(item.id)) throw new PublisherError('INVALID_CONTENT', '视频 ID 重复');
-    if (!item.title || !item.videoUrl || !item.posterUrl) throw new PublisherError('INVALID_CONTENT', `视频资料不完整：${item.title || item.id}`);
+    const sourceType = item.sourceType === 'bilibili' ? 'bilibili' : 'direct';
+    const playable = sourceType === 'bilibili'
+      ? /^BV[0-9A-Za-z]{10,20}$/.test(item.bvid || '')
+      : Boolean(item.videoUrl);
+    if (!item.title || !playable || !item.posterUrl) throw new PublisherError('INVALID_CONTENT', `视频资料不完整：${item.title || item.id}`);
     if (!['published', 'draft'].includes(item.status)) throw new PublisherError('INVALID_CONTENT', '视频状态无效');
     ids.add(item.id);
   }

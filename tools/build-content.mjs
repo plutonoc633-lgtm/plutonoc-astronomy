@@ -55,7 +55,11 @@ function validateVideos(data) {
   const ids = new Set();
   data.items.forEach((item, index) => {
     if (!item.id || ids.has(item.id)) throw new Error(`视频 ID 重复或为空：${item.id || index}`);
-    if (!item.title || !item.videoUrl || !item.posterUrl || !item.posterPreviewUrl) throw new Error(`视频字段不完整：${item.id}`);
+    const sourceType = item.sourceType === 'bilibili' ? 'bilibili' : 'direct';
+    const playable = sourceType === 'bilibili'
+      ? /^BV[0-9A-Za-z]{10,20}$/.test(item.bvid || '')
+      : Boolean(item.videoUrl);
+    if (!item.title || !playable || !item.posterUrl || !item.posterPreviewUrl) throw new Error(`视频字段不完整：${item.id}`);
     if (!['published', 'draft'].includes(item.status)) throw new Error(`视频状态无效：${item.id}`);
     if (!Number.isFinite(item.sortOrder)) throw new Error(`视频排序无效：${item.id}`);
     ids.add(item.id);

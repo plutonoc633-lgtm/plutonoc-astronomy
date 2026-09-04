@@ -494,3 +494,11 @@ node tools/build-content.mjs --check
 - 手机端装饰性时间码不再渲染或运行计时器；桌面时间码保持 100ms 节流。INDEX 大预览只在桌面打开 INDEX 后加载，直接进入 `#films`、`#contact` 使用瞬时定位，避免滚动穿越中间栏目而误触发其资源。
 - 当前公共 CSS / JS 缓存版本为 `20260830-weak-network-1`，摄影与视频内容版本均为 `20260830-responsive-1`，后台 CSS / JS 版本为 `20260830-responsive-1`。Pages 工作流固定使用 Pillow 12.2.0，并在上传前执行响应式资源与内联关键 CSS 的确定性检查。
 - 2026-08-30 已用腾讯云账号 `PlutonoC` 对正式环境完成云函数代码更新和后台静态文件部署；随后执行 `python tools/verify-site.py --url https://plutonoc.cn/`，117 张摄影作品、Pages/CloudBase 后台、CloudBase SDK 及 3 条视频和封面全部通过线上检查。首次 Pages 运行仅因 CloudBase 尚未同步而在最终核验阶段失败，完成同步后以本条交接更新重新触发工作流。
+
+## 26. 2026-09-04 B站完整视频播放
+
+- 动态影像支持 `direct` 与 `bilibili` 两种来源。旧内容未设置 `sourceType` 时继续按直连 MP4 处理；B站内容保存规范 `bvid`、`bilibiliUrl`，可选 `previewUrl` 作为桌面悬停短预览。
+- B站播放器仅在用户点击视频卡片后创建，地址使用 `https://player.bilibili.com/player.html`；关闭弹窗时先切换到 `about:blank` 再移除 iframe，确保声音和网络请求停止。弹窗保留“在哔哩哔哩打开”作为播放器受限时的后备入口。
+- 管理后台“动态影像”表单新增播放来源选择。选择“哔哩哔哩”后粘贴完整视频页地址或 BV 号，后台会提取 BV 号并保存稳定的标准视频页地址；悬停预览地址可以留空。视频时长和画幅需手动填写，封面仍由后台生成 1920px / 960px 两档资源。
+- 完整长视频不进入 Git 仓库、CloudBase 静态托管或页面首屏。推荐流程为：B站发布 4K 正片 → 取得 BV 号 → 后台选择“哔哩哔哩”并填写资料/封面 → 保存发布。若需要影视飓风式悬停效果，再单独上传数秒轻量 MP4 并填写 `previewUrl`。
+- 本轮只增加播放能力，没有把东京视频写入内容清单；必须等B站审核完成并取得 BV 号后再在后台发布。当前公共 CSS / JS 与后台 CSS / JS 缓存版本为 `20260904-bilibili-1`，视频运行时缓存版本同为 `20260904-bilibili-1`。修改该功能后需同步部署 Pages、`plutonoc-content-publisher` 云函数和 CloudBase 管理后台。

@@ -33,7 +33,7 @@
   };
   const draftFieldNames = {
     photo: ['recordId', 'title', 'category', 'date', 'location', 'sortOrder', 'equipment', 'parameters', 'process', 'story', 'notes', 'featured', 'status'],
-    video: ['recordId', 'videoUrl', 'title', 'category', 'summary', 'date', 'location', 'sortOrder', 'duration', 'aspectRatio', 'status'],
+    video: ['recordId', 'sourceType', 'videoUrl', 'bilibiliUrl', 'previewUrl', 'title', 'category', 'summary', 'date', 'location', 'sortOrder', 'duration', 'aspectRatio', 'status'],
   };
   const draftTimers = { photo: 0, video: 0 };
   const draftDirty = { photo: false, video: false };
@@ -67,6 +67,27 @@
 
   function deepClone(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  function extractBvid(value) {
+    const match = String(value || '').match(/BV[0-9A-Za-z]{10,20}/i)?.[0] || '';
+    return match ? `BV${match.slice(2)}` : '';
+  }
+
+  function canonicalBilibiliUrl(bvid) {
+    return bvid ? `https://www.bilibili.com/video/${bvid}/` : '';
+  }
+
+  function videoSourceType(item = {}) {
+    return item.sourceType === 'bilibili' || item.bvid || extractBvid(item.bilibiliUrl) ? 'bilibili' : 'direct';
+  }
+
+  function syncVideoSourceFields() {
+    const sourceType = videoForm.elements.sourceType.value;
+    $$('[data-video-source-panel]').forEach(panel => { panel.hidden = panel.dataset.videoSourcePanel !== sourceType; });
+    videoForm.elements.videoUrl.required = sourceType === 'direct';
+    videoForm.elements.bilibiliUrl.required = sourceType === 'bilibili';
+    $('[data-probe-video]').hidden = sourceType !== 'direct';
   }
 
   function draftForm(kind) {
@@ -163,6 +184,7 @@
       } else if (record) editVideo(record, { clearStoredDraft: false, scroll: false });
       else resetVideoForm({ clearStoredDraft: false });
       applyDraftFields(kind, fields);
+      if (kind === 'video') syncVideoSourceFields();
       preparedPhoto = kind === 'photo' ? null : preparedPhoto;
       preparedPoster = kind === 'video' ? null : preparedPoster;
       if (draft.hadFile && kind === 'photo') {
@@ -295,7 +317,10 @@
     if (data?.version !== 1 || !Array.isArray(data.items)) throw new Error('视频数据格式无效');
     data.items.forEach(item => {
       if (!item.id || ids.has(item.id)) throw new Error(`视频 ID 重复：${item.id || '空'}`);
-      if (!item.title || !item.videoUrl || !item.posterUrl) throw new Error(`视频资料不完整：${item.title || item.id}`);
+      const playable = videoSourceType(item) === 'bilibili'
+        ? /^BV[0-9A-Za-z]{10,20}$/.test(item.bvid || extractBvid(item.bilibiliUrl))
+        : Boolean(item.videoUrl);
+      if (!item.title || !playable || !item.posterUrl) throw new Error(`视频资料不完整：${item.title || item.id}`);
       if (!['published', 'draft'].includes(item.status)) throw new Error(`视频状态无效：${item.title}`);
       ids.add(item.id);
     });
@@ -652,6 +677,8 @@
     videoForm.elements.sortOrder.value = Math.max(0, ...repoState.videos.items.map(item => item.sortOrder || 0)) + 1;
     videoForm.elements.aspectRatio.value = '1.7778';
     videoForm.elements.status.value = 'published';
+    videoForm.elements.sourceType.value = 'direct';
+    syncVideoSourceFields();
     preparedPoster = null;
     revokePreview('poster');
     $('[data-poster-preview]').removeAttribute('src');
@@ -670,7 +697,11 @@
     videoForm.elements.recordId.value = item.id;
     videoForm.elements.existingPosterUrl.value = item.posterUrl;
     videoForm.elements.existingPosterPreviewUrl.value = item.posterPreviewUrl || item.posterUrl;
-    videoForm.elements.videoUrl.value = item.videoUrl;
+    videoForm.elements.sourceType.value = videoSourceType(item);
+    videoForm.elements.videoUrl.value = item.videoUrl || '';
+    videoForm.elements.bilibiliUrl.value = item.bilibiliUrl || canonicalBilibiliUrl(item.bvid);
+    videoForm.elements.previewUrl.value = item.previewUrl || '';
+    syncVideoSourceFields();
     videoForm.elements.title.value = item.title;
     videoForm.elements.category.value = item.category;
     videoForm.elements.summary.value = item.summary || '';
@@ -694,7 +725,7 @@
     $('[data-video-list]').innerHTML = items.length ? items.map(item => `
       <article class="manager-card ${item.status === 'draft' ? 'is-hidden' : ''}" data-video-id="${escapeHtml(item.id)}">
         <img src="${escapeHtml(item.posterPreviewUrl || item.posterUrl)}" alt="" loading="lazy" decoding="async">
-        <div><h3>${escapeHtml(item.title)}</h3><p><span class="status">${item.status === 'published' ? '已发布' : '草稿'}</span> / ${escapeHtml(item.category)} / 排序 ${item.sortOrder}</p></div>
+        <div><h3>${escapeHtml(item.title)}</h3><p><span class="status">${item.status === 'published' ? '已发布' : '草稿'}</span> / ${videoSourceType(item) === 'bilibili' ? 'B站' : '直连'} / ${escapeHtml(item.category)} / 排序 ${item.sortOrder}</p></div>
         <button type="button" data-edit-video>编辑</button>
       </article>`).join('') : '<p>暂无影像</p>';
   }
@@ -883,7 +914,19 @@
     item.summary = videoForm.elements.summary.value.trim();
     item.date = videoForm.elements.date.value;
     item.location = videoForm.elements.location.value.trim();
-    item.videoUrl = videoForm.elements.videoUrl.value.trim();
+    item.sourceType = videoForm.elements.sourceType.value === 'bilibili' ? 'bilibili' : 'direct';
+    item.previewUrl = videoForm.elements.previewUrl.value.trim();
+    if (item.sourceType === 'bilibili') {
+      item.bvid = extractBvid(videoForm.elements.bilibiliUrl.value);
+      if (!item.bvid) return setMessage($('[data-video-message]'), '请输入有效的 B站视频链接或 BV 号', true);
+      item.bilibiliUrl = canonicalBilibiliUrl(item.bvid);
+      item.videoUrl = '';
+    } else {
+      item.videoUrl = videoForm.elements.videoUrl.value.trim();
+      if (!item.videoUrl) return setMessage($('[data-video-message]'), '请输入公开 MP4 地址或站内路径', true);
+      item.bvid = '';
+      item.bilibiliUrl = '';
+    }
     item.duration = Number(videoForm.elements.duration.value) || 0;
     item.aspectRatio = Number(videoForm.elements.aspectRatio.value) || 16 / 9;
     item.status = videoForm.elements.status.value;
@@ -998,6 +1041,11 @@
     } catch (error) {
       setMessage($('[data-video-message]'), formatError(error), true);
     }
+  });
+
+  videoForm.elements.sourceType.addEventListener('change', () => {
+    syncVideoSourceFields();
+    markDraftDirty('video');
   });
 
   $('[data-photo-list]').addEventListener('click', event => {

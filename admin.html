@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC 管理后台</title>
-  <link rel="stylesheet" href="admin.css?v=20260830-responsive-1">
+  <link rel="stylesheet" href="admin.css?v=20260904-bilibili-1">
 </head>
 <body>
   <header class="studio-header">
@@ -123,10 +123,28 @@
                 <p data-video-draft-text></p>
                 <div><button type="button" data-video-draft-discard>放弃草稿</button><button type="button" class="primary" data-video-draft-restore>恢复草稿</button></div>
               </div>
-              <label>公开 MP4 地址或站内路径
-                <small>大视频先上传至 CloudBase 静态托管，再粘贴公开地址</small>
-                <input name="videoUrl" type="text" required placeholder="https://…/video.mp4">
+              <label>播放来源
+                <select name="sourceType" data-video-source-type>
+                  <option value="direct">直连视频</option>
+                  <option value="bilibili">哔哩哔哩</option>
+                </select>
               </label>
+              <div data-video-source-panel="direct">
+                <label>公开 MP4 地址或站内路径
+                  <small>大视频先上传至 CloudBase 静态托管，再粘贴公开地址</small>
+                  <input name="videoUrl" type="text" placeholder="https://…/video.mp4">
+                </label>
+              </div>
+              <div data-video-source-panel="bilibili" hidden>
+                <label>B站视频链接或 BV 号
+                  <small>发布视频后粘贴网页地址，例如 https://www.bilibili.com/video/BV…</small>
+                  <input name="bilibiliUrl" type="text" placeholder="BV… 或 B站视频链接">
+                </label>
+                <label>悬停预览地址（可选）
+                  <small>填写轻量 MP4 地址后，桌面鼠标经过封面会播放短预览；留空则显示静态封面</small>
+                  <input name="previewUrl" type="text" placeholder="https://…/preview.mp4">
+                </label>
+              </div>
               <div class="form-row">
                 <label>标题<input name="title" maxlength="100" required></label>
                 <label>分类<select name="category"><option>行星观测</option><option>星野延时</option><option>天象记录</option><option>观测现场</option><option>其他</option></select></label>
@@ -141,7 +159,7 @@
                 <label>时长（秒）<input name="duration" type="number" min="0" step="0.001" required></label>
                 <label>画幅比例<input name="aspectRatio" type="number" min="0.1" step="0.001" value="1.7778" required></label>
               </div>
-              <button type="button" class="secondary probe-button" data-probe-video>从视频地址读取时长与画幅</button>
+              <button type="button" class="secondary probe-button" data-probe-video>从直连视频读取时长与画幅</button>
               <label class="file-zone">替换封面
                 <small>可不选；选择后自动生成高清封面和 960px 手机预览</small>
                 <input name="poster" type="file" accept="image/jpeg,image/png,image/webp">
@@ -175,6 +193,6 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin.js?v=20260830-responsive-1"></script>
+  <script src="admin.js?v=20260904-bilibili-1"></script>
 </body>
 </html>

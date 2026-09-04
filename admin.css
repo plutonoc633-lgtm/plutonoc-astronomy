@@ -144,6 +144,7 @@ button:disabled { opacity: .45; cursor: wait; }
 .dashboard-grid { display: grid; grid-template-columns: minmax(440px, .9fr) minmax(500px, 1.1fr); gap: 30px; align-items: start; }
 .content-form, .content-manager { border: 1px solid var(--line); background: var(--panel); padding: clamp(22px, 3vw, 38px); }
 .content-form { display: grid; gap: 20px; }
+.content-form [data-video-source-panel] { display: grid; gap: 20px; }
 .form-heading, .manager-head { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 18px; }
 .form-heading h2, .manager-head h2 { margin: 0; font-size: 20px; font-weight: 500; }
 .manager-head h2 span { color: var(--muted); font-size: 12px; }

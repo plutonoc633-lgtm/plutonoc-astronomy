@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260830-weak-network-1"
-ADMIN_STYLE_CACHE_VERSION = "20260830-responsive-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260830-responsive-1"
-SCRIPT_CACHE_VERSION = "20260830-weak-network-1"
+STYLE_CACHE_VERSION = "20260904-bilibili-1"
+ADMIN_STYLE_CACHE_VERSION = "20260904-bilibili-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260904-bilibili-1"
+SCRIPT_CACHE_VERSION = "20260904-bilibili-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -237,6 +237,8 @@ def verify_local(root: Path) -> None:
     )
     require("sortOrder: Number(item.sortOrder) || 0" in runtime_generator, "Shared gallery runtime omits sortOrder")
     require("posterPreviewUrl: item.posterPreviewUrl || item.posterUrl" in runtime_generator, "Shared video runtime omits posterPreviewUrl")
+    require("sourceType: item.sourceType === 'bilibili' ? 'bilibili' : 'direct'" in runtime_generator, "Shared video runtime omits playback source type")
+    require("bilibiliUrl: item.bilibiliUrl || ''" in runtime_generator and "bvid: item.bvid || ''" in runtime_generator, "Shared video runtime omits Bilibili data")
     require("config?.homeMobileCover || featured?.previewSrc" in runtime_generator, "Homepage mobile cover fallback is missing")
     require("applyHomepageImages" in runtime_generator, "Shared homepage image generator is missing")
     require(
@@ -375,8 +377,19 @@ def verify_local(root: Path) -> None:
         "function hydrateDeferredMedia(element)",
         "function hydrateEquipmentAround()",
         "film.posterPreviewUrl || film.posterUrl",
+        "function bilibiliPlayerUrl(film = {})",
+        "https://player.bilibili.com/player.html",
+        "iframe.className = 'bilibili-player'",
     ):
         require(marker in script, f"Missing performance marker: {marker}")
+    for marker in (
+        'name="sourceType"',
+        'name="bilibiliUrl"',
+        'name="previewUrl"',
+        "function syncVideoSourceFields()",
+        "请输入有效的 B站视频链接或 BV 号",
+    ):
+        require(marker in admin + admin_script, f"Missing Bilibili admin marker: {marker}")
     for marker in (
         ".reveal.is-reveal-before",
         ".film-list.reveal.is-visible .film-card",
@@ -616,11 +629,14 @@ def verify_remote(base_url: str) -> None:
                     require(prefix, f"{label} {key} returned an empty response")
                     require(actual_type in {"image/jpeg", "image/png", "image/webp"}, f"{label} {key} has unexpected type: {actual_type}")
 
-                target = urljoin(base, video["videoUrl"])
-                prefix, actual_type, status = fetch_prefix(target)
-                require(status in {200, 206}, f"{label} video returned status {status}")
-                require(prefix, f"{label} video returned an empty response")
-                require(actual_type == "video/mp4", f"{label} video has unexpected type: {actual_type}")
+                if video.get("sourceType") == "bilibili":
+                    require(re.fullmatch(r"BV[0-9A-Za-z]{10,20}", video.get("bvid", "")), f"{label} has an invalid BV id")
+                else:
+                    target = urljoin(base, video["videoUrl"])
+                    prefix, actual_type, status = fetch_prefix(target)
+                    require(status in {200, 206}, f"{label} video returned status {status}")
+                    require(prefix, f"{label} video returned an empty response")
+                    require(actual_type == "video/mp4", f"{label} video has unexpected type: {actual_type}")
 
             print(
                 f"Remote site verification passed: {base}; "

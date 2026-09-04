@@ -1937,6 +1937,8 @@
   /* Video archive */
   const videoDialog = $('[data-video-dialog]');
   const videoPlayer = $('video', videoDialog);
+  const videoFrame = $('.video-frame', videoDialog);
+  const videoExternalLink = $('[data-video-external]', videoDialog);
   let loadedFilms = [];
   let activeFilmPreview = null;
 
@@ -1965,6 +1967,26 @@
     });
     return cloudBaseSdkPromise;
   }
+  function extractBvid(value) {
+    const match = String(value || '').match(/BV[0-9A-Za-z]{10,20}/i)?.[0] || '';
+    return match ? `BV${match.slice(2)}` : '';
+  }
+  function filmSourceType(film = {}) {
+    return film.sourceType === 'bilibili' || film.bvid || extractBvid(film.bilibiliUrl) ? 'bilibili' : 'direct';
+  }
+  function filmPreviewUrl(film = {}) {
+    return film.previewUrl || (filmSourceType(film) === 'direct' ? film.videoUrl : '');
+  }
+  function bilibiliPageUrl(film = {}) {
+    const bvid = film.bvid || extractBvid(film.bilibiliUrl);
+    return bvid ? `https://www.bilibili.com/video/${bvid}/` : '';
+  }
+  function bilibiliPlayerUrl(film = {}) {
+    const bvid = film.bvid || extractBvid(film.bilibiliUrl);
+    if (!bvid) return '';
+    const parameters = new URLSearchParams({ isOutside: 'true', bvid, p: '1', autoplay: '1', high_quality: '1', danmaku: '0' });
+    return `https://player.bilibili.com/player.html?${parameters}`;
+  }
 
   async function loadCloudFilms() {
     const config = window.PLUTONOC_CLOUDBASE || {};
@@ -1989,10 +2011,11 @@
       date: normalizeDate(record.date),
       videoUrl: links.get(record.videoFileId) || record.videoUrl,
       posterUrl: links.get(record.posterFileId) || record.posterUrl
-    })).filter(record => record.videoUrl);
+    })).filter(record => filmSourceType(record) === 'bilibili' ? Boolean(bilibiliPlayerUrl(record)) : Boolean(record.videoUrl));
   }
   function filmCard(film, index) {
-    return `<figure class="film-card" data-film-index="${index}">
+    const previewUrl = filmPreviewUrl(film);
+    return `<figure class="film-card" data-film-index="${index}"${previewUrl ? ' data-has-preview' : ''}>
       <picture><source media="(max-width: 760px)" data-deferred-srcset="${escapeHtml(film.posterPreviewUrl || film.posterUrl)}"><img data-deferred-src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" decoding="async"></picture>
       <video class="film-preview" muted loop playsinline preload="none" aria-hidden="true"></video>
       <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
@@ -2019,7 +2042,9 @@
         const film = loadedFilms[Number(card.dataset.filmIndex)];
         const preview = $('.film-preview', card);
         if (!film || !preview || card.classList.contains('is-previewing')) return;
-        preview.src = film.videoUrl;
+        const previewUrl = filmPreviewUrl(film);
+        if (!previewUrl) return;
+        preview.src = previewUrl;
         try {
           await preview.play();
           card.classList.add('is-previewing');
@@ -2058,8 +2083,27 @@
     const film = loadedFilms[index];
     if (!film) return;
     stopAllFilmPreviews();
-    videoPlayer.src = film.videoUrl;
-    videoPlayer.poster = film.posterUrl || '';
+    const bilibili = filmSourceType(film) === 'bilibili';
+    videoPlayer.hidden = bilibili;
+    videoExternalLink.hidden = !bilibili;
+    if (bilibili) {
+      const pageUrl = bilibiliPageUrl(film);
+      const playerUrl = bilibiliPlayerUrl(film);
+      if (!playerUrl) return;
+      const iframe = document.createElement('iframe');
+      iframe.className = 'bilibili-player';
+      iframe.src = playerUrl;
+      iframe.title = `${film.title} - 哔哩哔哩播放器`;
+      iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      videoFrame.append(iframe);
+      videoExternalLink.href = pageUrl;
+    } else {
+      videoPlayer.src = film.videoUrl;
+      videoPlayer.poster = film.posterUrl || '';
+      videoExternalLink.removeAttribute('href');
+    }
     $('.video-caption h3', videoDialog).textContent = film.title;
     $('.video-caption p', videoDialog).textContent = [film.date, formatDuration(film.duration), film.location].filter(Boolean).join(' / ');
     videoDialog.showModal();
@@ -2076,6 +2120,14 @@
     videoPlayer.removeAttribute('src');
     videoPlayer.removeAttribute('poster');
     videoPlayer.load();
+    const iframe = $('.bilibili-player', videoFrame);
+    if (iframe) {
+      iframe.src = 'about:blank';
+      iframe.remove();
+    }
+    videoPlayer.hidden = false;
+    videoExternalLink.hidden = true;
+    videoExternalLink.removeAttribute('href');
     document.body.classList.remove('dialog-open');
   });
   (async () => {
