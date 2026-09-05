@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260904-bilibili-1"
+STYLE_CACHE_VERSION = "20260905-loading-1"
 ADMIN_STYLE_CACHE_VERSION = "20260904-bilibili-1"
 ADMIN_SCRIPT_CACHE_VERSION = "20260904-bilibili-1"
-SCRIPT_CACHE_VERSION = "20260904-media-honors-1"
+SCRIPT_CACHE_VERSION = "20260905-loading-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -409,6 +409,9 @@ def verify_local(root: Path) -> None:
         ".timecode { display: none; }",
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
+    require('aria-describedby="gallery-drag-hint"' in index, "Visible canvas instructions must be associated with the canvas")
+    require('image-loader.js?v=20260905-loading-1' in index, "Bounded image loader is missing")
+    require('return film.previewUrl || \'\';' in script, "Hover previews must not fall back to full movies")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
     for marker in (
         'cron: "17 */6 * * *"',
@@ -437,6 +440,7 @@ def verify_local(root: Path) -> None:
         "index.html",
         "style.css",
         "script.js",
+        "image-loader.js",
         "gallery-data.js",
         "video-data.js",
         "assets/gallery/hero/earth-mobile.webp",

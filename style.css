@@ -529,11 +529,11 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .arrival-hero::before { top: 0; height: min(30svh, 290px); background: linear-gradient(180deg, #020304 0%, rgba(2,3,4,.93) 18%, rgba(2,3,4,.48) 58%, transparent 100%); }
 .arrival-hero::after { bottom: -1px; height: min(34svh, 330px); background: linear-gradient(180deg, transparent 0%, rgba(4,8,15,.68) 54%, #050b14 100%); }
 .arrival-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: #020304; }
-.arrival-sky img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; opacity: var(--arrival-image-opacity, .08); filter: brightness(.7) saturate(.82) contrast(1.03); transform: scale(var(--arrival-image-scale, 1.025)); transform-origin: 50% 50%; will-change: transform, opacity; }
+.arrival-sky img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; opacity: var(--arrival-image-opacity, 1); filter: brightness(.7) saturate(.82) contrast(1.03); transform: scale(var(--arrival-image-scale, 1.025)); transform-origin: 50% 50%; will-change: transform, opacity; }
 .arrival-sky::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 35%, rgba(0,0,0,.44) 0%, rgba(0,0,0,.2) 32%, transparent 62%), radial-gradient(ellipse at 50% 46%, transparent 34%, rgba(0,0,0,.5) 100%), linear-gradient(180deg, rgba(2,3,5,.32) 0%, rgba(2,3,5,.12) 43%, rgba(4,8,15,.42) 100%); }
 .arrival-copy { position: absolute; inset: 0; z-index: 3; }
 .arrival-copy h2 { position: absolute; inset: 0; font: 500 clamp(42px, 5.4vw, 78px)/1.08 var(--font-display); letter-spacing: var(--arrival-spacing, .06em); text-shadow: 0 2px 24px rgba(0,0,0,.68), 0 0 42px rgba(133,153,184,.12); }
-.arrival-copy h2 span { position: absolute; left: 50%; top: 37%; display: block; white-space: nowrap; opacity: var(--arrival-opacity, 0); filter: blur(var(--arrival-blur, 8px)); transform: translate3d(-50%, var(--arrival-title-y, 12px), 0); will-change: transform, opacity, filter; }
+.arrival-copy h2 span { position: absolute; left: 50%; top: 37%; display: block; white-space: nowrap; opacity: var(--arrival-opacity, 1); filter: blur(var(--arrival-blur, 0px)); transform: translate3d(-50%, var(--arrival-title-y, 0px), 0); will-change: transform, opacity, filter; }
 .arrival-copy h2 span i { display: block; font-style: normal; }
 .arrival-outro { position: relative; overflow: hidden; padding: clamp(76px, 7vw, 112px) var(--page-gutter) calc(34px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, #050b14 0%, #07111e 36%, #050a12 100%); box-shadow: 0 -54px 96px 28px rgba(5,11,20,.96); }
 .arrival-outro-inner { position: relative; max-width: 960px; margin: 0 auto; }
@@ -810,4 +810,30 @@ dialog { color: inherit; }
   .film-list.reveal .film-card,
   .archive-list.reveal .archive-row,
   .social-links.reveal a { opacity: 1; filter: none; transform: none; transition-delay: 0s !important; }
+}
+
+/* Content remains readable if animation or content scripts are delayed/unavailable. */
+.reveal:not(.is-reveal-ready),
+.section-heading.reveal:not(.is-reveal-ready) > p,
+.section-heading.reveal:not(.is-reveal-ready) > h2,
+.section-heading.reveal:not(.is-reveal-ready) > span,
+.film-list.reveal:not(.is-reveal-ready) .film-card,
+.archive-list.reveal:not(.is-reveal-ready) .archive-row,
+.social-links.reveal:not(.is-reveal-ready) a {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  clip-path: none;
+}
+.gallery-guidance { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; padding: 14px 0; color: var(--muted-bright); font-size: 13px; line-height: 1.6; }
+.drag-hint-touch { display: none; }
+.archive-canvas { cursor: grab; }
+.image-retry { cursor: pointer; color: var(--muted-bright); font: inherit; text-decoration: underline; text-underline-offset: 4px; }
+.image-retry:hover { color: var(--foreground); }
+.image-retry[hidden] { display: none; }
+.directory-retry { display: block; margin: 12px 0; font-size: 13px; }
+.photo-load-feedback { min-height: 22px; margin-top: 14px; color: var(--muted-bright); font-size: 12px; line-height: 1.6; }
+@media (hover: none), (pointer: coarse) {
+  .drag-hint-desktop { display: none; }
+  .drag-hint-touch { display: inline; }
 }

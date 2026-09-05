@@ -126,7 +126,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
   background: #020304;
   border-bottom: 1px solid var(--line);
 }
-.profile-visual { position: absolute; inset: 0; overflow: hidden; clip-path: inset(0 0 10%); opacity: 0; }
+.profile-visual { position: absolute; inset: 0; overflow: hidden; clip-path: inset(0); opacity: 1; }
 .profile-visual.is-visible { clip-path: inset(0); opacity: 1; }
 .profile-visual picture { display: block; width: 100%; height: 100%; }
 .profile-visual::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 48%, rgba(0,0,0,.04), rgba(0,0,0,.58) 92%), linear-gradient(180deg, rgba(1,3,6,.2), rgba(1,3,6,.46)); }
@@ -167,9 +167,9 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 }
   </style>
   <!-- CRITICAL_CSS_END -->
-  <link rel="preload" href="style.css?v=20260904-bilibili-1" as="style">
-  <link rel="stylesheet" href="style.css?v=20260904-bilibili-1" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="style.css?v=20260904-bilibili-1"></noscript>
+  <link rel="preload" href="style.css?v=20260905-loading-1" as="style">
+  <link rel="stylesheet" href="style.css?v=20260905-loading-1" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="style.css?v=20260905-loading-1"></noscript>
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -328,7 +328,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
         </a>
       </nav>
       <a class="motion-gateway" href="#films" data-transition-link>
-        <video src="assets/videos/jupiter.mp4" data-deferred-poster="assets/video-posters/previews/local-jupiter-observation.webp" muted loop playsinline preload="none" data-home-motion aria-label="木星动态观测影像"></video>
+        <video data-preview-src="assets/videos/jupiter.mp4" data-deferred-poster="assets/video-posters/previews/local-jupiter-observation.webp" muted loop playsinline preload="none" data-home-motion aria-label="木星动态观测影像"></video>
         <span><i>06</i><b>动态影像</b><em>MOTION</em><small>00:06</small></span>
       </a>
     </section>
@@ -360,8 +360,12 @@ section { position: relative; scroll-margin-top: var(--header-height); }
           <button class="gallery-next" type="button" aria-label="下一张">→</button>
         </div>
       </div>
+      <div class="gallery-guidance">
+        <p id="gallery-drag-hint"><span class="drag-hint-desktop">拖动探索作品 · 点击查看大图</span><span class="drag-hint-touch">左右拖动探索作品 · 轻点查看大图</span><span class="sr-only">。键盘方向键切换作品，回车键打开大图。</span></p>
+        <button type="button" class="image-retry" data-canvas-retry hidden>部分图片加载失败 · 重新加载</button>
+      </div>
       <div class="canvas-stage reveal" data-canvas-stage>
-        <canvas class="archive-canvas" data-archive-canvas tabindex="0" role="application" aria-label="可拖动的无限摄影作品画布"></canvas>
+        <canvas class="archive-canvas" data-archive-canvas tabindex="0" role="application" aria-label="可拖动的无限摄影作品画布" aria-describedby="gallery-drag-hint"></canvas>
         <div class="canvas-coordinate" aria-hidden="true"><span>RA 00H 00M</span><span>DEC +00° 00′</span></div>
         <p class="canvas-status" data-canvas-status aria-live="polite">全部 / 117</p>
         <p class="sr-only" data-canvas-live aria-live="polite"></p>
@@ -499,6 +503,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
         </label>
       </div>
     </div>
+    <button type="button" class="image-retry directory-retry" data-directory-retry hidden>部分图片加载失败 · 重新加载</button>
     <div class="gallery-directory-grid" data-gallery-directory-grid></div>
     <footer class="gallery-directory-footer">
       <p data-gallery-directory-result>117 张作品</p>
@@ -521,6 +526,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
           <button type="button" data-gallery-directory-return>返回目录</button>
         </div>
       </div>
+      <p class="photo-load-feedback" aria-live="polite"><span data-photo-load-message></span> <button type="button" class="image-retry" data-photo-retry hidden>重新加载</button></p>
       <section data-detail-object><i>01 / <span data-object-label>OBJECT</span></i><h2 data-photo-title></h2><p data-photo-category></p></section>
       <section data-detail-capture hidden><i>02 / CAPTURE</i><dl><div data-detail-date hidden><dt>日期</dt><dd></dd></div><div data-detail-location hidden><dt>地点</dt><dd></dd></div></dl></section>
       <section data-detail-system hidden><i>03 / SYSTEM</i><dl><div data-detail-equipment hidden><dt>设备</dt><dd></dd></div><div data-detail-parameters hidden><dt>参数</dt><dd></dd></div></dl></section>
@@ -535,9 +541,10 @@ section { position: relative; scroll-margin-top: var(--header-height); }
     <div class="video-caption"><h3></h3><div><p></p><a data-video-external target="_blank" rel="noopener noreferrer" hidden>在哔哩哔哩打开 ↗</a></div></div>
   </dialog>
 
-  <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="video-data.js?v=20260904-tokyo-vlog-1"></script>
-  <script src="gallery-data.js?v=20260830-responsive-1"></script>
-  <script src="script.js?v=20260904-media-honors-1"></script>
+  <script defer src="image-loader.js?v=20260905-loading-1"></script>
+  <script defer src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
+  <script defer src="video-data.js?v=20260904-tokyo-vlog-1"></script>
+  <script defer src="gallery-data.js?v=20260830-responsive-1"></script>
+  <script defer src="script.js?v=20260905-loading-1"></script>
 </body>
 </html>

@@ -44,7 +44,7 @@
     ? new IntersectionObserver(deferredObserverCallback, { rootMargin: '600px 0px', threshold: 0 })
     : null;
   const deferredNearMediaObserver = 'IntersectionObserver' in window
-    ? new IntersectionObserver(deferredObserverCallback, { rootMargin: '0px 0px -5% 0px', threshold: 0 })
+    ? new IntersectionObserver(deferredObserverCallback, { rootMargin: '600px 0px', threshold: 0 })
     : null;
 
   function registerDeferredMedia(root = document) {
@@ -185,6 +185,7 @@
     const revealObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         const element = entry.target;
+        element.classList.add('is-reveal-ready');
         if (entry.isIntersecting) {
           element.classList.remove('is-reveal-before', 'is-reveal-after');
           element.classList.add('is-visible');
@@ -474,15 +475,33 @@
     requestMobilePanelUpdate();
   }
 
-  if (homeMotion && supportsHover && !reducedMotion && 'IntersectionObserver' in window) {
-    const homeVideoObserver = new IntersectionObserver(entries => {
-      entries.forEach(async entry => {
-        if (entry.isIntersecting) {
-          try { await homeMotion.play(); } catch (_) { /* Poster remains visible. */ }
-        } else homeMotion.pause();
-      });
-    }, { threshold: .3 });
-    homeVideoObserver.observe(homeMotion);
+  if (homeMotion && supportsHover && !reducedMotion) {
+    const gateway = homeMotion.closest('.motion-gateway');
+    let homePreviewActive = false;
+    let homePreviewGeneration = 0;
+    const stop = () => {
+      homePreviewGeneration += 1;
+      homePreviewActive = false;
+      homeMotion.pause();
+      homeMotion.removeAttribute('src');
+      homeMotion.load();
+    };
+    const start = async () => {
+      if (homePreviewActive) return;
+      const generation = ++homePreviewGeneration;
+      homePreviewActive = true;
+      hydrateDeferredMedia(homeMotion);
+      homeMotion.src = homeMotion.dataset.previewSrc;
+      try {
+        await homeMotion.play();
+        if (generation === homePreviewGeneration && !homePreviewActive) stop();
+      } catch (_) { if (generation === homePreviewGeneration) stop(); }
+    };
+    gateway?.addEventListener('pointerenter', start);
+    gateway?.addEventListener('pointerleave', stop);
+    gateway?.addEventListener('focusin', start);
+    gateway?.addEventListener('focusout', stop);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
   }
 
   /* Scroll progress calibration and finale */
@@ -638,6 +657,7 @@
       this.protectedSources = new Set();
       this.queue = [];
       this.active = 0;
+      this.pumpScheduled = false;
     }
 
     get(source) {
@@ -646,20 +666,28 @@
       return entry?.bitmap || null;
     }
 
-    request(source) {
+    failed(source) { return Boolean(this.entries.get(source)?.failed); }
+
+    request(source, priority = 0) {
       if (!source || this.entries.has(source)) return;
-      const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true, queued: true };
+      const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true, queued: true, priority };
       this.entries.set(source, entry);
       this.queue.push(source);
-      this.pump();
+      // Collect the frame first so small visible images precede all upgrades.
+      if (!this.pumpScheduled) {
+        this.pumpScheduled = true;
+        queueMicrotask(() => { this.pumpScheduled = false; this.pump(); });
+      }
     }
 
     pump() {
+      this.queue.sort((a, b) => (this.entries.get(a)?.priority || 0) - (this.entries.get(b)?.priority || 0));
       while (this.active < this.concurrency && this.queue.length) {
         const source = this.queue.shift();
         const entry = this.entries.get(source);
         if (!entry?.pending || !entry.queued) continue;
         entry.queued = false;
+        entry.controller = new AbortController();
         this.active += 1;
         this.load(source, entry).finally(() => {
           this.active -= 1;
@@ -669,55 +697,51 @@
     }
 
     async load(source, entry) {
-      const finish = bitmap => {
+      try {
+        const bitmap = await window.PlutonoCImages.load(source, {
+          signal: entry.controller.signal,
+          priority: entry.priority ? 'low' : 'high'
+        });
+        if (entry.controller.signal.aborted || this.entries.get(source) !== entry) return;
         entry.bitmap = bitmap;
         entry.pending = false;
-        entry.bytes = (bitmap.width || 1) * (bitmap.height || 1) * 4;
+        entry.bytes = (bitmap.naturalWidth || bitmap.width || 1) * (bitmap.naturalHeight || bitmap.height || 1) * 4;
         this.bytes += entry.bytes;
         this.prune();
+      } catch (error) {
+        if (this.entries.get(source) !== entry) return;
+        entry.pending = false;
+        if (error.name === 'AbortError') this.entries.delete(source);
+        else entry.failed = true;
+      } finally {
         archiveCanvas?.requestDraw();
-      };
-      try {
-        if (location.protocol !== 'file:' && 'createImageBitmap' in window) {
-          const response = await fetch(source);
-          if (!response.ok) throw new Error(`Image ${response.status}`);
-          finish(await createImageBitmap(await response.blob()));
-          return;
-        }
-        const image = await new Promise((resolve, reject) => {
-          const fallbackImage = new Image();
-          fallbackImage.decoding = 'async';
-          fallbackImage.onload = () => resolve(fallbackImage);
-          fallbackImage.onerror = reject;
-          fallbackImage.src = source;
-        });
-        finish(image);
-      } catch (_) {
-        try {
-          const image = await new Promise((resolve, reject) => {
-            const fallbackImage = new Image();
-            fallbackImage.decoding = 'async';
-            fallbackImage.onload = () => resolve(fallbackImage);
-            fallbackImage.onerror = reject;
-            fallbackImage.src = source;
-          });
-          finish(image);
-        } catch (_) {
-          entry.pending = false;
-          entry.failed = true;
-        }
       }
+    }
+
+    cancelPending() {
+      for (const [source, entry] of this.entries) {
+        if (!entry.pending) continue;
+        this.entries.delete(source);
+        entry.controller?.abort();
+      }
+      this.queue = [];
+    }
+
+    retryFailed() {
+      for (const source of this.protectedSources) {
+        if (this.entries.get(source)?.failed) this.entries.delete(source);
+      }
+      archiveCanvas?.requestDraw();
     }
 
     protect(sources) {
       this.protectedSources = new Set(sources);
-      if (this.queue.length) {
-        const priority = new Set(sources);
-        this.queue = [
-          ...this.queue.filter(source => priority.has(source)),
-          ...this.queue.filter(source => !priority.has(source))
-        ];
+      for (const [source, entry] of this.entries) {
+        if (this.protectedSources.has(source) || (!entry.pending && !entry.failed)) continue;
+        this.entries.delete(source);
+        entry.controller?.abort();
       }
+      this.queue = this.queue.filter(source => this.entries.get(source)?.queued);
       this.prune();
     }
 
@@ -801,6 +825,7 @@
     setFilter(filter, immediate = false) {
       const normalized = filter === 'planetary' ? 'planet' : filter;
       if (normalized !== 'all' && !categoryConfig[normalized]) return;
+      this.cache.cancelPending();
       this.filter = normalized;
       this.visibleWorks = normalized === 'all' ? [...this.allWorks] : this.allWorks.filter(work => work.category === normalized);
       this.focusedIndex = 0;
@@ -1054,6 +1079,12 @@
         }
       }
       this.cache.protect(this.frameSources);
+      const hasFailed = this.rendered.some(({ node }) => {
+        const preview = node.work.previewSrc || node.work.src;
+        return this.cache.failed(preview) || (!this.cache.get(preview) && this.cache.failed(node.work.thumbnailSrc || preview));
+      });
+      const retry = $('[data-canvas-retry]');
+      if (retry) retry.hidden = !hasFailed;
       this.syncFocusedFromCenter();
     }
 
@@ -1079,8 +1110,15 @@
       const height = node.height * scale;
       const source = node.work.previewSrc || node.work.src;
       this.frameSources.add(source);
-      const bitmap = this.cache.get(source);
-      if (!bitmap) this.cache.request(source);
+      const thumbnail = node.work.thumbnailSrc || source;
+      this.frameSources.add(thumbnail);
+      const previewBitmap = this.cache.get(source);
+      const thumbnailBitmap = this.cache.get(thumbnail);
+      const bitmap = previewBitmap || thumbnailBitmap;
+      if (!previewBitmap) {
+        if (!thumbnailBitmap) this.cache.request(thumbnail, 0);
+        if (thumbnailBitmap || thumbnail === source || this.cache.failed(thumbnail)) this.cache.request(source, 1);
+      }
 
       context.save();
       context.translate(x, y);
@@ -1283,6 +1321,7 @@
     } else if (location.hash === '#works') ensureArchiveCanvas();
   }
   $$('.gallery-filters [data-filter]').forEach(button => button.addEventListener('click', () => ensureArchiveCanvas()?.setFilter(button.dataset.filter)));
+  $('[data-canvas-retry]')?.addEventListener('click', () => archiveCanvas?.cache.retryFailed());
   $('.gallery-prev')?.addEventListener('click', () => ensureArchiveCanvas()?.go(-1));
   $('.gallery-next')?.addEventListener('click', () => ensureArchiveCanvas()?.go(1));
 
@@ -1340,8 +1379,13 @@
     }
   }
 
+  const directoryImageControllers = new Set();
   function resetDirectoryImageLoader() {
     directoryImageGeneration += 1;
+    directoryImageControllers.forEach(controller => controller.abort());
+    directoryImageControllers.clear();
+    const retry = $('[data-directory-retry]');
+    if (retry) retry.hidden = true;
     directoryImageObserver?.disconnect();
     directoryImageObserver = null;
     directoryImageQueue = [];
@@ -1350,24 +1394,35 @@
   function pumpDirectoryImages() {
     while (directoryImageActive < directoryImageConcurrency && directoryImageQueue.length) {
       const task = directoryImageQueue.shift();
+      if (task.generation !== directoryImageGeneration || !task.image.isConnected) continue;
+      const controller = new AbortController();
+      directoryImageControllers.add(controller);
       directoryImageActive += 1;
-      const preload = new Image();
-      preload.decoding = 'async';
-      const finish = () => {
+      window.PlutonoCImages.load(task.source, { signal: controller.signal }).then(() => {
+        if (task.generation !== directoryImageGeneration || !task.image.isConnected) return;
+        task.image.src = task.source;
+        task.image.classList.add('is-loaded');
+        delete task.image.dataset.directoryFailed;
+      }).catch(error => {
+        if (error.name === 'AbortError' || task.generation !== directoryImageGeneration || !task.image.isConnected) return;
+        task.image.dataset.directoryFailed = task.source;
+        $('[data-directory-retry]').hidden = false;
+      }).finally(() => {
+        directoryImageControllers.delete(controller);
         directoryImageActive = Math.max(0, directoryImageActive - 1);
         pumpDirectoryImages();
-      };
-      preload.onload = () => {
-        if (task.generation === directoryImageGeneration && task.image.isConnected) {
-          task.image.src = task.source;
-          task.image.classList.add('is-loaded');
-        }
-        finish();
-      };
-      preload.onerror = finish;
-      preload.src = task.source;
+      });
     }
   }
+
+  $('[data-directory-retry]')?.addEventListener('click', event => {
+    event.currentTarget.hidden = true;
+    $$('img[data-directory-failed]', galleryDirectoryGrid).forEach(image => {
+      directoryImageQueue.push({ image, source: image.dataset.directoryFailed, generation: directoryImageGeneration });
+      delete image.dataset.directoryFailed;
+    });
+    pumpDirectoryImages();
+  });
 
   function observeDirectoryImages(generation) {
     const images = $$('img[data-directory-src]', galleryDirectoryGrid);
@@ -1535,6 +1590,54 @@
   let photoClosingFromHistory = false;
   let photoReturnScrollY = 0;
   let photoCopyResetTimer = 0;
+  let photoRenderTimer = 0;
+  let photoImageController = null;
+  let photoImageGeneration = 0;
+
+  function cancelPhotoImages() {
+    clearTimeout(photoRenderTimer);
+    photoImageGeneration += 1;
+    photoImageController?.abort();
+    photoImageController = null;
+  }
+
+  function loadPhotoImages(work, keepPreview = false) {
+    cancelPhotoImages();
+    const generation = photoImageGeneration;
+    const controller = new AbortController();
+    photoImageController = controller;
+    const message = $('[data-photo-load-message]');
+    const retry = $('[data-photo-retry]');
+    let fullReady = false;
+    const current = () => generation === photoImageGeneration && !controller.signal.aborted;
+    if (!keepPreview) photoImage.removeAttribute('src');
+    photoImage.alt = work.title;
+    photoImage.style.aspectRatio = `${work.width} / ${work.height}`;
+    message.textContent = '正在加载高清图片…';
+    retry.hidden = true;
+    const preview = work.previewSrc && archiveCanvas?.cache.get(work.previewSrc)
+      ? work.previewSrc : (work.thumbnailSrc || work.previewSrc);
+    if (preview && preview !== work.src && !keepPreview) {
+      window.PlutonoCImages.load(preview, { signal: controller.signal, priority: 'high' }).then(() => {
+        if (current() && !fullReady) photoImage.src = preview;
+      }).catch(() => { /* The full-size request has its own visible error state. */ });
+    }
+    window.PlutonoCImages.load(work.src, { signal: controller.signal, priority: 'low' }).then(() => {
+      if (!current()) return;
+      fullReady = true;
+      photoImage.src = work.src;
+      message.textContent = '';
+    }).catch(error => {
+      if (!current() || error.name === 'AbortError') return;
+      message.textContent = '图片暂未加载完成';
+      retry.hidden = false;
+    });
+  }
+
+  $('[data-photo-retry]')?.addEventListener('click', () => {
+    const work = archiveCanvas?.visibleWorks[photoIndex];
+    if (work) loadPhotoImages(work, Boolean(photoImage.getAttribute('src')));
+  });
 
   function detailValue(work, key) {
     const value = work.details?.[key];
@@ -1553,13 +1656,13 @@
     const work = archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
     markWorkSeen(work);
+    cancelPhotoImages();
     if (direction) {
       photoDialog.style.setProperty('--photo-direction', `${direction * 20}px`);
       photoDialog.classList.add('is-switching');
     }
     const render = () => {
-      photoImage.src = work.src;
-      photoImage.alt = work.title;
+      loadPhotoImages(work);
       $('[data-photo-current]').textContent = pad(photoIndex + 1);
       $('[data-photo-total]').textContent = pad(archiveCanvas.visibleWorks.length);
       $('[data-photo-title]').textContent = work.title;
@@ -1586,7 +1689,7 @@
       $('[data-detail-notes]').hidden = !(story || notes);
       photoDialog.classList.remove('is-switching');
     };
-    if (direction && !reducedMotion) setTimeout(render, 150);
+    if (direction && !reducedMotion) photoRenderTimer = setTimeout(render, 150);
     else render();
   }
 
@@ -1718,6 +1821,7 @@
     if (Math.abs(delta) > 55) movePhoto(delta < 0 ? 1 : -1);
   });
   photoDialog?.addEventListener('close', () => {
+    cancelPhotoImages();
     const reopenDirectory = returnToGalleryDirectory;
     returnToGalleryDirectory = false;
     photoHistoryEntryOwned = false;
@@ -1975,7 +2079,7 @@
     return film.sourceType === 'bilibili' || film.bvid || extractBvid(film.bilibiliUrl) ? 'bilibili' : 'direct';
   }
   function filmPreviewUrl(film = {}) {
-    return film.previewUrl || (filmSourceType(film) === 'direct' ? film.videoUrl : '');
+    return film.previewUrl || '';
   }
   function bilibiliPageUrl(film = {}) {
     const bvid = film.bvid || extractBvid(film.bilibiliUrl);
