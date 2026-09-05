@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260905-hover-1"
+STYLE_CACHE_VERSION = "20260905-hover-2"
 ADMIN_STYLE_CACHE_VERSION = "20260904-bilibili-1"
 ADMIN_SCRIPT_CACHE_VERSION = "20260904-bilibili-1"
-SCRIPT_CACHE_VERSION = "20260905-hover-1"
+SCRIPT_CACHE_VERSION = "20260905-hover-2"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"

@@ -118,7 +118,8 @@ test('stalled images release their slots and allow following images to load', as
     for (let i = 0; i < 4; i++) cache.request('stalled-' + i);
     cache.request('healthy');
     cache.protect(['stalled-0', 'stalled-1', 'stalled-2', 'stalled-3', 'healthy']);
-    for (let i = 0; i < 50 && !cache.get('healthy'); i++) await pause(5);
+    // One freed slot can finish the healthy image before the other deadlines.
+    for (let i = 0; i < 50 && (!cache.get('healthy') || cache.active > 0); i++) await pause(5);
     assert.ok(cache.get('healthy'));
     assert.equal(cache.active, 0);
     assert.equal(cache.failed('stalled-0'), true);

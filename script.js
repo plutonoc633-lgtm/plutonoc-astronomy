@@ -399,7 +399,6 @@
   const descentSheet = $('.descent-sheet');
   const descentPanels = $$('.descent-panel');
   const homeMotion = $('[data-home-motion]');
-  let visualStageOverride = null;
   let activeVisualStage = '';
 
   function setVisualStage(category) {
@@ -410,25 +409,9 @@
     document.documentElement.style.setProperty('--stage-color', categoryConfig[stage]?.color || '#9ec8ff');
   }
 
-  // CSS owns expansion. Only synchronize the surrounding background on a change.
-  function updateHeroStage() {
-    if (isMobile) return;
-    const hovered = supportsHover ? descentSheet?.querySelector('.descent-panel:hover') : null;
-    const focused = descentSheet?.querySelector('.descent-panel:focus-visible');
-    const category = (hovered || focused)?.dataset.homeFilter || null;
-    if (category === visualStageOverride) return;
-    visualStageOverride = category;
-    if (category) setVisualStage(category);
-    else scrollDirty = true;
-    requestMainFrame();
-  }
-  descentPanels.forEach(panel => {
-    if (supportsHover) panel.addEventListener('pointerenter', updateHeroStage);
-  });
-  descentSheet?.addEventListener('pointerleave', updateHeroStage);
-  descentSheet?.addEventListener('focusin', updateHeroStage);
-  descentSheet?.addEventListener('focusout', () => queueMicrotask(updateHeroStage));
-  queueMicrotask(updateHeroStage);
+  // Desktop panels respond entirely in CSS. Do not switch the full-screen SVG
+  // atmosphere on hover/focus: its blur rasterization stalls the opening frame.
+  // Atmosphere follows page scroll; mobile keeps its existing centered-card state.
 
   if (isMobile && descentSheet) {
     let mobilePanelFrame = 0;
@@ -590,7 +573,7 @@
     if (ratio >= .78) fallbackStage = 'earth';
     const worksVisible = layoutMetrics.worksTop < scrollY + innerHeight * .72
       && layoutMetrics.worksBottom > scrollY + innerHeight * .25;
-    setVisualStage(visualStageOverride || (worksVisible && archiveCanvas?.filter !== 'all' ? archiveCanvas.filter : fallbackStage));
+    setVisualStage(worksVisible && archiveCanvas && archiveCanvas.filter !== 'all' ? archiveCanvas.filter : fallbackStage);
   }
 
   window.addEventListener('scroll', () => {

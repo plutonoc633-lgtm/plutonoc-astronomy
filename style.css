@@ -313,6 +313,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 .hero { min-height: 100svh; padding-top: var(--header-height); background: rgba(2, 3, 5, .24); }
 .descent-sheet { position: relative; display: flex; height: calc(100svh - var(--header-height) - 102px); min-height: 560px; overflow: hidden; }
 .descent-panel {
+  --panel-duration: .4s;
   --panel-dim: .35;
   --panel-scale: 1.01;
   --panel-line: 0;
@@ -322,22 +323,22 @@ section { position: relative; scroll-margin-top: var(--header-height); }
   overflow: hidden;
   border-right: 1px solid var(--line);
   background: #020304;
-  transition: flex-basis .3s var(--ease-cinematic);
+  transition: flex-basis var(--panel-duration) var(--ease-cinematic);
 }
 /* Keyboard works without JavaScript; a fine pointer takes precedence below. */
 @media (min-width: 761px) {
   .descent-sheet:has(:where(.descent-panel:focus-visible)) .descent-panel { flex-basis: 14%; --panel-dim: .56; }
   .descent-sheet .descent-panel:focus-visible { flex-basis: 44%; --panel-dim: 0; --panel-scale: 1.075; --panel-line: 1; }
 }
-@media (min-width: 761px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 761px) and (any-hover: hover) and (any-pointer: fine) {
   .descent-sheet:has(.descent-panel:hover) .descent-panel { flex-basis: 14%; --panel-dim: .56; --panel-scale: 1.01; --panel-line: 0; }
   .descent-sheet:has(.descent-panel:hover) .descent-panel:hover { flex-basis: 44%; --panel-dim: 0; --panel-scale: 1.075; --panel-line: 1; }
 }
 .descent-panel picture { display: block; width: 100%; height: 100%; }
-.descent-panel img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.88) contrast(1.04); transform: scale(var(--panel-scale)); transform-origin: center; transition: transform .3s var(--ease-cinematic); will-change: transform; }
+.descent-panel img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.88) contrast(1.04); transform: scale(var(--panel-scale)); transform-origin: center; transition: transform var(--panel-duration) var(--ease-cinematic); will-change: transform; }
 .descent-panel-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .25), transparent 42%, rgba(0, 0, 0, .92)); }
-.descent-panel-shade::before { content: ""; position: absolute; inset: 0; background: #000; opacity: var(--panel-dim); transition: opacity .3s ease; }
-.descent-panel::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--panel-color); transform: scaleX(var(--panel-line)); transform-origin: left; transition: transform .3s var(--ease-cinematic); }
+.descent-panel-shade::before { content: ""; position: absolute; inset: 0; background: #000; opacity: var(--panel-dim); transition: opacity var(--panel-duration) ease; }
+.descent-panel::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--panel-color); transform: scaleX(var(--panel-line)); transform-origin: left; transition: transform var(--panel-duration) var(--ease-cinematic); }
 .descent-panel-index { position: absolute; top: 30px; right: 26px; color: rgba(255, 255, 255, .58); font: 10px/1 var(--font-meta); }
 .descent-panel-meta { position: absolute; inset: auto 24px 26px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 4px 16px; }
 .descent-panel-meta b { grid-column: 1; font: 500 clamp(28px, 3.4vw, 56px)/1.08 var(--font-display); letter-spacing: 0; white-space: nowrap; }
