@@ -410,43 +410,25 @@
     document.documentElement.style.setProperty('--stage-color', categoryConfig[stage]?.color || '#9ec8ff');
   }
 
+  // CSS owns expansion. Only synchronize the surrounding background on a change.
+  function updateHeroStage() {
+    if (isMobile) return;
+    const hovered = supportsHover ? descentSheet?.querySelector('.descent-panel:hover') : null;
+    const focused = descentSheet?.querySelector('.descent-panel:focus-visible');
+    const category = (hovered || focused)?.dataset.homeFilter || null;
+    if (category === visualStageOverride) return;
+    visualStageOverride = category;
+    if (category) setVisualStage(category);
+    else scrollDirty = true;
+    requestMainFrame();
+  }
   descentPanels.forEach(panel => {
-    const category = panel.dataset.homeFilter;
-    const activate = () => {
-      descentPanels.forEach(item => item.classList.toggle('is-active', item === panel));
-      descentSheet?.classList.add('has-active');
-      visualStageOverride = category;
-      setVisualStage(category);
-      requestMainFrame();
-    };
-    if (supportsHover) panel.addEventListener('pointerenter', activate);
-    panel.addEventListener('focus', activate);
-    if (supportsHover && !reducedMotion) {
-      panel.addEventListener('pointermove', event => {
-        activate();
-        const bounds = panel.getBoundingClientRect();
-        const x = clamp((event.clientX - bounds.left) / bounds.width * 100, 8, 92);
-        const y = clamp((event.clientY - bounds.top) / bounds.height * 100, 8, 92);
-        panel.style.setProperty('--zoom-x', `${x}%`);
-        panel.style.setProperty('--zoom-y', `${y}%`);
-      });
-    }
+    if (supportsHover) panel.addEventListener('pointerenter', updateHeroStage);
   });
-  descentSheet?.addEventListener('pointerleave', () => {
-    descentPanels.forEach(panel => panel.classList.remove('is-active'));
-    descentSheet.classList.remove('has-active');
-    visualStageOverride = null;
-    scrollDirty = true;
-    requestMainFrame();
-  });
-  descentSheet?.addEventListener('focusout', event => {
-    if (descentSheet.contains(event.relatedTarget)) return;
-    descentPanels.forEach(panel => panel.classList.remove('is-active'));
-    descentSheet.classList.remove('has-active');
-    visualStageOverride = null;
-    scrollDirty = true;
-    requestMainFrame();
-  });
+  descentSheet?.addEventListener('pointerleave', updateHeroStage);
+  descentSheet?.addEventListener('focusin', updateHeroStage);
+  descentSheet?.addEventListener('focusout', () => queueMicrotask(updateHeroStage));
+  queueMicrotask(updateHeroStage);
 
   if (isMobile && descentSheet) {
     let mobilePanelFrame = 0;
