@@ -15,7 +15,7 @@ $adminSource = Join-Path $projectRoot "admin.html"
 Copy-Item -LiteralPath $adminSource -Destination (Join-Path $stageRoot "index.html") -Force
 Copy-Item -LiteralPath $adminSource -Destination (Join-Path $stageRoot "admin.html") -Force
 
-foreach ($asset in @("admin.css", "admin.js", "cloudbase-config.js")) {
+foreach ($asset in @("admin.css", "admin.js", "admin-analytics.js", "cloudbase-config.js")) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $asset) -Destination (Join-Path $stageRoot $asset) -Force
 }
 
@@ -24,7 +24,7 @@ const fs = require("fs");
 const path = require("path");
 const output = path.join(process.cwd(), "dist");
 fs.mkdirSync(output, { recursive: true });
-for (const file of ["index.html", "admin.html", "admin.css", "admin.js", "cloudbase-config.js"]) {
+for (const file of ["index.html", "admin.html", "admin.css", "admin.js", "admin-analytics.js", "cloudbase-config.js"]) {
   fs.copyFileSync(path.join(process.cwd(), file), path.join(output, file));
 }
 '@

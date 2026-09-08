@@ -1628,6 +1628,7 @@
     }
     const render = () => {
       loadPhotoImages(work);
+      recordWorkOpen('photo', work.id, work.title);
       $('[data-photo-current]').textContent = pad(photoIndex + 1);
       $('[data-photo-total]').textContent = pad(archiveCanvas.visibleWorks.length);
       $('[data-photo-title]').textContent = work.title;
@@ -2148,6 +2149,15 @@
     layoutDirty = true;
     requestMainFrame();
   }
+  function recordWorkOpen(kind, id, title) {
+    try {
+      if (window.PlutonoCAnalytics) window.PlutonoCAnalytics.work(kind, id, title);
+      else {
+        const early = window.plutonoCEarlyWork ||= [];
+        if (early.length < 20) early.push([kind, id, title]);
+      }
+    } catch { /* optional analytics must not affect artwork dialogs */ }
+  }
   function openFilm(index) {
     const film = loadedFilms[index];
     if (!film) return;
@@ -2176,6 +2186,7 @@
     $('.video-caption h3', videoDialog).textContent = film.title;
     $('.video-caption p', videoDialog).textContent = [film.date, formatDuration(film.duration), film.location].filter(Boolean).join(' / ');
     videoDialog.showModal();
+    recordWorkOpen('video', film.id, film.title);
     document.body.classList.add('dialog-open');
   }
   $('#films')?.addEventListener('click', event => {

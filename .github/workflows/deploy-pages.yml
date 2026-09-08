@@ -36,6 +36,10 @@ jobs:
           node --test tools/test-image-loading.cjs
           node --check script.js
           node --check admin.js
+          node --check analytics.js
+          node --check admin-analytics.js
+          node --check cloudfunctions/analytics-shared/core.js
+          node --test tools/test-analytics.cjs
           node --check cloudfunctions/plutonoc-content-publisher/index.js
           node --check cloudfunctions/plutonoc-content-publisher/content-runtime.js
           node tools/build-content.mjs --check

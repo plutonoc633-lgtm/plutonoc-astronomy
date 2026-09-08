@@ -21,6 +21,12 @@
   const confirmDialog = $('[data-confirm-dialog]');
   let app;
   let auth;
+  const visitorAnalytics = window.createVisitorAnalytics(async (action, data) => {
+    const response = await app.callFunction({ name: 'plutonoc-analytics-query', data: { action, ...data }, parse: true });
+    const result = typeof response.result === 'string' ? JSON.parse(response.result) : response.result;
+    if (!result?.ok) throw new Error(result?.error?.message || '统计暂时不可用，请刷新重试');
+    return result.data;
+  });
   let repoState = null;
   let preparedPhoto = null;
   let preparedPoster = null;
@@ -1079,6 +1085,10 @@
   });
 
   $$('[data-studio-tab]').forEach(tab => tab.addEventListener('click', () => {
+    const analyticsActive = tab.dataset.studioTab === 'analytics';
+    publisher.hidden = analyticsActive;
+    if (analyticsActive) visitorAnalytics.show();
+    else visitorAnalytics.reset();
     $$('[data-studio-tab]').forEach(button => button.classList.toggle('is-active', button === tab));
     $$('[data-studio-panel]').forEach(panel => {
       const active = panel.dataset.studioPanel === tab.dataset.studioTab;
@@ -1111,6 +1121,8 @@
   });
 
   signOutButton.addEventListener('click', async () => {
+    visitorAnalytics.reset();
+    dashboard.hidden = true;
     clearDraft('photo');
     clearDraft('video');
     repoState = null;
@@ -1122,6 +1134,7 @@
   });
 
   async function showDashboard() {
+    $('[data-studio-tab="photos"]').click();
     loginPanel.hidden = true;
     dashboard.hidden = false;
     signOutButton.hidden = false;
@@ -1145,6 +1158,14 @@
     try {
       app = window.cloudbase.init(cloudOptions());
       auth = app.auth({ persistence: 'local' });
+      auth.onLoginStateChanged?.(state => {
+        if (!state) {
+          visitorAnalytics.reset();
+          dashboard.hidden = true;
+          signOutButton.hidden = true;
+          loginPanel.hidden = false;
+        }
+      });
       if (await currentUser()) await showDashboard();
       else loginPanel.hidden = false;
     } catch (error) {

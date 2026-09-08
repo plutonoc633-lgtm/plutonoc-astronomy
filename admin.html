@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC 管理后台</title>
-  <link rel="stylesheet" href="admin.css?v=20260904-bilibili-1">
+  <link rel="stylesheet" href="admin.css?v=20260908-analytics-1">
 </head>
 <body>
   <header class="studio-header">
@@ -36,6 +36,7 @@
       <nav class="studio-tabs" aria-label="内容类型">
         <button type="button" class="is-active" data-studio-tab="photos">摄影作品</button>
         <button type="button" data-studio-tab="videos">动态影像</button>
+        <button type="button" data-studio-tab="analytics">访客统计</button>
       </nav>
 
       <section class="publisher" data-publisher hidden>
@@ -180,6 +181,23 @@
           </div>
         </section>
       </section>
+      <section class="studio-panel analytics-panel" data-studio-panel="analytics" data-analytics hidden>
+        <div class="panel-heading"><h1>访客统计</h1></div>
+        <p class="stats-muted">统计从功能上线后开始，保留最近 90 天。匿名人数为估算值，浏览器拦截或清除记录可能影响结果；不收集姓名、联系方式、精确位置或原始 IP。</p>
+        <form class="stats-controls" data-stats-form>
+          <div class="stats-presets"><button type="button" data-stats-days="1">今天</button><button type="button" data-stats-days="7">最近 7 天</button><button type="button" data-stats-days="30">最近 30 天</button></div>
+          <label>开始日期<input type="date" data-stats-start required></label><label>结束日期<input type="date" data-stats-end required></label><button type="submit">查询 / 刷新</button>
+        </form>
+        <p data-stats-status role="status" class="stats-muted"></p>
+        <div class="stats-metrics" data-stats-metrics></div>
+        <div class="stats-grid">
+          <section class="stats-card"><h2>每天的变化</h2><div class="stats-table-scroll"><table><thead><tr><th>日期</th><th>访客</th><th>访问</th><th>作品打开</th></tr></thead><tbody data-stats-trend></tbody></table></div></section>
+          <section class="stats-card"><h2>热门作品</h2><ol class="stats-list" data-stats-works></ol></section>
+          <section class="stats-card"><h2>设备类型</h2><ul class="stats-list" data-stats-devices></ul></section>
+          <section class="stats-card"><h2>访问来源</h2><ul class="stats-list" data-stats-sources></ul></section>
+        </div>
+        <section class="stats-card"><h2>访问记录</h2><p class="stats-muted">点击展开浏览过程。打开或刷新网页记一次访问；30 分钟无活动后开始新的浏览过程。同一过程中的栏目和作品各记录一次。设备与来源按访问次数统计，时间为北京时间。</p><div data-stats-visits></div><div class="stats-pagination"><button type="button" data-stats-prev disabled>上一页</button><span data-stats-page></span><button type="button" data-stats-next disabled>下一页</button></div></section>
+      </section>
     </section>
   </main>
 
@@ -193,6 +211,7 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin.js?v=20260904-bilibili-1"></script>
+  <script src="admin-analytics.js?v=20260908-analytics-1"></script>
+  <script src="admin.js?v=20260908-analytics-1"></script>
 </body>
 </html>

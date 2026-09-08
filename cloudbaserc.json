@@ -4,6 +4,9 @@
   "envId": "activity-book-web-d7djhe7bb1e834",
   "functionRoot": "cloudfunctions",
   "functions": [
+    { "name": "plutonoc-analytics-collect", "runtime": "Nodejs20.19", "handler": "index.main", "timeout": 20, "memorySize": 256, "installDependency": true },
+    { "name": "plutonoc-analytics-query", "runtime": "Nodejs20.19", "handler": "index.main", "timeout": 30, "memorySize": 256, "installDependency": true },
+    { "name": "plutonoc-analytics-cleanup", "runtime": "Nodejs20.19", "handler": "index.main", "timeout": 60, "memorySize": 256, "installDependency": true },
     {
       "name": "plutonoc-content-publisher",
       "runtime": "Nodejs20.19",
