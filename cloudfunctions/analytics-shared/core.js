@@ -121,15 +121,22 @@ async function query(event, context) {
 
 async function cleanup(event, secret) {
   // Fixed retention only: caller input cannot select collections or deletion dates.
-  if (!secret || event.Message !== secret || event.Type !== 'Timer' || event.TriggerName !== 'plutonoc-analytics-daily') return { ok: false };
+  if (!secret || event.Message !== secret || event.Type !== 'Timer' || event.TriggerName !== 'plutonoc-analytics-daily') throw fail('CLEANUP_FORBIDDEN', '清理触发参数不匹配');
   const db = database(), now = Date.now();
+  const report = {};
   for (const [collection, cutoff] of [[EVENTS, now - 90 * DAY], [LIMITS, now - DAY]]) {
+    report[collection] = { deleted: 0, remaining: false };
     for (let batch = 0; batch < 100; batch++) {
+      if (Date.now() - now > 45000) throw fail('CLEANUP_INCOMPLETE', '清理接近执行时限，需检查过期积压');
       const rows = (await db.collection(collection).where({ at: db.command.lt(cutoff) }).limit(100).field({ _id: true }).get()).data;
       if (!rows.length) break;
       await Promise.all(rows.map(row => db.collection(collection).doc(row._id).remove()));
+      report[collection].deleted += rows.length;
     }
+    report[collection].remaining = (await db.collection(collection).where({ at: db.command.lt(cutoff) }).limit(1).field({ _id: true }).get()).data.length > 0;
   }
-  return { ok: true };
+  console.log('analytics cleanup', JSON.stringify(report));
+  if (Object.values(report).some(item => item.remaining)) throw fail('CLEANUP_INCOMPLETE', '清理达到处理上限，仍有过期积压');
+  return { ok: true, report };
 }
 module.exports = { normalize, range, collect, query, cleanup, ADMIN, EVENTS, LIMITS };

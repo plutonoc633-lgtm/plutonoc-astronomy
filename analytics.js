@@ -9,6 +9,7 @@
   const validId = value => typeof value === 'string' && /^[a-f0-9-]{36}$/i.test(value);
   const idleLimit = 30 * 60000;
   let visitor, session, started = false, pending = [], busy = false, seen = new Set(), activitySaved = 0;
+  let restartDwell = () => {};
   const source = () => { try { return new URL(document.referrer).hostname; } catch { return ''; } };
   const device = /iPad|Tablet/i.test(navigator.userAgent) || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1) ? 'tablet' : /Mobi|Android/i.test(navigator.userAgent) ? 'phone' : 'desktop';
   function persist() { session.seen = [...seen]; write('sessionStorage', sessionKey, session); }
@@ -17,6 +18,7 @@
     if (!session || now - session.last >= idleLimit) {
       session = { id: uuid(), last: now, source: source(), seen: [] };
       seen = new Set();
+      restartDwell();
     }
     session.last = now;
     if (now - activitySaved > 30000) { persist(); activitySaved = now; }
@@ -89,23 +91,35 @@
       const timers = new Map();
       if ('IntersectionObserver' in window) {
         let observer, resizeTimer;
+        const centered = new Set();
+        const blocked = () => Boolean(document.querySelector('dialog[open], .site-index[aria-hidden="false"]'));
+        const arm = element => {
+          clearTimeout(timers.get(element)); timers.delete(element);
+          if (!centered.has(element) || document.visibilityState !== 'visible' || blocked()) return;
+          timers.set(element, setTimeout(() => {
+            timers.delete(element);
+            if (centered.has(element) && document.visibilityState === 'visible' && !blocked()) record('section', element.id);
+          }, 1000));
+        };
+        restartDwell = () => centered.forEach(arm);
         const sections = [...document.querySelectorAll('main > section[id]')].filter(element => ['home', 'works', 'films', 'records', 'equipment', 'contact'].includes(element.id));
         const observe = () => {
           timers.forEach(clearTimeout); timers.clear();
+          centered.clear();
           observer?.disconnect();
           // IO percentage margins use root width; pixels keep the central band tied to height.
           const inset = Math.round(window.innerHeight * .25);
           observer = new IntersectionObserver(entries => entries.forEach(entry => {
-          clearTimeout(timers.get(entry.target));
-          timers.delete(entry.target);
-          if (entry.isIntersecting && document.visibilityState === 'visible') timers.set(entry.target, setTimeout(() => {
-            if (document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) record('section', entry.target.id);
-            timers.delete(entry.target);
-          }, 1000));
+          if (entry.isIntersecting) centered.add(entry.target); else centered.delete(entry.target);
+          arm(entry.target);
           }), { rootMargin: `-${inset}px 0px -${inset}px 0px`, threshold: 0 });
           sections.forEach(element => observer.observe(element));
         };
         observe();
+        if ('MutationObserver' in window) {
+          const overlays = new MutationObserver(restartDwell);
+          document.querySelectorAll('dialog, .site-index').forEach(element => overlays.observe(element, { attributes: true, attributeFilter: ['open', 'aria-hidden'] }));
+        }
         window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(observe, 150); }, { passive: true });
         document.addEventListener('visibilitychange', () => {
           timers.forEach(clearTimeout); timers.clear();

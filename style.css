@@ -608,12 +608,12 @@ dialog { color: inherit; }
 .video-dialog { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: #020304; overflow: hidden; }
 .photo-dialog::backdrop,
 .video-dialog::backdrop { background: #020304; }
-.photo-dialog { display: none; grid-template-columns: minmax(0, 1.7fr) minmax(330px, .7fr); }
+.photo-dialog { display: none; grid-template-columns: minmax(0, 1.7fr) minmax(330px, .7fr); grid-template-rows: minmax(0, 1fr); }
 .photo-dialog[open] { display: grid; }
 .photo-stage { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 5vh 5vw; background: #000; }
-.photo-stage img { width: 100%; height: 100%; object-fit: contain; transition: opacity .2s ease, transform .35s var(--ease-cinematic); }
+.photo-stage img { display: block; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; transition: opacity .2s ease, transform .35s var(--ease-cinematic); }
 .photo-dialog.is-switching .photo-stage img { opacity: 0; transform: translateX(var(--photo-direction, 18px)); }
-.photo-information { overflow-y: auto; padding: 80px 44px 60px; border-left: 1px solid var(--line); background: #080a0d; }
+.photo-information { min-width: 0; min-height: 0; overflow-y: auto; overflow-wrap: anywhere; padding: 80px 44px 60px; border-left: 1px solid var(--line); background: #080a0d; }
 .photo-information-nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .photo-position { color: var(--muted); font: 10px/1 var(--font-meta); }
 .photo-information-actions { display: flex; align-items: center; gap: 16px; }
@@ -648,6 +648,12 @@ dialog { color: inherit; }
 .video-caption a { color: var(--muted-bright); font: 10px/1.5 var(--font-meta); letter-spacing: .08em; transition: color .25s ease; }
 .video-caption a:hover,
 .video-caption a:focus-visible { color: var(--foreground); }
+
+@media (max-width: 1060px), (max-height: 560px) {
+  .photo-dialog { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; overflow-y: auto; align-content: start; }
+  .photo-stage { height: max(300px, 70dvh); min-height: 0; padding: 62px 18px 24px; }
+  .photo-information { overflow: visible; padding: 34px 20px 80px; border-left: 0; border-top: 1px solid var(--line); }
+}
 
 @media (max-width: 1060px) {
   .equipment { grid-template-columns: 1fr; }

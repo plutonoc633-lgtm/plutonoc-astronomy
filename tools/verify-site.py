@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260905-hover-2"
-ADMIN_STYLE_CACHE_VERSION = "20260908-analytics-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260908-analytics-1"
-SCRIPT_CACHE_VERSION = "20260908-analytics-1"
+STYLE_CACHE_VERSION = "20260908-reliability-1"
+ADMIN_STYLE_CACHE_VERSION = "20260908-reliability-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260908-reliability-1"
+SCRIPT_CACHE_VERSION = "20260908-reliability-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -274,9 +274,11 @@ def verify_local(root: Path) -> None:
         and "Assert-SameFile" in admin_deploy_script
         and "Test-AdminHtml" in admin_deploy_script
         and "Get-Content -LiteralPath (Join-Path $projectRoot \"admin.html\")" not in admin_deploy_script
-        and "tcb hosting deploy" in admin_deploy_script
-        and "--retry-count 5" in admin_deploy_script,
-        "CloudBase static admin deployment must preserve UTF-8 bytes, verify dist and upload directly",
+        and "tcb app deploy $ServiceName" in admin_deploy_script
+        and "Push-Location $stageRoot" in admin_deploy_script
+        and '--cwd "."' in admin_deploy_script
+        and '--build-command "npm run build"' in admin_deploy_script,
+        "CloudBase admin deployment must preserve UTF-8 bytes, verify dist and deploy the existing app service",
     )
     require(
         all(marker in admin_script for marker in ("3000", "1600", "1280", "960", "640", "thumbnailBlob", "thumbnailSrc", "posterPreviewUrl", "homeMobileCover")),

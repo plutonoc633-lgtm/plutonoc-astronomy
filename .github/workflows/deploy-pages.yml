@@ -40,6 +40,7 @@ jobs:
           node --check admin-analytics.js
           node --check cloudfunctions/analytics-shared/core.js
           node --test tools/test-analytics.cjs
+          node --test tools/test-reliability.cjs
           node --check cloudfunctions/plutonoc-content-publisher/index.js
           node --check cloudfunctions/plutonoc-content-publisher/content-runtime.js
           node tools/build-content.mjs --check

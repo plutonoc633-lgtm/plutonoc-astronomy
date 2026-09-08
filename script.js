@@ -790,6 +790,7 @@
     setFilter(filter, immediate = false) {
       const normalized = filter === 'planetary' ? 'planet' : filter;
       if (normalized !== 'all' && !categoryConfig[normalized]) return;
+      clearTimeout(this.filterTimer);
       this.cache.cancelPending();
       this.filter = normalized;
       this.visibleWorks = normalized === 'all' ? [...this.allWorks] : this.allWorks.filter(work => work.category === normalized);
@@ -810,10 +811,10 @@
         this.requestDraw();
       };
       const stage = $('[data-canvas-stage]');
-      if (immediate || reducedMotion) apply();
+      if (immediate || reducedMotion) { apply(); stage.classList.remove('is-changing'); }
       else {
         stage.classList.add('is-changing');
-        setTimeout(() => { apply(); stage.classList.remove('is-changing'); }, 180);
+        this.filterTimer = setTimeout(() => { apply(); stage.classList.remove('is-changing'); }, 180);
       }
     }
 
@@ -896,8 +897,12 @@
 
         const rowHeight = Math.max((contentWidth - gap * (row.length - 1)) / Math.max(aspectTotal, .08), 72);
         let left = gap;
+        let captionHeight = 0;
         row.forEach(slot => {
           const width = rowHeight * slot.aspect;
+          const titleLines = this.wrapTitle(slot.work.title, Math.max(1, width));
+          const textHeight = titleLines.length * 20 + 19;
+          captionHeight = Math.max(captionHeight, textHeight);
           this.nodes.push({
             work: slot.work,
             index: slot.index,
@@ -907,11 +912,14 @@
             y: rowTop + rowHeight / 2,
             width,
             height: rowHeight,
+            titleLines,
+            captionHeight: textHeight,
             featured: false
           });
           left += width + gap;
         });
-        rowTop += rowHeight + gap;
+        // Reserve captions before hover, including image expansion on both rows.
+        rowTop += rowHeight * 1.035 + captionHeight + 14 + gap;
       }
 
       this.tile.height = Math.max(rowTop, minimumTileHeight);
@@ -922,6 +930,22 @@
       const bottom = Math.max(...originals.map(node => node.y + node.height / 2));
       this.initialCamera.x = mod((left + right) / 2, this.tile.width);
       this.initialCamera.y = mod(top + this.height / 2, this.tile.height);
+    }
+
+    wrapTitle(title, width) {
+      this.context.save();
+      this.context.font = '14px "Source Han Sans CN", sans-serif';
+      const lines = [];
+      let line = '';
+      for (const character of String(title)) {
+        if (line && this.context.measureText(line + character).width > width) {
+          lines.push(line); line = '';
+        }
+        line += character;
+      }
+      if (line) lines.push(line);
+      this.context.restore();
+      return lines.length ? lines : [''];
     }
 
     primaryNodeForIndex(index) {
@@ -1024,7 +1048,7 @@
           for (let offsetY = -repeatY; offsetY <= repeatY; offsetY += 1) {
             let x = node.x - this.camera.x + this.width / 2 + offsetX * this.tile.width;
             let y = node.y - this.camera.y + this.height / 2 + offsetY * this.tile.height;
-            if (x + node.width / 2 < -80 || x - node.width / 2 > this.width + 80 || y + node.height / 2 < -80 || y - node.height / 2 > this.height + 80) continue;
+            if (x + node.width / 2 < -80 || x - node.width / 2 > this.width + 80 || y + node.height / 2 + (node.captionHeight || 0) + 14 < -80 || y - node.height / 2 > this.height + 80) continue;
             let opacity = 1;
             let emphasis = 1;
             if (this.opening) {
@@ -1120,10 +1144,13 @@
         context.globalAlpha = opacity;
         context.fillStyle = 'rgba(238,234,224,.92)';
         context.font = '14px "Source Han Sans CN", sans-serif';
-        context.fillText(node.work.title, x - width / 2, y + height / 2 + 24);
+        const captionX = x - node.width / 2;
+        const captionY = y + node.height * 1.035 / 2 + 24;
+        const lines = node.titleLines || [node.work.title];
+        lines.forEach((line, index) => context.fillText(line, captionX, captionY + index * 20));
         context.fillStyle = categoryConfig[node.work.category]?.color || '#8d9097';
         context.font = '9px "IBM Plex Sans", monospace';
-        context.fillText(`${categoryEnglish(node.work.category)} / ${pad(node.index + 1)}`, x - width / 2, y + height / 2 + 41);
+        context.fillText(`${categoryEnglish(node.work.category)} / ${pad(node.index + 1)}`, captionX, captionY + lines.length * 20 + 1, node.width);
         context.restore();
       }
       this.rendered.push({ node, x, y, width, height });
@@ -1779,13 +1806,19 @@
     event.preventDefault();
     requestPhotoClose();
   });
-  photoDialog?.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') photoSwipeStart = event.clientX; });
+  photoDialog?.addEventListener('pointerdown', event => {
+    photoSwipeStart = event.pointerType === 'touch' && event.target.closest('.photo-stage') && !event.target.closest('button')
+      ? { x: event.clientX, y: event.clientY, id: event.pointerId } : null;
+  });
   photoDialog?.addEventListener('pointerup', event => {
     if (photoSwipeStart === null) return;
-    const delta = event.clientX - photoSwipeStart;
+    if (event.pointerId !== photoSwipeStart.id) return;
+    const delta = event.clientX - photoSwipeStart.x;
+    const vertical = Math.abs(event.clientY - photoSwipeStart.y);
     photoSwipeStart = null;
-    if (Math.abs(delta) > 55) movePhoto(delta < 0 ? 1 : -1);
+    if (Math.abs(delta) > 55 && Math.abs(delta) > vertical * 1.25) movePhoto(delta < 0 ? 1 : -1);
   });
+  photoDialog?.addEventListener('pointercancel', () => { photoSwipeStart = null; });
   photoDialog?.addEventListener('close', () => {
     cancelPhotoImages();
     const reopenDirectory = returnToGalleryDirectory;

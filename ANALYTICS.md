@@ -1,6 +1,6 @@
 # 访客统计维护说明
 
-上线版本：20260908-analytics-1。官网使用 GitHub Pages，后台继续使用现有 CloudBase 站点。
+本轮资源版本：20260908-reliability-1。官网使用 GitHub Pages，后台继续使用现有 CloudBase 站点。
 
 ## 数据与权限
 
@@ -18,11 +18,17 @@
 
 ## 清理与部署
 
-`plutonoc-analytics-cleanup` 每天 04:15（北京时间）清理 90 天前事件和 1 天前限流计数。固定集合及期限，不接受调用方指定删除目标；仅接受带有私有参数的清理触发事件。单次每集合最多处理 10,000 条，需关注大流量下的过期积压及云函数超时日志。
+`plutonoc-analytics-cleanup` 每天 04:15（北京时间）清理 90 天前事件和 1 天前限流计数。固定集合及期限，不接受调用方指定删除目标；仅接受带有私有参数的清理触发事件。单次每集合最多处理 10,000 条，返回删除数量与剩余状态。参数错误直接抛出 CLEANUP_FORBIDDEN；达到上限仍有积压或接近执行时限时抛出 CLEANUP_INCOMPLETE，不再将这些情况报告为成功。维护时须检查云函数失败日志；本轮未另接消息告警渠道。
 
-运行 `node tools/build-analytics.mjs` 生成独立部署包，仅针对三个 analytics 函数使用 `tcb fn deploy NAME --dir work/analytics-functions/NAME --force`；不要执行全量函数部署或修改 publisher 凭据。清理包中的 cleanup-secret.json 是私有触发参数，保留现有文件；换机器部署时须安全恢复并核对定时任务 CustomArgument，不能随意重新生成后只更新函数。work/ 被 Git 忽略，禁止上传其测试脚本、凭据和私有清理参数。
+将环境变量 PLUTONOC_TCB_CLI 指向已安装的 @cloudbase/cli/bin/tcb，运行 `node tools/deploy-analytics.mjs --check` 核对线上触发器，再运行 `node tools/deploy-analytics.mjs` 构建并部署三个统计函数；部署后再次核验触发器。不执行全量函数部署。清理包中的 cleanup-secret.json 是私有触发参数，必须保留；缺失时构建直接失败，不能生成替代参数。换机器须安全恢复既有参数。work/ 被 Git 忽略，禁止上传其测试脚本、凭据和私有清理参数。
 
-后台通过 `tools/deploy-admin-cloudbase.ps1` 同步 admin-analytics.js。发布后逐一比对后台 HTML/JS/CSS，再开启官网开关并推送 main；发布前核对远端以保留后台新内容。
+后台通过 `tools/deploy-admin-cloudbase.ps1` 同步 admin-analytics.js，并部署既有 plutonoc-studio 云应用；不向另一个静态存储入口上传。传入 -StageOnly 可只生成并核验发布目录。发布后逐一比对后台 HTML/JS/CSS，再发布 Pages；现有官网统计开关保持开启，发布前核对远端以保留后台新内容。
+
+## 本轮可靠性回归
+
+- 栏目在弹窗或目录遮挡期间暂停计时，关闭后重新停留一秒；会话更新后重新计时当前栏目。
+- 后台统计模块失败不再阻断作品管理；日期输入与已提交范围分离，分页不混用未提交日期。
+- `node --test tools/test-image-loading.cjs tools/test-analytics.cjs tools/test-reliability.cjs` 覆盖选图乱序、发布版本、过时响应、标题预留空间、管理员取图权限、固定提交读取和清理失败。
 
 ## 2026-09-08 验证记录
 

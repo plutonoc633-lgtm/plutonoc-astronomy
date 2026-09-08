@@ -1,6 +1,7 @@
 param(
     [string]$EnvironmentId = "activity-book-web-d7djhe7bb1e834",
-    [string]$ServiceName = "plutonoc-studio"
+    [string]$ServiceName = "plutonoc-studio",
+    [switch]$StageOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -97,11 +98,22 @@ Test-AdminHtml -Path (Join-Path $distRoot "index.html")
 Assert-SameFile -Expected $adminSource -Actual (Join-Path $distRoot "index.html")
 Assert-SameFile -Expected $adminSource -Actual (Join-Path $distRoot "admin.html")
 
-npx --yes --package "@cloudbase/cli@3.6.3" tcb hosting deploy $distRoot "/" `
+if ($StageOnly) { return }
+
+Push-Location $stageRoot
+try {
+  npx --yes --package "@cloudbase/cli@3.6.3" tcb app deploy $ServiceName `
     -e $EnvironmentId `
-    --concurrency 5 `
-    --retry-count 5 `
-    --retry-interval 2000
-if ($LASTEXITCODE -ne 0) {
+    --cwd "." `
+    --framework static `
+    --install-command "npm install --ignore-scripts --no-audit --no-fund" `
+    --build-command "npm run build" `
+    --output-dir "dist" `
+    --deploy-path "/" `
+    --force `
+    --json
+  if ($LASTEXITCODE -ne 0) {
     throw "CloudBase admin upload failed with exit code $LASTEXITCODE"
+  }
 }
+finally { Pop-Location }

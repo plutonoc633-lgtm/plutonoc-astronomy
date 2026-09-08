@@ -21,18 +21,70 @@
   const confirmDialog = $('[data-confirm-dialog]');
   let app;
   let auth;
-  const visitorAnalytics = window.createVisitorAnalytics(async (action, data) => {
-    const response = await app.callFunction({ name: 'plutonoc-analytics-query', data: { action, ...data }, parse: true });
+  function createAnalytics() {
+    try { return window.createVisitorAnalytics(async (action, data) => {
+    const response = await withTimeout(app.callFunction({ name: 'plutonoc-analytics-query', data: { action, ...data }, parse: true }), 35000);
     const result = typeof response.result === 'string' ? JSON.parse(response.result) : response.result;
     if (!result?.ok) throw new Error(result?.error?.message || '统计暂时不可用，请刷新重试');
     return result.data;
-  });
+    }); } catch {
+      return { show() { $('[data-stats-status]').textContent = '访客统计暂时不可用，请刷新重试；作品管理仍可使用。'; }, reset() { $('[data-stats-status]').textContent = ''; } };
+    }
+  }
+  const visitorAnalytics = createAnalytics();
   let repoState = null;
   let preparedPhoto = null;
   let preparedPoster = null;
   let photoPreviewUrl = '';
   let posterPreviewUrl = '';
   let publishing = false;
+  let authEpoch = 0, contentEpoch = 0, deploymentEpoch = 0, publicationAuthEpoch = 0;
+  const editBases = { photo: null, video: null };
+  const imageTasks = { photo: 0, video: 0 };
+  const preparing = { photo: false, video: false };
+  const publicAsset = path => path ? new URL(path, publicSiteUrl).href : '';
+  function withTimeout(promise, ms = 65000) {
+    let timer;
+    return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('请求超时，请刷新核对状态后重试')), ms); })]).finally(() => clearTimeout(timer));
+  }
+  function syncPreparation() {
+    for (const [kind, form] of [['photo', photoForm], ['video', videoForm]]) {
+      $('button[type="submit"]', form).disabled = publishing || preparing[kind];
+    }
+  }
+  function invalidateSession() {
+    authEpoch++; contentEpoch++; deploymentEpoch++;
+    imageTasks.photo++; imageTasks.video++;
+    preparing.photo = preparing.video = false;
+    preparedPhoto = preparedPoster = null;
+    editBases.photo = editBases.video = null;
+    revokePreview('photo'); revokePreview('poster');
+    repoState = null;
+    $('[data-photo-list]').replaceChildren(); $('[data-video-list]').replaceChildren();
+    $('[data-photo-preview]').removeAttribute('src'); $('[data-poster-preview]').removeAttribute('src');
+    photoForm.reset(); videoForm.reset(); visitorAnalytics.reset();
+  }
+  function onMutation(target, name, kind, handler) {
+    target.addEventListener(name, async event => {
+      event.preventDefault();
+      if (publishing || preparing[kind] || !repoState) return;
+      const base = editBases[kind], epoch = authEpoch;
+      if (!base || base.headSha !== repoState.headSha) {
+        setMessage($(`[data-${kind}-message]`), '内容版本已变化，当前表单已保留；请核对后重新选择作品进行编辑。', true); return;
+      }
+      publishing = true; publicationAuthEpoch = epoch; contentEpoch++; deploymentEpoch++;
+      const controls = $$('button, input, select, textarea', dashboard).map(control => [control, control.disabled]);
+      controls.forEach(([control]) => { control.disabled = true; });
+      try { await handler(event, base); }
+      catch (error) {
+        if (epoch === authEpoch) { setPublishState(formatError(error), 'error'); setMessage($(`[data-${kind}-message]`), formatError(error), true); }
+      } finally {
+        publishing = false;
+        controls.forEach(([control, disabled]) => { control.disabled = disabled; });
+        syncPreparation();
+      }
+    });
+  }
   const draftKeys = {
     photo: 'plutonoc.studio.draft.v1.photo',
     video: 'plutonoc.studio.draft.v1.video',
@@ -257,11 +309,14 @@
   }
 
   async function publisherRequest(action, data = {}) {
-    const response = await app.callFunction({
+    if (publishing && publicationAuthEpoch !== authEpoch) throw new Error('登录状态已变化，操作已取消');
+    const epoch = authEpoch;
+    const response = await withTimeout(app.callFunction({
       name: publisherFunction,
       data: { action, ...data },
       parse: true,
-    });
+    }));
+    if (epoch !== authEpoch) throw new Error('登录状态已变化');
     let result = response?.result;
     if (typeof result === 'string') {
       try { result = JSON.parse(result); } catch {}
@@ -275,8 +330,12 @@
   }
 
   async function loadRepositoryContent() {
+    if (publishing) return;
+    const token = ++contentEpoch;
+    deploymentEpoch++;
     setPublishState('正在读取网站内容', 'working');
-    const state = await publisherRequest('load');
+    const state = await publisherRequest('load').catch(error => { if (token !== contentEpoch) return null; throw error; });
+    if (token !== contentEpoch || !state) return;
     const { gallery, videos } = state;
     validateGallery(gallery);
     validateVideos(videos);
@@ -339,14 +398,11 @@
     return { path, sha: result.sha };
   }
 
-  async function publishChanges({ gallery, videos, files = [], deletions = [], message, changed }) {
-    if (publishing) throw new Error('已有内容正在发布');
-    publishing = true;
-    $$('.content-form button').forEach(button => { button.disabled = true; });
-    try {
+  async function publishChanges({ base, gallery, videos, files = [], deletions = [], message, changed }) {
+      if (!publishing || !base) throw new Error('发布操作未初始化');
       const version = contentVersion();
-      const nextGallery = gallery || deepClone(repoState.gallery);
-      const nextVideos = videos || deepClone(repoState.videos);
+      const nextGallery = gallery || deepClone(base.gallery);
+      const nextVideos = videos || deepClone(base.videos);
       if (changed === 'gallery') nextGallery.contentVersion = version;
       if (changed === 'videos') nextVideos.contentVersion = version;
       validateGallery(nextGallery);
@@ -362,7 +418,7 @@
         setPublishState(`正在上传内容 ${completed} / ${uniqueFiles.size}`, 'working');
       }
       const result = await publisherRequest('publish', {
-        expectedHeadSha: repoState.headSha,
+        expectedHeadSha: base.headSha,
         gallery: nextGallery,
         videos: nextVideos,
         fileEntries,
@@ -382,10 +438,6 @@
       setPublishState(`已提交 ${result.sha.slice(0, 7)}，等待 Pages 部署`, 'working');
       pollDeployment(version, changed, result.sha);
       return result.sha;
-    } finally {
-      publishing = false;
-      $$('.content-form button').forEach(button => { button.disabled = false; });
-    }
   }
 
   async function fetchDeploymentCheck(commitSha) {
@@ -394,6 +446,7 @@
         `https://api.github.com/repos/${githubRepository}/commits/${encodeURIComponent(commitSha)}/check-runs`,
         {
           cache: 'no-store',
+          signal: AbortSignal.timeout(10000),
           headers: { Accept: 'application/vnd.github+json' },
         },
       );
@@ -406,20 +459,25 @@
   }
 
   async function pollDeployment(version, changed, commitSha) {
+    const token = ++deploymentEpoch;
     const marker = changed === 'gallery' ? `gallery-data.js?v=${version}` : `video-data.js?v=${version}`;
     const started = Date.now();
     let lastCheck = null;
     while (Date.now() - started < 180000) {
       await new Promise(resolve => setTimeout(resolve, 8000));
+      if (token !== deploymentEpoch) return;
       try {
-        const response = await fetch(`${publicSiteUrl}index.html?studio-check=${Date.now()}`, { cache: 'no-store' });
-        if (response.ok && (await response.text()).includes(marker)) {
+        const response = await fetch(`${publicSiteUrl}index.html?studio-check=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+        const html = response.ok ? await response.text() : '';
+        if (token !== deploymentEpoch) return;
+        if (html.includes(marker)) {
           setPublishState('Pages 已部署，内容已上线', 'success');
           return;
         }
       } catch {}
 
       lastCheck = await fetchDeploymentCheck(commitSha) || lastCheck;
+      if (token !== deploymentEpoch) return;
       if (!lastCheck) continue;
       if (lastCheck.status === 'completed' && lastCheck.conclusion !== 'success') {
         setPublishState('Pages 部署失败，网站尚未更新', 'error', lastCheck.html_url);
@@ -431,7 +489,7 @@
         setPublishState('正在部署到网站', 'working', lastCheck.html_url);
       }
     }
-    setPublishState('部署超时，网站尚未确认更新', 'error', lastCheck?.html_url || '');
+    if (token === deploymentEpoch) setPublishState('部署超时，网站尚未确认更新', 'error', lastCheck?.html_url || '');
   }
 
   async function decodeImage(blob) {
@@ -550,12 +608,27 @@
     };
   }
 
-  async function fetchAsset(path, pendingFiles) {
+  async function fetchAsset(path, pendingFiles, ref) {
     const pending = pendingFiles.find(([candidate]) => candidate === path);
     if (pending) return pending[1];
-    const response = await fetch(path, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`无法读取精选图片：${path}`);
-    return response.blob();
+    const result = await publisherRequest('readAsset', { path, ref });
+    if (result.sources) {
+      for (const url of result.sources) {
+        try {
+          const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+          if (!response.ok) continue;
+          const blob = await response.blob();
+          if (blob.size !== result.size) continue;
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          const header = new TextEncoder().encode(`blob ${bytes.length}\0`);
+          const input = new Uint8Array(header.length + bytes.length); input.set(header); input.set(bytes, header.length);
+          const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-1', input))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+          if (hash === result.sha) return blob;
+        } catch { /* try the pinned repository URL after the public-site copy */ }
+      }
+      throw new Error('无法读取与编辑版本一致的精选图片，请稍后重试');
+    }
+    return new Blob([Uint8Array.from(atob(result.content.replace(/\s/g, '')), character => character.charCodeAt(0))], { type: result.type });
   }
 
   function featuredIds(gallery) {
@@ -578,13 +651,13 @@
     });
   }
 
-  async function updateChangedHeroes(previous, next, files, deletions, forcedCategories = []) {
+  async function updateChangedHeroes(previous, next, files, deletions, forcedCategories = [], ref) {
     const before = featuredIds(previous);
     const after = featuredIds(next);
     for (const category of categoryOrder) {
       if (before[category] === after[category] && !forcedCategories.includes(category)) continue;
       const item = next.items.find(candidate => candidate.id === after[category]);
-      const hero = await heroFromBlob(await fetchAsset(item.src, files));
+      const hero = await heroFromBlob(await fetchAsset(item.src, files, ref));
       const heroPath = `assets/gallery/hero/${category}-${hero.desktopHash.slice(0, 12)}.webp`;
       const mobilePath = `assets/gallery/hero/${category}-mobile-${hero.mobileHash.slice(0, 12)}.webp`;
       files.push([heroPath, hero.desktopBlob], [mobilePath, hero.mobileBlob]);
@@ -605,6 +678,9 @@
   }
 
   function resetPhotoForm({ clearStoredDraft = true } = {}) {
+    imageTasks.photo++; preparing.photo = false;
+    editBases.photo = repoState ? deepClone(repoState) : null;
+    syncPreparation();
     suppressDraftSave = true;
     photoForm.reset();
     photoForm.elements.recordId.value = '';
@@ -644,7 +720,7 @@
     photoForm.elements.notes.value = item.details?.notes || '';
     photoForm.elements.featured.checked = Boolean(item.featured);
     photoForm.elements.status.value = item.status;
-    $('[data-photo-preview]').src = item.previewSrc;
+    $('[data-photo-preview]').src = publicAsset(item.previewSrc);
     $('[data-photo-preview-message]').textContent = `${item.width} × ${item.height} / 选择新图片可替换`;
     $('[data-photo-file]').textContent = '保留现有图片；选择新文件可替换';
     $('[data-photo-form-title]').textContent = `编辑 / ${item.title}`;
@@ -668,13 +744,16 @@
     $('[data-photo-count]').textContent = `${items.length} / ${repoState.gallery.items.length}`;
     $('[data-photo-list]').innerHTML = items.length ? items.map(item => `
       <article class="manager-card ${item.status === 'hidden' ? 'is-hidden' : ''}" data-photo-id="${escapeHtml(item.id)}">
-        <img src="${escapeHtml(item.thumbnailSrc || item.previewSrc)}" alt="" loading="lazy" decoding="async">
+        <img src="${escapeHtml(publicAsset(item.thumbnailSrc || item.previewSrc))}" alt="" loading="lazy" decoding="async">
         <div><h3>${escapeHtml(item.title)}${item.featured ? ' · 精选' : ''}</h3><p><span class="status">${item.status === 'published' ? '已发布' : '已隐藏'}</span> / ${categoryLabels[item.category]} / 排序 ${item.sortOrder}</p></div>
         <button type="button" data-edit-photo>编辑</button>
       </article>`).join('') : '<p>没有符合条件的作品</p>';
   }
 
   function resetVideoForm({ clearStoredDraft = true } = {}) {
+    imageTasks.video++; preparing.video = false;
+    editBases.video = repoState ? deepClone(repoState) : null;
+    syncPreparation();
     suppressDraftSave = true;
     videoForm.reset();
     videoForm.elements.recordId.value = '';
@@ -717,7 +796,7 @@
     videoForm.elements.duration.value = item.duration;
     videoForm.elements.aspectRatio.value = item.aspectRatio || 16 / 9;
     videoForm.elements.status.value = item.status;
-    $('[data-poster-preview]').src = item.posterPreviewUrl || item.posterUrl;
+    $('[data-poster-preview]').src = publicAsset(item.posterPreviewUrl || item.posterUrl);
     $('[data-poster-file]').textContent = '保留现有封面；选择新文件可替换';
     $('[data-video-form-title]').textContent = `编辑 / ${item.title}`;
     $('[data-delete-video]').hidden = false;
@@ -730,7 +809,7 @@
     $('[data-video-count]').textContent = items.length;
     $('[data-video-list]').innerHTML = items.length ? items.map(item => `
       <article class="manager-card ${item.status === 'draft' ? 'is-hidden' : ''}" data-video-id="${escapeHtml(item.id)}">
-        <img src="${escapeHtml(item.posterPreviewUrl || item.posterUrl)}" alt="" loading="lazy" decoding="async">
+        <img src="${escapeHtml(publicAsset(item.posterPreviewUrl || item.posterUrl))}" alt="" loading="lazy" decoding="async">
         <div><h3>${escapeHtml(item.title)}</h3><p><span class="status">${item.status === 'published' ? '已发布' : '草稿'}</span> / ${videoSourceType(item) === 'bilibili' ? 'B站' : '直连'} / ${escapeHtml(item.category)} / 排序 ${item.sortOrder}</p></div>
         <button type="button" data-edit-video>编辑</button>
       </article>`).join('') : '<p>暂无影像</p>';
@@ -773,11 +852,16 @@
 
   photoForm.elements.image.addEventListener('change', async () => {
     const file = photoForm.elements.image.files[0];
+    const token = ++imageTasks.photo;
+    preparedPhoto = null;
+    preparing.photo = Boolean(file); syncPreparation();
     if (!file) return;
     markDraftDirty('photo');
     setMessage($('[data-photo-message]'), '正在生成网页图片');
     try {
-      preparedPhoto = await preparePhotoFile(file);
+      const result = await preparePhotoFile(file);
+      if (token !== imageTasks.photo) return;
+      preparedPhoto = result;
       markDraftDirty('photo');
       revokePreview('photo');
       photoPreviewUrl = URL.createObjectURL(preparedPhoto.displayBlob);
@@ -786,19 +870,25 @@
       $('[data-photo-file]').textContent = `${file.name} / ${(file.size / 1024 / 1024).toFixed(1)} MB`;
       setMessage($('[data-photo-message]'), '图片已准备，原片不会上传');
     } catch (error) {
+      if (token !== imageTasks.photo) return;
       preparedPhoto = null;
       photoForm.elements.image.value = '';
       setMessage($('[data-photo-message]'), formatError(error), true);
-    }
+    } finally { if (token === imageTasks.photo) { preparing.photo = false; syncPreparation(); } }
   });
 
   videoForm.elements.poster.addEventListener('change', async () => {
     const file = videoForm.elements.poster.files[0];
+    const token = ++imageTasks.video;
+    preparedPoster = null;
+    preparing.video = Boolean(file); syncPreparation();
     if (!file) return;
     markDraftDirty('video');
     setMessage($('[data-video-message]'), '正在生成 16:9 封面');
     try {
-      preparedPoster = await preparePosterFile(file);
+      const result = await preparePosterFile(file);
+      if (token !== imageTasks.video) return;
+      preparedPoster = result;
       markDraftDirty('video');
       revokePreview('poster');
       posterPreviewUrl = URL.createObjectURL(preparedPoster.posterBlob);
@@ -806,17 +896,18 @@
       $('[data-poster-file]').textContent = `${file.name} / 已生成 WebP`;
       setMessage($('[data-video-message]'), '封面已准备');
     } catch (error) {
+      if (token !== imageTasks.video) return;
       preparedPoster = null;
       videoForm.elements.poster.value = '';
       setMessage($('[data-video-message]'), formatError(error), true);
-    }
+    } finally { if (token === imageTasks.video) { preparing.video = false; syncPreparation(); } }
   });
 
-  photoForm.addEventListener('submit', async event => {
+  onMutation(photoForm, 'submit', 'photo', async (event, base) => {
     event.preventDefault();
     const recordId = photoForm.elements.recordId.value;
     if (!recordId && !preparedPhoto) return setMessage($('[data-photo-message]'), '新增作品必须选择图片', true);
-    const previous = repoState.gallery;
+    const previous = base.gallery;
     const next = deepClone(previous);
     const files = [];
     const deletions = [];
@@ -884,8 +975,9 @@
     }
     ensureFeatured(next);
     try {
-      await updateChangedHeroes(previous, next, files, deletions, preparedPhoto && item.featured ? [item.category] : []);
+      await updateChangedHeroes(previous, next, files, deletions, preparedPhoto && item.featured ? [item.category] : [], base.headSha);
       await publishChanges({
+        base,
         gallery: next,
         files,
         deletions,
@@ -894,16 +986,13 @@
       });
       resetPhotoForm();
       setMessage($('[data-photo-message]'), '作品已提交，正在等待 Pages 上线');
-    } catch (error) {
-      setPublishState(formatError(error), 'error');
-      setMessage($('[data-photo-message]'), formatError(error), true);
-    }
+    } catch (error) { throw error; }
   });
 
-  videoForm.addEventListener('submit', async event => {
+  onMutation(videoForm, 'submit', 'video', async (event, base) => {
     event.preventDefault();
     const recordId = videoForm.elements.recordId.value;
-    const next = deepClone(repoState.videos);
+    const next = deepClone(base.videos);
     const files = [];
     const deletions = [];
     let item = next.items.find(candidate => candidate.id === recordId);
@@ -951,6 +1040,7 @@
     if (!item.posterUrl) return setMessage($('[data-video-message]'), '新增影像必须选择封面', true);
     try {
       await publishChanges({
+        base,
         videos: next,
         files,
         deletions,
@@ -959,17 +1049,14 @@
       });
       resetVideoForm();
       setMessage($('[data-video-message]'), '影像资料已提交，正在等待 Pages 上线');
-    } catch (error) {
-      setPublishState(formatError(error), 'error');
-      setMessage($('[data-video-message]'), formatError(error), true);
-    }
+    } catch (error) { throw error; }
   });
 
-  $('[data-delete-photo]').addEventListener('click', async () => {
+  onMutation($('[data-delete-photo]'), 'click', 'photo', async (event, base) => {
     const id = photoForm.elements.recordId.value;
-    const current = repoState.gallery.items.find(item => item.id === id);
+    const current = base.gallery.items.find(item => item.id === id);
     if (!current || !(await confirmPermanent(current.title))) return;
-    const previous = repoState.gallery;
+    const previous = base.gallery;
     const next = deepClone(previous);
     next.items = next.items.filter(item => item.id !== id);
     ensureFeatured(next);
@@ -979,8 +1066,9 @@
       if (path && isCmsPhotoPath(path) && !isReferencedByOtherPhoto(path, next, current.id) && !isReferencedOutsideGallery(path)) deletions.push(path);
     }
     try {
-      await updateChangedHeroes(previous, next, files, deletions);
+      await updateChangedHeroes(previous, next, files, deletions, [], base.headSha);
       await publishChanges({
+        base,
         gallery: next,
         files,
         deletions,
@@ -989,23 +1077,21 @@
       });
       clearDraft('photo');
       resetPhotoForm();
-    } catch (error) {
-      setPublishState(formatError(error), 'error');
-      setMessage($('[data-photo-message]'), formatError(error), true);
-    }
+    } catch (error) { throw error; }
   });
 
-  $('[data-delete-video]').addEventListener('click', async () => {
+  onMutation($('[data-delete-video]'), 'click', 'video', async (event, base) => {
     const id = videoForm.elements.recordId.value;
-    const current = repoState.videos.items.find(item => item.id === id);
+    const current = base.videos.items.find(item => item.id === id);
     if (!current || !(await confirmPermanent(current.title))) return;
-    const next = deepClone(repoState.videos);
+    const next = deepClone(base.videos);
     next.items = next.items.filter(item => item.id !== id);
     const deletions = [current.posterUrl, current.posterPreviewUrl]
       .filter((path, index, values) => path && values.indexOf(path) === index)
       .filter(path => /^assets\/video-posters\/(previews\/)?uploads\//.test(path) && !isReferencedByOtherVideo(path, next, current.id));
     try {
       await publishChanges({
+        base,
         videos: next,
         deletions,
         message: `[studio] 永久删除动态影像：${current.title}`,
@@ -1013,10 +1099,7 @@
       });
       clearDraft('video');
       resetVideoForm();
-    } catch (error) {
-      setPublishState(formatError(error), 'error');
-      setMessage($('[data-video-message]'), formatError(error), true);
-    }
+    } catch (error) { throw error; }
   });
 
   $('[data-probe-video]').addEventListener('click', async () => {
@@ -1104,7 +1187,8 @@
   $('[data-reset-photo]').addEventListener('click', resetPhotoForm);
   $('[data-reset-video]').addEventListener('click', resetVideoForm);
   $$('[data-refresh-content]').forEach(button => button.addEventListener('click', async () => {
-    try { await loadRepositoryContent(); } catch (error) { setPublishState(formatError(error), 'error'); }
+    const epoch = authEpoch;
+    try { await loadRepositoryContent(); } catch (error) { if (epoch === authEpoch) setPublishState(formatError(error), 'error'); }
   }));
 
   $('[data-login-form]').addEventListener('submit', async event => {
@@ -1121,19 +1205,19 @@
   });
 
   signOutButton.addEventListener('click', async () => {
-    visitorAnalytics.reset();
+    invalidateSession();
     dashboard.hidden = true;
     clearDraft('photo');
     clearDraft('video');
-    repoState = null;
     publisher.hidden = true;
-    await auth.signOut();
-    dashboard.hidden = true;
     signOutButton.hidden = true;
     loginPanel.hidden = false;
+    try { await withTimeout(auth.signOut(), 15000); }
+    catch { setMessage($('[data-login-message]'), '退出登录未完成，请刷新后重试。', true); }
   });
 
   async function showDashboard() {
+    const epoch = authEpoch;
     $('[data-studio-tab="photos"]').click();
     loginPanel.hidden = true;
     dashboard.hidden = false;
@@ -1141,12 +1225,13 @@
     publisher.hidden = false;
     try {
       await loadRepositoryContent();
+      if (epoch !== authEpoch || !repoState) return;
       resetPhotoForm({ clearStoredDraft: false });
       resetVideoForm({ clearStoredDraft: false });
       showDraftNotice('photo');
       showDraftNotice('video');
     } catch (error) {
-      setPublishState(formatError(error), 'error');
+      if (epoch === authEpoch) setPublishState(formatError(error), 'error');
     }
   }
 
@@ -1160,7 +1245,7 @@
       auth = app.auth({ persistence: 'local' });
       auth.onLoginStateChanged?.(state => {
         if (!state) {
-          visitorAnalytics.reset();
+          invalidateSession();
           dashboard.hidden = true;
           signOutButton.hidden = true;
           loginPanel.hidden = false;

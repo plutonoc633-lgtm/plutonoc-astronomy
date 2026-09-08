@@ -31,7 +31,7 @@ test('public route cannot read; rejects oversized batches and disallowed origins
   assert.equal((await core.collect({httpMethod:'GET',headers:{origin:'https://plutonoc.cn'}})).statusCode,405);
   assert.equal((await core.collect({httpMethod:'POST',headers:{origin:'https://evil.example'},body:'{}'})).statusCode,403);
   assert.equal((await core.collect({httpMethod:'POST',headers:{origin:'https://plutonoc.cn'},body:'x'.repeat(10241)})).statusCode,413);
-  assert.deepEqual(await core.cleanup({Type:'Timer',TriggerName:'plutonoc-analytics-daily'}, 'private'), {ok:false});
+  await assert.rejects(core.cleanup({Type:'Timer',TriggerName:'plutonoc-analytics-daily'}, 'private'), {code:'CLEANUP_FORBIDDEN'});
 });
 
 function browser({storage, storageBlocked = false, disabled = false, failed = false, stalled = false} = {}) {
@@ -42,11 +42,13 @@ function browser({storage, storageBlocked = false, disabled = false, failed = fa
   const on = (name, fn) => (listeners[name] ||= []).push(fn);
   const timer = (fn, delay, interval = false) => { const token = ++serial; tasks.set(token,{fn,at:time+delay,delay,interval}); return token; };
   const win = { innerHeight:800, PLUTONOC_ANALYTICS:{enabled:!disabled,endpoint:'https://qa.invalid',test:true}, localStorage:store(local),sessionStorage:store(session),addEventListener:on,requestIdleCallback:fn=>timer(fn,1)};
-  let observer;
+  let observer, overlayCallback;
+  class MO { constructor(callback) { overlayCallback = callback; } observe() {} }
+  win.MutationObserver = MO;
   class IO {constructor(callback,options){observer=this;this.callback=callback;this.options=options;}observe(){}unobserve(){}disconnect(){}}
   win.IntersectionObserver = IO;
   const document = { readyState:'complete',referrer:'https://search.example/private?q=secret',visibilityState:'visible',addEventListener:on,querySelector:()=>null,querySelectorAll:()=>sections };
-  const context = { window:win,document,navigator:{userAgent:'Desktop',maxTouchPoints:0},crypto,URL,TextEncoder,Blob,AbortController,IntersectionObserver:IO,
+  const context = { window:win,document,navigator:{userAgent:'Desktop',maxTouchPoints:0},crypto,URL,TextEncoder,Blob,AbortController,IntersectionObserver:IO,MutationObserver:MO,
     Date:class extends Date {static now(){return time;}},
     requestAnimationFrame:fn=>timer(fn,16),setTimeout:(fn,ms)=>timer(fn,ms),clearTimeout:token=>tasks.delete(token),setInterval:(fn,ms)=>timer(fn,ms,true),
     fetch:(url,options)=>{requests.push({url,options,payload:JSON.parse(options.body)}); if(stalled)return new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(Error('timeout')))); return failed?Promise.reject(Error('offline')):Promise.resolve({ok:true});}
@@ -58,7 +60,7 @@ function browser({storage, storageBlocked = false, disabled = false, failed = fa
       const [token,task]=next;time=task.at;tasks.delete(token);if(task.interval)tasks.set(token,{...task,at:time+task.delay});task.fn();await Promise.resolve();await Promise.resolve();}
     time=end;await Promise.resolve();
   }
-  return {win,document,requests,advance,storage:{local,session},margin:()=>observer.options.rootMargin,emit:(name,event={})=>listeners[name]?.forEach(fn=>fn(event)),enter:(index=0)=>observer.callback([{target:sections[index],isIntersecting:true}]),leave:(index=0)=>observer.callback([{target:sections[index],isIntersecting:false}])};
+  return {overlay(open) { document.querySelector = () => open ? {} : null; overlayCallback(); },win,document,requests,advance,storage:{local,session},margin:()=>observer.options.rootMargin,emit:(name,event={})=>listeners[name]?.forEach(fn=>fn(event)),enter:(index=0)=>observer.callback([{target:sections[index],isIntersecting:true}]),leave:(index=0)=>observer.callback([{target:sections[index],isIntersecting:false}])};
 }
 test('starts after paint/idle, one-second section dwell and per-session work dedupe', async () => {
   const b=browser();assert.equal(b.requests.length,0);b.win.PlutonoCAnalytics.work('photo','earth-007','QA');
@@ -89,4 +91,16 @@ test('batches bounded by 20 events and 10 KB; feature switch installs no reporti
   const b=browser();await b.advance(40);for(let i=0;i<50;i++)b.win.PlutonoCAnalytics.work('photo','qa-'+i,'测试'.repeat(80));await b.advance(70000);
   for(const request of b.requests){assert.ok(request.payload.events.length<=20);assert.ok(Buffer.byteLength(request.options.body)<=10240);}
   const off=browser({disabled:true});await off.advance(100000);assert.equal(off.requests.length,0);assert.equal(off.win.PlutonoCAnalytics,undefined);
+});
+
+test('closing an overlay restarts full dwell; resumed session records the current section', async () => {
+  const b=browser(); await b.advance(40); b.enter(); await b.advance(500);
+  b.overlay(true); await b.advance(1500); b.overlay(false); await b.advance(999);
+  b.overlay(true); await b.advance(9000);
+  assert.equal(b.requests.flatMap(r=>r.payload.events).filter(e=>e.kind==='section').length,0);
+  b.overlay(false); await b.advance(1001); await b.advance(10000);
+  assert.equal(b.requests.flatMap(r=>r.payload.events).filter(e=>e.kind==='section').length,1);
+  await b.advance(30*60000); b.emit('pointerdown'); await b.advance(1001); await b.advance(10000);
+  const visits=b.requests.filter(r=>r.payload.events.some(e=>e.kind==='section'));
+  assert.equal(visits.length,2); assert.notEqual(visits[0].payload.session,visits[1].payload.session);
 });

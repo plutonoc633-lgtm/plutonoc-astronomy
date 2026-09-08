@@ -6,10 +6,14 @@
     const day = time => new Date(time + 8 * 3600000).toISOString().slice(0, 10);
     const dateTime = time => new Date(time).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
     const labels = { desktop: '电脑', phone: '手机', tablet: '平板', unknown: '未知', home: '首页', works: '摄影作品', films: '动态影像', records: '媒体与荣誉', equipment: '设备', contact: '结尾' };
-    let generation = 0, page = 0, active = false, loading = false;
+    let generation = 0, page = 0, active = false, loading = false, selectedRange = null;
     function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; }
     const dates = () => ({ start: $('[data-stats-start]').value, end: $('[data-stats-end]').value });
+    function updateBounds() {
+      for (const el of [$('[data-stats-start]'), $('[data-stats-end]')]) { el.min = day(Date.now() - 89 * 86400000); el.max = day(Date.now()); }
+    }
     function preset(days) {
+      updateBounds();
       const today = day(Date.now());
       $('[data-stats-end]').value = today;
       $('[data-stats-start]').value = day(Date.parse(today + 'T00:00:00+08:00') - (days - 1) * 86400000);
@@ -67,7 +71,9 @@
     }
     async function load(includeSummary = true) {
       if (!active) return;
-      const selectedDates = dates(), token = ++generation;
+      updateBounds();
+      if (includeSummary) { selectedRange = dates(); page = 0; }
+      const selectedDates = { ...selectedRange }, token = ++generation;
       loading = true; $('[data-stats-status]').textContent = '正在读取统计…';
       $('[data-stats-prev]').disabled = true; $('[data-stats-next]').disabled = true;
       if (includeSummary) clear();
@@ -85,7 +91,9 @@
     $('[data-stats-prev]').addEventListener('click', () => { if (!loading && page > 0) { page--; load(false); } });
     $('[data-stats-next]').addEventListener('click', () => { if (!loading) { page++; load(false); } });
     preset(7);
-    for (const el of [$('[data-stats-start]'), $('[data-stats-end]')]) { el.min = day(Date.now() - 89 * 86400000); el.max = day(Date.now()); }
+    root.addEventListener('focusin', updateBounds);
+    root.addEventListener('pointerdown', updateBounds, { passive: true });
+    document.addEventListener('visibilitychange', () => { if (active && document.visibilityState === 'visible') updateBounds(); });
     return { show() { active = true; load(); }, reset() { active = false; generation++; page = 0; loading = false; clear(); $('[data-stats-status]').textContent = ''; preset(7); } };
   };
 })();

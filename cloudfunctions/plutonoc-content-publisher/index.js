@@ -45,6 +45,7 @@ function githubToken() {
 async function githubRequest(path, options = {}) {
   const response = await fetch(`https://api.github.com${path}`, {
     ...options,
+    signal: AbortSignal.timeout(15000),
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${githubToken()}`,
@@ -71,10 +72,28 @@ function decodeGithubText(content) {
   return Buffer.from(String(content || '').replace(/\s/g, ''), 'base64').toString('utf8');
 }
 
-async function readRepositoryText(path) {
+async function readRepositoryText(path, ref = repository.branch) {
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-  const result = await githubRequest(`/repos/${repository.owner}/${repository.name}/contents/${encodedPath}?ref=${repository.branch}`);
+  const result = await githubRequest(`/repos/${repository.owner}/${repository.name}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`);
   return decodeGithubText(result.content);
+}
+
+async function readAsset({ path, ref }) {
+  if (!/^[a-f0-9]{40}$/.test(String(ref || '')) || !/^assets\/(?:gallery|video-posters)\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:webp|jpg|jpeg|png)$/.test(String(path || ''))) {
+    throw new PublisherError('INVALID_PATH', '图片路径或内容版本无效');
+  }
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  const entry = await githubRequest(`/repos/${repository.owner}/${repository.name}/contents/${encoded}?ref=${ref}`);
+  if (entry.type !== 'file' || !/^[a-f0-9]{40}$/.test(entry.sha) || entry.size > 80 * 1024 * 1024) throw new PublisherError('INVALID_CONTENT', '图片不可读取或体积过大');
+  // Historical JPEGs can exceed a cloud-function response's size limit.
+  // Return only pinned metadata; the client verifies Git's blob digest before use.
+  if (entry.size > 3_500_000) return {
+    sha: entry.sha, size: entry.size,
+    sources: [`https://plutonoc.cn/${encoded}`, `https://raw.githubusercontent.com/${repository.owner}/${repository.name}/${ref}/${encoded}`],
+  };
+  const blob = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/blobs/${entry.sha}`);
+  if (blob.encoding !== 'base64' || blob.content.length > maxBlobBase64Length) throw new PublisherError('INVALID_CONTENT', '图片数据无效');
+  return { content: blob.content, type: /\.png$/i.test(path) ? 'image/png' : /\.webp$/i.test(path) ? 'image/webp' : 'image/jpeg' };
 }
 
 function isAllowedAssetPath(path) {
@@ -156,11 +175,11 @@ async function loadContent() {
   const headSha = reference.object.sha;
   const commit = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/commits/${headSha}`);
   const [galleryText, videosText, index, style, script] = await Promise.all([
-    readRepositoryText('content/gallery.json'),
-    readRepositoryText('content/videos.json'),
-    readRepositoryText('index.html'),
-    readRepositoryText('style.css'),
-    readRepositoryText('script.js'),
+    readRepositoryText('content/gallery.json', headSha),
+    readRepositoryText('content/videos.json', headSha),
+    readRepositoryText('index.html', headSha),
+    readRepositoryText('style.css', headSha),
+    readRepositoryText('script.js', headSha),
   ]);
   const gallery = JSON.parse(galleryText);
   const videos = JSON.parse(videosText);
@@ -183,7 +202,7 @@ async function publish(data) {
     throw new PublisherError('CONFLICT', '远端内容已变化，请刷新内容后重试');
   }
   const parentCommit = await githubRequest(`/repos/${repository.owner}/${repository.name}/git/commits/${expectedHeadSha}`);
-  let nextIndex = await readRepositoryText('index.html');
+  let nextIndex = await readRepositoryText('index.html', expectedHeadSha);
   const version = changed === 'gallery' ? gallery.contentVersion : videos.contentVersion;
   if (!version || version.length > 80) throw new PublisherError('INVALID_CONTENT', '内容版本无效');
   if (changed === 'gallery') {
@@ -248,6 +267,7 @@ exports.main = async (event, context) => {
     const action = String(event?.action || '');
     let data;
     if (action === 'load') data = await loadContent();
+    else if (action === 'readAsset') data = await readAsset(event);
     else if (action === 'createBlob') data = await createBinaryBlob(event);
     else if (action === 'publish') data = await publish(event);
     else throw new PublisherError('INVALID_ACTION', '不支持的发布操作');
