@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 STYLE_CACHE_VERSION = "20260908-reliability-1"
 ADMIN_STYLE_CACHE_VERSION = "20260908-reliability-1"
 ADMIN_SCRIPT_CACHE_VERSION = "20260908-reliability-1"
-SCRIPT_CACHE_VERSION = "20260908-reliability-1"
+SCRIPT_CACHE_VERSION = "20260910-interaction-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"

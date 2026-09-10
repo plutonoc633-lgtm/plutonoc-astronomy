@@ -185,7 +185,7 @@ function photoHarness() {
     } } }
   });
   const source = script.slice(script.indexOf('  function cancelPhotoImages()'), script.indexOf("  $('[data-photo-retry]')?.addEventListener"));
-  vm.runInContext('let photoRenderTimer = 0, photoImageController = null, photoImageGeneration = 0;\n' + source, context);
+  vm.runInContext('let photoRenderTimer = 0, photoImageTask = null;\n' + source, context);
   return { context, element, pending, retry, message };
 }
 
@@ -229,4 +229,32 @@ test('failed full-size image keeps its preview and offers retry', async () => {
   await tick();
   assert.equal(h.element.src, 'thumb');
   assert.equal(h.retry.hidden, false);
+});
+
+
+test('opening preparation starts both images and is reused without painting before the dialog', async () => {
+  const h = photoHarness();
+  h.context.work = { src: 'full', thumbnailSrc: 'thumb', width: 1, height: 1 };
+  vm.runInContext('preparePhotoImages(work)', h.context);
+  assert.equal(h.pending.length, 2);
+  h.pending[0].resolve(); await tick();
+  assert.equal(h.element.src, '');
+  vm.runInContext('loadPhotoImages(work)', h.context);
+  assert.equal(h.pending.length, 2);
+  assert.equal(h.element.src, 'thumb');
+});
+
+test('preparing a new target preserves the old displayed image and aborts obsolete work', async () => {
+  const h = photoHarness();
+  h.context.a = { src: 'a', thumbnailSrc: 'a-thumb', width: 1, height: 1 };
+  h.context.b = { src: 'b', thumbnailSrc: 'b-thumb', width: 1, height: 1 };
+  vm.runInContext('loadPhotoImages(a)', h.context);
+  h.pending[0].resolve(); await tick();
+  vm.runInContext('preparePhotoImages(b)', h.context);
+  assert.equal(h.pending[1].options.signal.aborted, true);
+  h.pending[1].resolve(); h.pending[2].resolve(); await tick();
+  assert.equal(h.element.src, 'a-thumb');
+  vm.runInContext('loadPhotoImages(b)', h.context);
+  assert.equal(h.element.src, 'b-thumb');
+  assert.equal(h.pending.length, 4);
 });

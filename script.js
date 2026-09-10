@@ -768,7 +768,7 @@
       this.canvas.addEventListener('pointermove', event => this.pointerMove(event));
       this.canvas.addEventListener('pointerup', event => this.pointerUp(event));
       this.canvas.addEventListener('pointercancel', event => this.pointerUp(event));
-      this.canvas.addEventListener('pointerleave', () => { if (!this.pointer) { this.hovered = null; this.requestDraw(); } });
+      this.canvas.addEventListener('pointerleave', () => { if (!this.pointer) { this.pendingPointerMove = null; this.hovered = null; this.requestDraw(); } });
       this.canvas.addEventListener('keydown', event => this.keyDown(event));
       this.canvas.addEventListener('contextmenu', event => event.preventDefault());
     }
@@ -792,6 +792,8 @@
       if (normalized !== 'all' && !categoryConfig[normalized]) return;
       clearTimeout(this.filterTimer);
       this.cache.cancelPending();
+      if (this.opening) cancelPhotoImages();
+      this.pendingPointerMove = null;
       this.filter = normalized;
       this.visibleWorks = normalized === 'all' ? [...this.allWorks] : this.allWorks.filter(work => work.category === normalized);
       this.focusedIndex = 0;
@@ -1002,6 +1004,7 @@
     }
 
     frame(time) {
+      this.flushPointerMove();
       const delta = Math.min((time - this.lastFrame) / 16.667, 2);
       this.lastFrame = time;
       const moving = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04;
@@ -1165,11 +1168,12 @@
     }
 
     startOpening(item) {
-      if (!item || this.opening) return;
+      if (!item || this.opening || item.node.work !== this.visibleWorks[item.node.index]) return;
       this.focusedIndex = item.node.index;
       this.velocity.x = 0;
       this.velocity.y = 0;
       this.hovered = null;
+      preparePhotoImages(this.visibleWorks[item.node.index]);
       if (reducedMotion) {
         openPhoto(item.node.index);
         return;
@@ -1187,6 +1191,7 @@
     }
 
     pointerDown(event) {
+      this.pendingPointerMove = null;
       if (event.button !== undefined && event.button !== 0) return;
       this.velocity.x = 0;
       this.velocity.y = 0;
@@ -1205,14 +1210,29 @@
     }
 
     pointerMove(event) {
+      this.pendingPointerMove = {
+        clientX: event.clientX, clientY: event.clientY,
+        pointerId: event.pointerId, pointerType: event.pointerType,
+        time: performance.now()
+      };
+      requestMainFrame();
+    }
+
+    flushPointerMove() {
+      const event = this.pendingPointerMove;
+      if (!event) return;
+      this.pendingPointerMove = null;
       const bounds = this.canvas.getBoundingClientRect();
       const localX = event.clientX - bounds.left;
       const localY = event.clientY - bounds.top;
       if (!this.pointer || this.pointer.id !== event.pointerId) {
         const hit = this.hitTest(localX, localY);
-        this.hovered = hit ? { ...hit } : null;
-        this.canvas.style.cursor = hit ? 'pointer' : 'grab';
-        this.requestDraw();
+        const changed = hit?.node !== this.hovered?.node || hit?.x !== this.hovered?.x || hit?.y !== this.hovered?.y;
+        if (changed) {
+          this.hovered = hit ? { ...hit } : null;
+          this.canvas.style.cursor = hit ? 'pointer' : 'grab';
+          this.requestDraw();
+        }
         return;
       }
       const totalX = event.clientX - this.pointer.startX;
@@ -1228,8 +1248,7 @@
         this.canvas.setPointerCapture?.(event.pointerId);
       }
       if (!this.pointer.dragging) return;
-      if (event.cancelable) event.preventDefault();
-      const now = performance.now();
+      const now = event.time;
       const elapsed = Math.max(now - this.pointer.lastTime, 1);
       const deltaX = event.clientX - this.pointer.lastX;
       const deltaY = event.clientY - this.pointer.lastY;
@@ -1244,6 +1263,8 @@
     }
 
     pointerUp(event) {
+      if (event.type === 'pointercancel') this.pendingPointerMove = null;
+      else this.flushPointerMove();
       if (!this.pointer || this.pointer.id !== event.pointerId) return;
       const bounds = this.canvas.getBoundingClientRect();
       const localX = event.clientX - bounds.left;
@@ -1583,52 +1604,62 @@
   let photoReturnScrollY = 0;
   let photoCopyResetTimer = 0;
   let photoRenderTimer = 0;
-  let photoImageController = null;
-  let photoImageGeneration = 0;
+  let photoImageTask = null;
 
   function cancelPhotoImages() {
     clearTimeout(photoRenderTimer);
-    photoImageGeneration += 1;
-    photoImageController?.abort();
-    photoImageController = null;
+    photoImageTask?.controller.abort();
+    photoImageTask = null;
+  }
+
+  function preparePhotoImages(work) {
+    if (photoImageTask?.work === work && !photoImageTask.controller.signal.aborted) return photoImageTask;
+    cancelPhotoImages();
+    const controller = new AbortController();
+    const task = { work, controller, source: '', fullReady: false, failed: false, render: null };
+    photoImageTask = task;
+    const current = () => photoImageTask === task && !controller.signal.aborted;
+    const preview = work.previewSrc && archiveCanvas?.cache.get(work.previewSrc)
+      ? work.previewSrc : (work.thumbnailSrc || work.previewSrc);
+    if (preview && preview !== work.src) {
+      window.PlutonoCImages.load(preview, { signal: controller.signal, priority: 'high' }).then(() => {
+        if (!current() || task.fullReady) return;
+        task.source = preview;
+        task.render?.();
+      }).catch(() => { /* Full image loading owns the visible error state. */ });
+    }
+    window.PlutonoCImages.load(work.src, { signal: controller.signal, priority: 'high' }).then(() => {
+      if (!current()) return;
+      task.fullReady = true;
+      task.source = work.src;
+      task.render?.();
+    }).catch(error => {
+      if (!current() || error.name === 'AbortError') return;
+      task.failed = true;
+      task.render?.();
+    });
+    return task;
   }
 
   function loadPhotoImages(work, keepPreview = false) {
-    cancelPhotoImages();
-    const generation = photoImageGeneration;
-    const controller = new AbortController();
-    photoImageController = controller;
+    const task = preparePhotoImages(work);
     const message = $('[data-photo-load-message]');
     const retry = $('[data-photo-retry]');
-    let fullReady = false;
-    const current = () => generation === photoImageGeneration && !controller.signal.aborted;
     if (!keepPreview) photoImage.removeAttribute('src');
     photoImage.alt = work.title;
     photoImage.style.aspectRatio = `${work.width} / ${work.height}`;
-    message.textContent = '正在加载高清图片…';
-    retry.hidden = true;
-    const preview = work.previewSrc && archiveCanvas?.cache.get(work.previewSrc)
-      ? work.previewSrc : (work.thumbnailSrc || work.previewSrc);
-    if (preview && preview !== work.src && !keepPreview) {
-      window.PlutonoCImages.load(preview, { signal: controller.signal, priority: 'high' }).then(() => {
-        if (current() && !fullReady) photoImage.src = preview;
-      }).catch(() => { /* The full-size request has its own visible error state. */ });
-    }
-    window.PlutonoCImages.load(work.src, { signal: controller.signal, priority: 'low' }).then(() => {
-      if (!current()) return;
-      fullReady = true;
-      photoImage.src = work.src;
-      message.textContent = '';
-    }).catch(error => {
-      if (!current() || error.name === 'AbortError') return;
-      message.textContent = '图片暂未加载完成';
-      retry.hidden = false;
-    });
+    task.render = () => {
+      if (photoImageTask !== task || task.controller.signal.aborted) return;
+      if (task.source) photoImage.src = task.source;
+      message.textContent = task.fullReady ? '' : task.failed ? '图片暂未加载完成' : '正在加载高清图片…';
+      retry.hidden = !task.failed;
+    };
+    task.render();
   }
 
   $('[data-photo-retry]')?.addEventListener('click', () => {
     const work = archiveCanvas?.visibleWorks[photoIndex];
-    if (work) loadPhotoImages(work, Boolean(photoImage.getAttribute('src')));
+    if (work) { cancelPhotoImages(); loadPhotoImages(work, Boolean(photoImage.getAttribute('src'))); }
   });
 
   function detailValue(work, key) {
@@ -1647,13 +1678,15 @@
   function updatePhotoDialog(direction = 0) {
     const work = archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
-    markWorkSeen(work);
-    cancelPhotoImages();
+    clearTimeout(photoRenderTimer);
+    const task = preparePhotoImages(work);
     if (direction) {
       photoDialog.style.setProperty('--photo-direction', `${direction * 20}px`);
       photoDialog.classList.add('is-switching');
     }
     const render = () => {
+      if (photoImageTask !== task || task.controller.signal.aborted) return;
+      markWorkSeen(work);
       loadPhotoImages(work);
       recordWorkOpen('photo', work.id, work.title);
       $('[data-photo-current]').textContent = pad(photoIndex + 1);
@@ -1986,8 +2019,13 @@
     else updateEquipmentTrack();
   }));
   equipmentTrack?.addEventListener('wheel', event => {
+    if (!event.deltaX || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+      clearTimeout(equipmentWheelIdleTimer);
+      equipmentWheelAccumulator = 0;
+      return;
+    }
     event.preventDefault();
-    const rawDelta = event.deltaX || event.deltaY;
+    const rawDelta = event.deltaX;
     const normalizedDelta = event.deltaMode === 1 ? rawDelta * 24 : event.deltaMode === 2 ? rawDelta * innerWidth : rawDelta;
     equipmentWheelAccumulator += clamp(normalizedDelta, -180, 180);
     const threshold = 90;

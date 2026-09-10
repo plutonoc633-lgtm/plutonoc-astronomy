@@ -34,6 +34,7 @@ jobs:
         run: |
           node --check image-loader.js
           node --test tools/test-image-loading.cjs
+          node --test tools/test-interaction-polish.cjs
           node --check script.js
           node --check admin.js
           node --check analytics.js
