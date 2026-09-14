@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC 管理后台</title>
-  <link rel="stylesheet" href="admin.css?v=20260908-reliability-1">
+  <link rel="stylesheet" href="admin.css?v=20260914-guestbook-1">
 </head>
 <body>
   <header class="studio-header">
@@ -37,6 +37,7 @@
         <button type="button" class="is-active" data-studio-tab="photos">摄影作品</button>
         <button type="button" data-studio-tab="videos">动态影像</button>
         <button type="button" data-studio-tab="analytics">访客统计</button>
+        <button type="button" data-studio-tab="guestbook">留言簿</button>
       </nav>
 
       <section class="publisher" data-publisher hidden>
@@ -181,6 +182,12 @@
           </div>
         </section>
       </section>
+      <section class="studio-panel analytics-panel" data-studio-panel="guestbook" data-admin-book hidden>
+        <div class="panel-heading"><h1>留言簿</h1></div>
+        <div class="stats-controls"><label>状态<select data-admin-book-filter><option value="pending">待审核</option><option value="published">已公开</option><option value="hidden">已隐藏</option></select></label><button type="button" data-admin-book-refresh>刷新</button></div>
+        <p data-admin-book-status role="status" class="stats-muted"></p><div data-admin-book-list></div>
+        <div class="stats-pagination"><button type="button" data-admin-book-prev disabled>上一页</button><span data-admin-book-page></span><button type="button" data-admin-book-next disabled>下一页</button></div>
+      </section>
       <section class="studio-panel analytics-panel" data-studio-panel="analytics" data-analytics hidden>
         <div class="panel-heading"><h1>访客统计</h1></div>
         <p class="stats-muted">统计从功能上线后开始，保留最近 90 天。匿名人数为估算值，浏览器拦截或清除记录可能影响结果；不收集姓名、联系方式、精确位置或原始 IP。</p>
@@ -212,6 +219,7 @@
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script src="admin-analytics.js?v=20260908-reliability-1"></script>
-  <script src="admin.js?v=20260908-reliability-1"></script>
+  <script src="admin-guestbook.js?v=20260914-guestbook-1"></script>
+  <script src="admin.js?v=20260914-guestbook-1"></script>
 </body>
 </html>

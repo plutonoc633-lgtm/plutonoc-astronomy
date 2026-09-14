@@ -39,6 +39,11 @@ jobs:
           node --check admin.js
           node --check analytics.js
           node --check admin-analytics.js
+          node --check admin-guestbook.js
+          node --check guestbook.js
+          node --check guestbook-config.js
+          node --check cloudfunctions/guestbook-shared/core.js
+          node --test tools/test-guestbook.cjs
           node --check cloudfunctions/analytics-shared/core.js
           node --test tools/test-analytics.cjs
           node --test tools/test-reliability.cjs

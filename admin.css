@@ -269,3 +269,7 @@ button:disabled { opacity: .45; cursor: wait; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+/* Guestbook stays isolated from content forms. */
+.admin-book-entry{padding:24px 0;border-bottom:1px solid rgba(238,234,224,.14)}
+.admin-book-entry header{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.admin-book-entry time{color:#8d9097;font-size:12px}.admin-book-entry p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}.admin-book-entry label{display:grid;gap:8px;font-size:12px}.admin-book-entry textarea{width:100%;min-height:90px;resize:vertical;font:inherit;font-size:16px;color:inherit;background:transparent;border:1px solid rgba(238,234,224,.2);padding:12px}.admin-book-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}.admin-book-entry strong{overflow-wrap:anywhere}.studio-tabs{flex-wrap:wrap}

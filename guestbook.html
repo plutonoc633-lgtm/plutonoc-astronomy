@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050609"><meta name="description" content="PlutonoC 留言簿">
+  <title>留言簿 — PlutonoC</title>
+  <link rel="icon" href="assets/branding/favicon-32.png">
+  <link rel="stylesheet" href="guestbook.css?v=20260914-guestbook-1">
+  <script defer src="guestbook-config.js?v=20260914-guestbook-1"></script>
+  <script defer src="guestbook.js?v=20260914-guestbook-1"></script>
+</head>
+<body>
+  <header class="book-header"><a href="./#home" aria-label="PlutonoC，返回网站"><img src="assets/branding/plutonoc-watermark-header.webp" width="128" height="35" alt="PlutonoC"></a><a href="./#home">返回网站 <span aria-hidden="true">↗</span></a></header>
+  <main class="book">
+    <div class="book-heading"><p>GUESTBOOK</p><h1>留言簿</h1></div>
+    <form data-book-form>
+      <label for="nickname">昵称 <span>选填</span></label><input id="nickname" name="nickname" autocomplete="nickname" maxlength="40" aria-describedby="nickname-note"><small id="nickname-note">最多 20 字，留空为“访客”</small>
+      <label for="message">留言</label><textarea id="message" name="body" rows="4" maxlength="2000" required aria-describedby="message-count"></textarea>
+      <div class="book-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+      <div class="book-form-foot"><span id="message-count" data-book-count>0 / 1000</span><button type="submit">提交留言 <span aria-hidden="true">↗</span></button></div>
+      <p class="book-status" data-book-submit-status role="status"></p>
+    </form>
+    <section class="book-messages" aria-label="公开留言"><div data-book-list></div><p class="book-status" data-book-list-status role="status"></p><button type="button" data-book-more hidden>加载更多</button></section>
+    <noscript><p>请启用 JavaScript 后查看和提交留言。</p></noscript>
+  </main>
+  <footer class="book-footer">© 2026 PLUTONOC</footer>
+</body>
+</html>

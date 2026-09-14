@@ -32,6 +32,17 @@
     }
   }
   const visitorAnalytics = createAnalytics();
+  function createGuestbook() {
+    try { return window.createGuestbookAdmin(async (action, data) => {
+      const response = await withTimeout(app.callFunction({ name: 'plutonoc-guestbook-admin', data: { action, ...data }, parse: true }), 20000);
+      const result = typeof response.result === 'string' ? JSON.parse(response.result) : response.result;
+      if (!result?.ok) throw new Error(result?.error?.message || '留言簿暂时不可用');
+      return result.data;
+    }); } catch {
+      return { show() { $('[data-admin-book-status]').textContent = '留言模块未能加载，请刷新重试；其他功能仍可使用。'; }, reset() { $('[data-admin-book-list]').replaceChildren(); $('[data-admin-book-status]').textContent = ''; } };
+    }
+  }
+  const guestbookAdmin = createGuestbook();
   let repoState = null;
   let preparedPhoto = null;
   let preparedPoster = null;
@@ -62,7 +73,7 @@
     repoState = null;
     $('[data-photo-list]').replaceChildren(); $('[data-video-list]').replaceChildren();
     $('[data-photo-preview]').removeAttribute('src'); $('[data-poster-preview]').removeAttribute('src');
-    photoForm.reset(); videoForm.reset(); visitorAnalytics.reset();
+    photoForm.reset(); videoForm.reset(); visitorAnalytics.reset(); guestbookAdmin.reset();
   }
   function onMutation(target, name, kind, handler) {
     target.addEventListener(name, async event => {
@@ -1169,7 +1180,8 @@
 
   $$('[data-studio-tab]').forEach(tab => tab.addEventListener('click', () => {
     const analyticsActive = tab.dataset.studioTab === 'analytics';
-    publisher.hidden = analyticsActive;
+    publisher.hidden = analyticsActive || tab.dataset.studioTab === 'guestbook';
+    if (tab.dataset.studioTab === 'guestbook') guestbookAdmin.show(); else guestbookAdmin.reset();
     if (analyticsActive) visitorAnalytics.show();
     else visitorAnalytics.reset();
     $$('[data-studio-tab]').forEach(button => button.classList.toggle('is-active', button === tab));

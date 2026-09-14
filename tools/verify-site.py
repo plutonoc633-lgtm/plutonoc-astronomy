@@ -13,9 +13,9 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20260908-reliability-1"
-ADMIN_STYLE_CACHE_VERSION = "20260908-reliability-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260908-reliability-1"
+STYLE_CACHE_VERSION = "20260914-guestbook-1"
+ADMIN_STYLE_CACHE_VERSION = "20260914-guestbook-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20260914-guestbook-1"
 SCRIPT_CACHE_VERSION = "20260910-interaction-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
@@ -515,7 +515,7 @@ def verify_remote_admin(url: str, label: str) -> None:
     require('data-photo-form' in admin and 'data-publisher' in admin, f"{label} photo studio is missing")
     require('data-github-form' not in admin, f"{label} still asks for a GitHub token")
 
-    for asset in ("admin.css", "admin.js", "admin-analytics.js", "cloudbase-config.js"):
+    for asset in ("admin.css", "admin.js", "admin-analytics.js", "admin-guestbook.js", "cloudbase-config.js"):
         body, actual_type = fetch(urljoin(url, asset))
         require(body, f"Empty {label} asset: {asset}")
         if asset.endswith(".css"):
