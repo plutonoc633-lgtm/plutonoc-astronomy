@@ -329,7 +329,8 @@
       '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
       '#records': ['PUBLIC RECORDS', 'MEDIA & HONORS', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
-      '#contact': ['PLUTONOC', '择日成星', '']
+      '#contact': ['PLUTONOC', '择日成星', ''],
+      '#guestbook': ['GUESTBOOK', '留言', '']
     };
     const copy = category
       ? ['ARCHIVE OPENED', config?.english || 'ARCHIVE', `${categoryCounts[category] || allWorks.length} OBSERVATIONS`]
@@ -2229,11 +2230,47 @@
       }
     } catch { /* optional analytics must not affect artwork dialogs */ }
   }
+  const videoShell = $('.video-shell', videoDialog);
+  const videoCaption = $('.video-caption', videoDialog);
+  let videoRatio = 16 / 9, videoLayoutFrame = 0;
+  function fitVideoDialog() {
+    if (!videoDialog.open) return;
+    const style = getComputedStyle(videoDialog);
+    const width = Math.min(1300, videoDialog.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
+    const height = videoDialog.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+    let fit = width;
+    videoFrame.style.setProperty('--video-ratio', videoRatio);
+    // Caption wrapping affects the remaining height; only measure on open or viewport changes.
+    for (let i = 0; i < 4; i++) {
+      videoShell.style.width = `${fit}px`;
+      const available = Math.max(1, height - videoCaption.getBoundingClientRect().height - 18);
+      fit = Math.min(fit, available * videoRatio);
+    }
+    videoShell.style.width = `${fit}px`;
+  }
+  function scheduleVideoLayout() {
+    cancelAnimationFrame(videoLayoutFrame);
+    if (videoDialog.open) videoLayoutFrame = requestAnimationFrame(fitVideoDialog);
+  }
+  window.addEventListener('resize', scheduleVideoLayout);
+  window.visualViewport?.addEventListener('resize', scheduleVideoLayout);
+  videoPlayer.addEventListener('loadedmetadata', () => {
+    if (!videoPlayer.hidden && videoPlayer.videoWidth && videoPlayer.videoHeight) {
+      videoRatio = videoPlayer.videoWidth / videoPlayer.videoHeight; scheduleVideoLayout();
+    }
+  });
+  function clearVideoPlayers() {
+    videoPlayer.pause(); videoPlayer.removeAttribute('src'); videoPlayer.removeAttribute('poster'); videoPlayer.load();
+    $$('.bilibili-player', videoFrame).forEach(iframe => { iframe.src = 'about:blank'; iframe.remove(); });
+    videoPlayer.hidden = true; videoExternalLink.hidden = true; videoExternalLink.removeAttribute('href');
+  }
   function openFilm(index) {
     const film = loadedFilms[index];
     if (!film) return;
     stopAllFilmPreviews();
+    clearVideoPlayers();
     const bilibili = filmSourceType(film) === 'bilibili';
+    videoRatio = bilibili ? 16 / 9 : (Number(film.aspectRatio) > 0 ? Number(film.aspectRatio) : 16 / 9);
     videoPlayer.hidden = bilibili;
     videoExternalLink.hidden = !bilibili;
     if (bilibili) {
@@ -2256,7 +2293,8 @@
     }
     $('.video-caption h3', videoDialog).textContent = film.title;
     $('.video-caption p', videoDialog).textContent = [film.date, formatDuration(film.duration), film.location].filter(Boolean).join(' / ');
-    videoDialog.showModal();
+    if (!videoDialog.open) videoDialog.showModal();
+    fitVideoDialog();
     recordWorkOpen('video', film.id, film.title);
     document.body.classList.add('dialog-open');
   }
@@ -2267,18 +2305,8 @@
   $('.dialog-close', videoDialog)?.addEventListener('click', () => videoDialog.close());
   videoDialog?.addEventListener('click', event => { if (event.target === videoDialog) videoDialog.close(); });
   videoDialog?.addEventListener('close', () => {
-    videoPlayer.pause();
-    videoPlayer.removeAttribute('src');
-    videoPlayer.removeAttribute('poster');
-    videoPlayer.load();
-    const iframe = $('.bilibili-player', videoFrame);
-    if (iframe) {
-      iframe.src = 'about:blank';
-      iframe.remove();
-    }
-    videoPlayer.hidden = false;
-    videoExternalLink.hidden = true;
-    videoExternalLink.removeAttribute('href');
+    cancelAnimationFrame(videoLayoutFrame);
+    clearVideoPlayers();
     document.body.classList.remove('dialog-open');
   });
   (async () => {

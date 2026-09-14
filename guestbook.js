@@ -1,6 +1,9 @@
 (() => {
   'use strict';
-  const config = window.PLUTONOC_GUESTBOOK || {}, $ = selector => document.querySelector(selector);
+  const root = document.querySelector('[data-guestbook]');
+  if (!root || root.dataset.initialized) return;
+  root.dataset.initialized = 'true';
+  const config = window.PLUTONOC_GUESTBOOK || {}, $ = selector => root.querySelector(selector);
   const form = $('[data-book-form]'), list = $('[data-book-list]'), more = $('[data-book-more]');
   const submitStatus = $('[data-book-submit-status]'), listStatus = $('[data-book-list-status]');
   const nickname = form.elements.nickname, body = form.elements.body;
@@ -24,7 +27,7 @@
     seen.add(item._id);
     const article = node('article'), header = node('header'), date = node('time');
     article.className = 'book-entry'; date.dateTime = new Date(item.publishedAt).toISOString(); date.textContent = new Date(item.publishedAt).toLocaleDateString('zh-CN');
-    header.append(node('h2', item.nickname), date); article.append(header, node('p', item.body));
+    header.append(node('h3', item.nickname), date); article.append(header, node('p', item.body));
     if (item.reply) { const reply = node('div'); reply.className = 'book-reply'; reply.append(node('span', 'PlutonoC'), node('p', item.reply)); article.append(reply); }
     list.append(article);
   }
@@ -56,5 +59,6 @@
   });
   more.addEventListener('click', load);
   if (!config.enabled || !config.endpoint) { form.hidden = true; listStatus.textContent = '留言簿暂未开放。'; return; }
+  $('fieldset').disabled = false;
   validate(); load();
 })();

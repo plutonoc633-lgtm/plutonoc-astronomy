@@ -58,8 +58,9 @@ const base = process.env.PLUTONOC_TEST_URL || 'http://127.0.0.1:9011';
     for (const viewport of [{width:1366,height:768},{width:320,height:568}]) {
       await page.setViewportSize(viewport); await page.goto(base);
       await page.locator('[data-index-open]').click();
-      await page.locator('.index-nav a[href="guestbook.html"]').click();
-      await page.waitForURL('**/guestbook.html');
+      await page.locator('.index-nav a[href="#guestbook"]').click();
+      await page.waitForURL('**/#guestbook');
+      await page.waitForFunction(()=>document.querySelector('[data-guestbook]').dataset.initialized==='true');
     }
     console.log('PASS navigation: guestbook reachable from INDEX at 1366×768 and 320×568.');
     assert.deepEqual(errors,[]);

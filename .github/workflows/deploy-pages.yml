@@ -40,6 +40,8 @@ jobs:
           node --check analytics.js
           node --check admin-analytics.js
           node --check admin-guestbook.js
+          node --check guestbook-loader.js
+          node tools/build-guestbook-ui.mjs --check
           node --check guestbook.js
           node --check guestbook-config.js
           node --check cloudfunctions/guestbook-shared/core.js

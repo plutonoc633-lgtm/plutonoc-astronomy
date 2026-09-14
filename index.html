@@ -167,9 +167,11 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 }
   </style>
   <!-- CRITICAL_CSS_END -->
-  <link rel="preload" href="style.css?v=20260914-guestbook-1" as="style">
-  <link rel="stylesheet" href="style.css?v=20260914-guestbook-1" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="style.css?v=20260914-guestbook-1"></noscript>
+  <link rel="preload" href="style.css?v=20260914-book-layout-1" as="style">
+  <link rel="stylesheet" href="style.css?v=20260914-book-layout-1" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="style.css?v=20260914-book-layout-1"></noscript>
+  <link rel="stylesheet" href="guestbook.css?v=20260914-book-layout-1">
+  <script defer src="guestbook-loader.js?v=20260914-book-layout-1"></script>
 </head>
 <body>
   <a class="skip-link" href="#content">跳至正文</a>
@@ -252,7 +254,7 @@ section { position: relative; scroll-margin-top: var(--header-height); }
           <a href="#records" data-index-link data-preview="assets/gallery/previews/sunmoon/planetary-04.webp"><span>04</span><b>媒体与荣誉</b><em>MEDIA &amp; HONORS</em></a>
           <a href="#equipment" data-index-link data-preview="assets/equipment/previews/equipment-c925hd.webp"><span>05</span><b>设备</b><em>EQUIPMENT</em></a>
           <a href="#contact" data-index-link data-preview="assets/gallery/previews/earth/earth-052.webp" data-preview-position="center"><span>06</span><b>结尾</b><em>FINALE</em></a>
-          <a href="guestbook.html"><span>07</span><b>留言簿</b><em>GUESTBOOK</em></a>
+          <a href="#guestbook" data-index-link><span>07</span><b>留言簿</b><em>GUESTBOOK</em></a>
         </nav>
         <figure class="index-preview" aria-hidden="true">
           <img data-deferred-manual data-deferred-src="assets/gallery/previews/nightscape/nightscape-03.webp" width="1600" height="1067" alt="" decoding="async">
@@ -432,6 +434,23 @@ section { position: relative; scroll-margin-top: var(--header-height); }
           <h2><span><i>择日成星</i></span></h2>
         </div>
       </div>
+<!-- GUESTBOOK_START -->
+<section class="book" id="guestbook" data-guestbook aria-labelledby="guestbook-title">
+  <header class="book-heading"><h2 id="guestbook-title">留言</h2><span>GUESTBOOK</span></header>
+  <form data-book-form>
+    <fieldset disabled>
+      <div class="book-identity"><label for="nickname">昵称</label><input id="nickname" name="nickname" autocomplete="nickname" maxlength="40" placeholder="访客（选填）" aria-label="昵称，选填，最多20字"></div>
+      <label class="book-sr-only" for="message">留言正文，最多1000字</label><textarea id="message" name="body" rows="4" maxlength="2000" required placeholder="写下你的留言…" aria-describedby="message-count"></textarea>
+      <div class="book-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+      <div class="book-form-foot"><span id="message-count" data-book-count>0 / 1000</span><button type="submit">提交留言 <span aria-hidden="true">↗</span></button></div>
+    </fieldset>
+    <p class="book-status" data-book-submit-status role="status"></p>
+  </form>
+  <div class="book-messages" aria-label="公开留言"><div data-book-list></div><p class="book-status" data-book-list-status role="status"></p><button type="button" data-book-more hidden>加载更多</button></div>
+  <button class="book-loader-retry" type="button" data-book-loader-retry hidden>重新加载留言区</button>
+  <noscript><p>请启用 JavaScript 后查看和提交留言。</p></noscript>
+</section>
+<!-- GUESTBOOK_END -->
       <div class="arrival-outro">
         <div class="arrival-outro-inner">
           <div class="social-links reveal" aria-label="PlutonoC 社交平台">
@@ -538,15 +557,17 @@ section { position: relative; scroll-margin-top: var(--header-height); }
 
   <dialog class="video-dialog" data-video-dialog>
     <button class="dialog-close" type="button" aria-label="关闭">×</button>
+    <div class="video-shell">
     <div class="video-frame"><video controls playsinline preload="metadata"></video></div>
     <div class="video-caption"><h3></h3><div><p></p><a data-video-external target="_blank" rel="noopener noreferrer" hidden>在哔哩哔哩打开 ↗</a></div></div>
+    </div>
   </dialog>
 
   <script defer src="image-loader.js?v=20260905-loading-1"></script>
   <script defer src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
   <script defer src="video-data.js?v=20260904-tokyo-vlog-1"></script>
   <script defer src="gallery-data.js?v=20260911-japan-1"></script>
-  <script defer src="script.js?v=20260910-interaction-1"></script>
+  <script defer src="script.js?v=20260914-book-layout-1"></script>
   <script defer src="analytics-config.js?v=20260908-reliability-1"></script>
   <script defer src="analytics.js?v=20260908-reliability-1"></script>
 </body>
