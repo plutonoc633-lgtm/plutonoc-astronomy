@@ -833,3 +833,32 @@ dialog { color: inherit; }
   .drag-hint-desktop { display: none; }
   .drag-hint-touch { display: inline; }
 }
+
+/* Keep the original photo, social links and signature together; the guestbook follows. */
+.arrival-guestbook { display: flow-root; padding: clamp(48px, 6vw, 80px) 0 calc(54px + env(safe-area-inset-bottom)); background: #050a12; }
+.arrival-guestbook .book { margin: 0 auto; }
+.arrival-guestbook .book fieldset { background: rgba(13,16,21,.7); }
+
+/* Fit the complete index before resorting to scrolling at extreme viewport sizes. */
+.index-panel { display: flex; flex-direction: column; gap: 20px; }
+.index-top { flex: 0 0 auto; }
+.index-body { flex: 1 1 auto; height: auto; max-height: none; min-height: 0; padding: 0; grid-template-columns: minmax(340px, 1fr) minmax(0, .9fr); gap: 32px; }
+.index-foot { position: static; flex: 0 0 auto; }
+.index-nav { min-width: 0; }
+.index-nav a { grid-template-columns: 30px minmax(0, 1fr) auto 26px; gap: 10px; min-height: 50px; padding: 9px 0; }
+.index-nav b { font-size: clamp(22px, 1.5vw, 26px); line-height: 1.35; white-space: nowrap; }
+.index-nav a:hover, .index-nav a:focus-visible, .index-nav a.is-current { padding-left: 4px; }
+.index-nav em { font-size: 9px; letter-spacing: .06em; }
+@media (max-height: 800px), (max-width: 767px) {
+  .index-panel { gap: 18px; }
+  .index-body { display: flex; align-items: safe center; }
+  .index-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(16px, 4vw, 44px); width: 100%; }
+  .index-nav a { grid-template-columns: minmax(0, 1fr) auto; min-height: 44px; padding: 10px 0; gap: 8px; }
+  .index-nav b { font-size: clamp(18px, 2.4vw, 24px); }
+  .index-nav em, .index-nav span, .index-preview { display: none; }
+}
+@media (max-height: 480px) {
+  .index-panel { padding-block: 16px; gap: 12px; }
+  .index-foot { display: none; }
+  .index-nav a { padding-block: 8px; }
+}

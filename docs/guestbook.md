@@ -1,6 +1,6 @@
 # 留言簿维护
 
-首页留言区：`https://plutonoc.cn/#guestbook`，位于结尾照片与社交链接之间，INDEX 直接跳转。独立页面 `https://plutonoc.cn/guestbook.html` 保留。首页接近留言区 600px 内才加载组件与配置并请求数据；首次首屏不请求，锚点跳转立即加载。
+首页留言区：`https://plutonoc.cn/#guestbook`，位于结尾照片、社交链接及版权落款整段之后，是首页最后一块内容，INDEX 直接跳转。独立页面 `https://plutonoc.cn/guestbook.html` 保留。首页接近留言区 600px 内才加载组件与配置并请求数据；首次首屏不请求，锚点跳转立即加载。
 
 共享结构来源为 `partials/guestbook.html`，用 `node tools/build-guestbook-ui.mjs` 同步两个页面，CI 使用 `--check` 防止分叉。`guestbook.css` 样式限定在组件内，`guestbook.js` 统一交互；`guestbook-loader.js` 负责延迟启动和脚本加载失败的手动重试。
 
