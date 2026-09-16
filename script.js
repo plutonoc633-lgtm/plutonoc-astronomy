@@ -3,7 +3,8 @@
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const isMobile = window.matchMedia('(max-width: 760px)').matches;
+  const mobileMedia = window.matchMedia('(max-width: 760px)');
+  let isMobile = mobileMedia.matches;
   const reloadToHome = document.documentElement.dataset.reloadHome === 'true';
   delete document.documentElement.dataset.reloadHome;
   const $ = (selector, root = document) => root?.querySelector(selector);
@@ -119,6 +120,7 @@
   let frameRequested = false;
   let scrollDirty = true;
   let layoutDirty = true;
+  let viewportDirty = false;
   let filmSectionVisible = false;
   let archiveCanvas = null;
   let timecodeStart = performance.now();
@@ -133,6 +135,15 @@
   function runMainFrame(time) {
     frameRequested = false;
     let needsNext = false;
+    if (viewportDirty) {
+      viewportDirty = false;
+      isMobile = mobileMedia.matches;
+      archiveCanvas?.resize();
+      directoryImageConcurrency = isMobile ? 4 : 6;
+      syncTimecode();
+      updateEquipmentTrack(0, true);
+      if (siteIndex.classList.contains('is-open')) updateIndexPreview(indexPreviewLink);
+    }
     if (layoutDirty) refreshLayoutMetrics();
     if (scrollDirty || layoutDirty) {
       updateScrollExperience();
@@ -247,17 +258,34 @@
   const indexName = $('[data-index-name]', siteIndex);
   let indexReturnFocus = null;
   let indexPreviewRequest = 0;
+  let indexFocusTimer = 0;
+  let indexPreviewImage = null;
+  let indexPreviewLink = $('.index-nav a.is-current', siteIndex) || $('.index-nav a', siteIndex);
+  function clearIndexPreview() {
+    ++indexPreviewRequest;
+    if (indexPreviewImage) {
+      indexPreviewImage.onload = indexPreviewImage.onerror = null;
+      indexPreviewImage.removeAttribute('src');
+      indexPreviewImage = null;
+    }
+    indexPreview?.classList.remove('is-changing');
+  }
 
   function openIndex(event) {
     indexReturnFocus = event?.currentTarget || document.activeElement;
-    if (!isMobile) hydrateDeferredMedia(indexPreview);
     siteIndex.classList.add('is-open');
     siteIndex.setAttribute('aria-hidden', 'false');
     document.body.classList.add('index-open');
-    setTimeout(() => $('[data-index-close]:not(.index-backdrop)', siteIndex)?.focus(), reducedMotion ? 0 : 140);
+    updateIndexPreview(indexPreviewLink);
+    clearTimeout(indexFocusTimer);
+    indexFocusTimer = setTimeout(() => {
+      if (siteIndex.classList.contains('is-open')) $('[data-index-close]:not(.index-backdrop)', siteIndex)?.focus();
+    }, reducedMotion ? 0 : 140);
   }
 
   function closeIndex({ restoreFocus = true } = {}) {
+    clearTimeout(indexFocusTimer);
+    clearIndexPreview();
     siteIndex.classList.remove('is-open');
     siteIndex.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('index-open');
@@ -266,26 +294,38 @@
 
   function updateIndexPreview(link) {
     if (!link || !indexPreview) return;
+    indexPreviewLink = link;
+    if (!siteIndex.classList.contains('is-open') || !indexPreview.closest('.index-preview').getClientRects().length) {
+      clearIndexPreview();
+      return;
+    }
     indexCount.textContent = $('span', link)?.textContent || '';
     indexName.textContent = $('b', link)?.textContent || '';
     const source = link.dataset.preview;
     const position = link.dataset.previewPosition || 'center';
     if (!source) return;
     if (indexPreview.getAttribute('src') === source) {
+      clearIndexPreview();
       indexPreview.style.setProperty('--index-preview-position', position);
       return;
     }
-    const request = ++indexPreviewRequest;
+    if (indexPreviewImage?.getAttribute('src') === source) return;
+    clearIndexPreview();
+    const request = indexPreviewRequest;
     indexPreview.classList.add('is-changing');
-    const preload = new Image();
+    const preload = indexPreviewImage = new Image();
     preload.onload = () => {
       if (request !== indexPreviewRequest) return;
+      indexPreviewImage = null;
       indexPreview.src = source;
       indexPreview.style.setProperty('--index-preview-position', position);
       requestAnimationFrame(() => indexPreview.classList.remove('is-changing'));
     };
     preload.onerror = () => {
-      if (request === indexPreviewRequest) indexPreview.classList.remove('is-changing');
+      if (request === indexPreviewRequest) {
+        indexPreviewImage = null;
+        indexPreview.classList.remove('is-changing');
+      }
     };
     preload.src = source;
   }
@@ -414,10 +454,14 @@
   // atmosphere on hover/focus: its blur rasterization stalls the opening frame.
   // Atmosphere follows page scroll; mobile keeps its existing centered-card state.
 
-  if (isMobile && descentSheet) {
+  if (descentSheet) {
     let mobilePanelFrame = 0;
     const updateMobilePanel = () => {
       mobilePanelFrame = 0;
+      if (!mobileMedia.matches) {
+        descentPanels.forEach(panel => panel.classList.remove('is-mobile-current'));
+        return;
+      }
       const sheetBounds = descentSheet.getBoundingClientRect();
       const sheetCenter = sheetBounds.left + sheetBounds.width / 2;
       let currentPanel = descentPanels[0] || null;
@@ -592,7 +636,20 @@
     scrollDirty = true;
     requestMainFrame();
   }, { passive: true });
-  window.addEventListener('resize', () => { layoutDirty = true; archiveCanvas?.resize(); requestMainFrame(); }, { passive: true });
+  function invalidateViewport() {
+    viewportDirty = true;
+    layoutDirty = true;
+    requestMainFrame();
+  }
+  window.addEventListener('resize', invalidateViewport, { passive: true });
+  mobileMedia.addEventListener('change', invalidateViewport);
+  if ('ResizeObserver' in window) {
+    const contentObserver = new ResizeObserver(() => {
+      layoutDirty = true;
+      requestMainFrame();
+    });
+    contentObserver.observe(document.querySelector('main'));
+  }
   window.addEventListener('load', () => {
     const initialHash = photoIdFromUrl() ? '#works' : normalizeHash(location.hash);
     if (location.hash !== initialHash) {
@@ -778,6 +835,17 @@
       const bounds = this.canvas.getBoundingClientRect();
       if (!bounds.width || !bounds.height) return;
       const dpr = Math.min(devicePixelRatio || 1, isMobile ? 1.2 : 1.75);
+      if (this.width === bounds.width && this.height === bounds.height && this.dpr === dpr && this.mobile === isMobile) return;
+      // Anchor the nearest repeated tile to its existing relative viewport position.
+      const anchor = this.nodes.map(node => ({
+        node,
+        dx: mod(node.x - this.camera.x + this.tile.width / 2, this.tile.width) - this.tile.width / 2,
+        dy: mod(node.y - this.camera.y + this.tile.height / 2, this.tile.height) - this.tile.height / 2
+      })).sort((a, b) => Math.hypot(a.dx, a.dy) - Math.hypot(b.dx, b.dy))[0];
+      const relative = anchor && { x: anchor.dx / this.width, y: anchor.dy / this.height };
+      this.mobile = isMobile;
+      this.cache.budget = (isMobile ? 96 : 240) * 1024 * 1024;
+      this.cache.concurrency = isMobile ? 4 : 6;
       this.width = bounds.width;
       this.height = bounds.height;
       this.dpr = dpr;
@@ -785,6 +853,25 @@
       this.canvas.height = Math.round(bounds.height * dpr);
       this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.layout();
+      if (anchor) {
+        const target = this.nodes.find(node => node.slotIndex === anchor.node.slotIndex && node.work.id === anchor.node.work.id)
+          || this.nodes.find(node => node.work.id === anchor.node.work.id);
+        if (target) {
+          this.camera.x = mod(target.x - relative.x * this.width, this.tile.width);
+          this.camera.y = mod(target.y - relative.y * this.height, this.tile.height);
+        }
+      }
+      this.velocity.x = this.velocity.y = 0;
+      this.pendingPointerMove = null;
+      if (this.pointer && this.canvas.hasPointerCapture?.(this.pointer.id)) this.canvas.releasePointerCapture(this.pointer.id);
+      this.pointer = null;
+      this.canvas.classList.remove('is-dragging');
+      this.hovered = null;
+      if (this.opening) {
+        this.opening = null;
+        if (!photoDialog?.open) cancelPhotoImages();
+      }
+      this.cache.prune();
       this.requestDraw();
     }
 
@@ -1352,7 +1439,7 @@
   let directoryImageQueue = [];
   let directoryImageActive = 0;
   let directoryImageGeneration = 0;
-  const directoryImageConcurrency = isMobile ? 4 : 6;
+  let directoryImageConcurrency = isMobile ? 4 : 6;
 
   function directorySearchText(work) {
     const details = work.details || {};
@@ -2044,7 +2131,7 @@
   }, { passive: false });
   $('[data-equipment-prev]')?.addEventListener('click', () => moveEquipment(-1));
   $('[data-equipment-next]')?.addEventListener('click', () => moveEquipment(1));
-  window.addEventListener('resize', () => updateEquipmentTrack(0, true), { passive: true });
+
   updateEquipmentTrack(0, true);
   const equipmentSection = $('#equipment');
   if (equipmentSection && 'IntersectionObserver' in window) {

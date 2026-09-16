@@ -55,6 +55,21 @@ jobs:
           python tools/build-first-view-assets.py --check
       - name: Verify static site
         run: python tools/verify-site.py --root .
+      - name: Browser regression checks
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/browser-tests/node_modules"
+          npm install --prefix "$RUNNER_TEMP/browser-tests" --no-save --package-lock=false playwright@1.58.2
+          node "$NODE_PATH/playwright/cli.js" install --with-deps chromium
+          mkdir -p work
+          python -m http.server 9011 --bind 127.0.0.1 > work/http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for i in {1..30}; do curl -fsS http://127.0.0.1:9011/ > /dev/null && break || sleep 1; done
+          node tools/test-responsive-browser.cjs
+          node tools/test-ending-browser.cjs
+          node tools/test-site-dialogs-browser.cjs
+          node tools/test-guestbook-browser.cjs
+          mv work "$RUNNER_TEMP/plutonoc-browser-results"
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site

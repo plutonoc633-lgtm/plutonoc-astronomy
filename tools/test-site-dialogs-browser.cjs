@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
-const { chromium } = require(process.env.PLUTONOC_PLAYWRIGHT || 'C:/Users/komorebi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const { chromium, launchOptions } = require('./browser-test-runtime.cjs');
 (async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch(launchOptions);
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const requests = []; page.on('request', r => requests.push(r.url()));
@@ -10,7 +10,7 @@ const { chromium } = require(process.env.PLUTONOC_PLAYWRIGHT || 'C:/Users/komore
     await page.route('https://qa.test/**', r => r.fulfill({ contentType: 'application/json', body: '{"ok":true,"data":{"items":[],"nextCursor":null}}' }));
     await page.route('https://player.bilibili.com/**', r => r.fulfill({ contentType: 'text/html', body: '<body style="background:#111;color:#888">B站播放器尺寸测试</body>' }));
     await page.route('**/*.mp4', r => r.abort());
-    await page.goto('http://127.0.0.1:9011');
+    await page.goto(process.env.PLUTONOC_TEST_URL || 'http://127.0.0.1:9011');
     await page.waitForTimeout(700);
     assert.equal(requests.some(url => /guestbook(?:-config)?\.js|qa\.test/.test(url)), false, 'No guestbook module/data at first screen');
     await page.locator('.film-card').first().click();

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
-const {chromium} = require(process.env.PLUTONOC_PLAYWRIGHT || 'C:/Users/komorebi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const { chromium, launchOptions } = require('./browser-test-runtime.cjs');
 (async()=>{
-  const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+  const browser=await chromium.launch(launchOptions);
   try {
     const page=await browser.newPage();
     await page.route('**/analytics-config.js?*',r=>r.fulfill({contentType:'application/javascript',body:'window.PLUTONOC_ANALYTICS={enabled:false};'}));
