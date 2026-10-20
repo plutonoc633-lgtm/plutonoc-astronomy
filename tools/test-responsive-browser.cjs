@@ -26,6 +26,7 @@ const { chromium, launchOptions } = require('./browser-test-runtime.cjs');
   assert.equal(previews,0,'hidden mobile preview must not download');
   await page.setViewportSize({width:1440,height:1000});
   await page.waitForFunction(()=>document.querySelector('.index-preview img').getAttribute('src')==='/qa-index-3.png');
+  await page.waitForFunction(()=>document.querySelector('.index-preview img').complete);
   const visibleRequests=previews; assert.ok(visibleRequests>0);
   let releaseSlow, slowStarted;
   const started=new Promise(resolve=>slowStarted=resolve);

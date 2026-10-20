@@ -3,7 +3,7 @@
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const mobileMedia = window.matchMedia('(max-width: 760px)');
+  const mobileMedia = window.matchMedia('(max-width: 760px), (max-width: 1060px) and (max-height: 560px) and (hover: none) and (pointer: coarse)');
   let isMobile = mobileMedia.matches;
   const reloadToHome = document.documentElement.dataset.reloadHome === 'true';
   delete document.documentElement.dataset.reloadHome;
@@ -138,6 +138,7 @@
     if (viewportDirty) {
       viewportDirty = false;
       isMobile = mobileMedia.matches;
+      syncMobileContent();
       archiveCanvas?.resize();
       directoryImageConcurrency = isMobile ? 4 : 6;
       syncTimecode();
@@ -1429,6 +1430,7 @@
   /* Searchable photography directory */
   const galleryDirectory = $('[data-gallery-directory]');
   const galleryDirectoryGrid = $('[data-gallery-directory-grid]', galleryDirectory);
+  let galleryDirectoryFocusTimer = 0;
   const galleryDirectorySearch = $('[data-gallery-directory-search]', galleryDirectory);
   const galleryDirectorySummary = $('[data-gallery-directory-summary]', galleryDirectory);
   const galleryDirectoryResult = $('[data-gallery-directory-result]', galleryDirectory);
@@ -1589,11 +1591,13 @@
     renderGalleryDirectory();
     if (!galleryDirectory.open) galleryDirectory.showModal();
     document.body.classList.add('dialog-open');
-    setTimeout(() => galleryDirectorySearch?.focus(), reducedMotion ? 0 : 100);
+    clearTimeout(galleryDirectoryFocusTimer);
+    galleryDirectoryFocusTimer = setTimeout(() => { if (galleryDirectory.open) galleryDirectorySearch?.focus(); }, reducedMotion ? 0 : 100);
   }
 
   function closeGalleryDirectory({ restoreFocus = true } = {}) {
     if (!galleryDirectory?.open) return;
+    clearTimeout(galleryDirectoryFocusTimer);
     galleryDirectoryRestoreFocus = restoreFocus;
     galleryDirectory.close();
   }
@@ -1628,16 +1632,22 @@
       openGalleryDirectory({ status: 'all', search: '' });
       return;
     }
+    const fromDirectory = galleryDirectory.open;
+    if (fromDirectory) closeGalleryDirectory({ restoreFocus: false });
     const canvas = ensureArchiveCanvas();
     canvas.setFilter('all', true);
     const index = canvas.focusWorkById(nextWork.id);
-    if (index >= 0) openPhoto(index);
+    if (index >= 0) {
+      openPhoto(index);
+      if (fromDirectory) photoReturnFocus = $('[data-gallery-directory-open]');
+    }
   });
   $('[data-gallery-directory-close]', galleryDirectory)?.addEventListener('click', () => closeGalleryDirectory());
   galleryDirectory?.addEventListener('click', event => {
     if (event.target === galleryDirectory) closeGalleryDirectory();
   });
   galleryDirectory?.addEventListener('close', () => {
+    clearTimeout(galleryDirectoryFocusTimer);
     if (!photoDialog?.open) document.body.classList.remove('dialog-open');
     resetDirectoryImageLoader();
     galleryDirectoryGrid.replaceChildren();
@@ -1775,6 +1785,7 @@
     const render = () => {
       if (photoImageTask !== task || task.controller.signal.aborted) return;
       markWorkSeen(work);
+      photoDialog.style.setProperty('--photo-ratio', work.width / work.height);
       loadPhotoImages(work);
       recordWorkOpen('photo', work.id, work.title);
       $('[data-photo-current]').textContent = pad(photoIndex + 1);
@@ -2244,11 +2255,12 @@
   }
   function filmCard(film, index) {
     const previewUrl = filmPreviewUrl(film);
-    return `<figure class="film-card" data-film-index="${index}"${previewUrl ? ' data-has-preview' : ''}>
-      <picture><source media="(max-width: 760px)" data-deferred-srcset="${escapeHtml(film.posterPreviewUrl || film.posterUrl)}"><img data-deferred-src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" decoding="async"></picture>
+    const ratio = Number(film.aspectRatio) > 0 ? Number(film.aspectRatio) : 16 / 9;
+    return `<figure class="film-card" data-film-index="${index}" style="--film-ratio:${ratio}"${previewUrl ? ' data-has-preview' : ''}>
+      <div class="film-visual"><picture><source media="(max-width: 760px)" data-deferred-srcset="${escapeHtml(film.posterPreviewUrl || film.posterUrl)}"><img data-deferred-src="${escapeHtml(film.posterUrl)}" alt="${escapeHtml(film.title)}视频封面" decoding="async"></picture>
       <video class="film-preview" muted loop playsinline preload="none" aria-hidden="true"></video>
-      <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button>
-      <figcaption><h3>${escapeHtml(film.title)}</h3><p>${escapeHtml(film.date || '')}<br>${formatDuration(film.duration)}</p></figcaption>
+      <button type="button" aria-label="播放${escapeHtml(film.title)}"><span class="play" aria-hidden="true">▶</span></button></div>
+      <figcaption><h3>${escapeHtml(film.title)}</h3><p><span>${escapeHtml(film.date || '')}</span><br><span>${formatDuration(film.duration)}</span></p></figcaption>
     </figure>`;
   }
   function stopFilmPreview(card) {
@@ -2386,7 +2398,7 @@
     document.body.classList.add('dialog-open');
   }
   $('#films')?.addEventListener('click', event => {
-    const card = event.target.closest('.film-card');
+    const card = event.target.closest('.film-card button')?.closest('.film-card');
     if (card) openFilm(Number(card.dataset.filmIndex));
   });
   $('.dialog-close', videoDialog)?.addEventListener('click', () => videoDialog.close());
@@ -2405,6 +2417,43 @@
       renderFilms(window.localVideoData || []);
     }
   })();
+
+  const mobileMoves = [
+    ...$$('.gallery-seen-progress, [data-gallery-unseen], [data-gallery-continue]', $('.gallery-discovery')).map(element => ({ element, target: $('[data-directory-progress]') })),
+    { element: $('[data-detail-notes]'), target: $('.photo-information'), before: $('[data-detail-capture]') },
+    { element: $('.equipment-console > header'), target: $('#equipment'), before: $('.equipment-media') }
+  ].map(move => {
+    const anchor = document.createComment('responsive position');
+    move.element.before(anchor);
+    return { ...move, anchor };
+  });
+  let mobileContentState;
+  function syncActiveFilter() {
+    if (!isMobile) return;
+    const strip = $('.gallery-filters'), selected = $('.active', strip);
+    if (!selected) return;
+    const bounds = strip.getBoundingClientRect(), item = selected.getBoundingClientRect();
+    const inset = 4;
+    const delta = item.right > bounds.right - inset ? item.right - bounds.right + inset
+      : item.left < bounds.left + inset ? item.left - bounds.left - inset : 0;
+    if (delta) strip.scrollTo({ left: strip.scrollLeft + delta, behavior: reducedMotion ? 'instant' : 'smooth' });
+  }
+  function syncMobileContent() {
+    if (mobileContentState !== isMobile) {
+      $('[data-gallery-directory-open]').textContent = isMobile ? '作品目录' : '目录';
+      for (const { element, target, before, anchor } of mobileMoves) {
+        if (isMobile) target.insertBefore(element, before || null);
+        else anchor.after(element);
+      }
+      mobileContentState = isMobile;
+    }
+    syncActiveFilter();
+  }
+  const filterObserver = new MutationObserver(() => {
+    if (isMobile) requestAnimationFrame(syncActiveFilter);
+  });
+  filterObserver.observe($('.gallery-filters'), { subtree: true, attributes: true, attributeFilter: ['class'] });
+  syncMobileContent();
 
   setVisualStage('deepsky');
   requestMainFrame();

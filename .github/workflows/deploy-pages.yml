@@ -65,6 +65,7 @@ jobs:
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
           for i in {1..30}; do curl -fsS http://127.0.0.1:9011/ > /dev/null && break || sleep 1; done
+          node tools/test-mobile-layout-browser.cjs
           node tools/test-responsive-browser.cjs
           node tools/test-ending-browser.cjs
           node tools/test-site-dialogs-browser.cjs
