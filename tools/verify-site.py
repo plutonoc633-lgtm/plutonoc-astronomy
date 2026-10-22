@@ -468,7 +468,9 @@ def verify_local(root: Path) -> None:
 
 def cache_bust(url: str) -> str:
     parts = urlsplit(url)
-    query = urlencode({"verify": int(time.time())})
+    # IDs and version/signature parameters are part of the resource identity.
+    # Append our probe parameter without replacing or re-encoding existing ones.
+    query = parts.query + ("&" if parts.query else "") + urlencode({"verify": int(time.time())})
     return urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
 
 

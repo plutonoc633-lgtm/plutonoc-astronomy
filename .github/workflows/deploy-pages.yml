@@ -57,7 +57,9 @@ jobs:
           node tools/build-content.mjs --check
           python tools/build-first-view-assets.py --check
       - name: Verify static site
-        run: python tools/verify-site.py --root .
+        run: |
+          python tools/test-site-verifier.py
+          python tools/verify-site.py --root .
       - name: Browser regression checks
         run: |
           export NODE_PATH="$RUNNER_TEMP/browser-tests/node_modules"
