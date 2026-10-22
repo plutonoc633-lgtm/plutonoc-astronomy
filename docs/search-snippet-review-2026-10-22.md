@@ -11,3 +11,5 @@
 内容一致性、关键样式及本地静态检查通过。网站端发布与搜索端更新分开记录：添加标记不能直接改写必应已经展示的旧摘要，也不能保证必应逐字采用 meta description。需要必应重新抓取后再核对搜索结果；本次未登录站长平台、未提交移除请求或新建索引提交服务。
 
 依据：[必应 data-nosnippet 说明](https://blogs.bing.com/webmaster/2025/10/Bing-Introduces-Support-for-the-data-nosnippet-HTML-Attribute/)。
+
+发布核对：提交 `67a1a215129f28ae61b82d32f16a2039f41087fa` 的 [Pages 检查、部署及线上校验](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/39774841721)成功。官网首页逐字节匹配该提交；官网浏览器检查确认三份描述一致、两处摘要排除标记存在、可访问性树仍包含完整键盘说明。必应搜索结果是否已替换旧摘要尚未确认，不将网站端发布等同于搜索端更新。
