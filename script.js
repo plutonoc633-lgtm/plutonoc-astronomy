@@ -2032,6 +2032,7 @@
   });
   photoDialog?.addEventListener('pointercancel', () => { photoSwipeStart = null; });
   photoDialog?.addEventListener('close', () => {
+    if (photoDialog.open) return;
     cancelPhotoImages();
     const reopenDirectory = returnToGalleryDirectory;
     returnToGalleryDirectory = false;
@@ -2482,9 +2483,17 @@
     const card = event.target.closest('.film-card button')?.closest('.film-card');
     if (card) openFilm(Number(card.dataset.filmIndex));
   });
-  $('.dialog-close', videoDialog)?.addEventListener('click', () => videoDialog.close());
-  videoDialog?.addEventListener('click', event => { if (event.target === videoDialog) videoDialog.close(); });
+  function closeVideoDialog() {
+    cancelAnimationFrame(videoLayoutFrame);
+    clearVideoPlayers();
+    videoDialog.close();
+    document.body.classList.remove('dialog-open');
+  }
+  $('.dialog-close', videoDialog)?.addEventListener('click', closeVideoDialog);
+  videoDialog?.addEventListener('click', event => { if (event.target === videoDialog) closeVideoDialog(); });
+  videoDialog?.addEventListener('cancel', event => { event.preventDefault(); closeVideoDialog(); });
   videoDialog?.addEventListener('close', () => {
+    if (videoDialog.open) return;
     cancelAnimationFrame(videoLayoutFrame);
     clearVideoPlayers();
     document.body.classList.remove('dialog-open');

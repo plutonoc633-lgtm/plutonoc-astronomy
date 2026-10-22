@@ -12,6 +12,9 @@ const png=fs.readFileSync('assets/branding/favicon-32.png');
  await p.evaluate(()=>document.querySelector('.index-nav a[href="#equipment"]').click());await p.waitForTimeout(80);await p.goBack();await p.waitForTimeout(1250);assert.ok((await p.url()).endsWith('#home'));assert.equal(await p.locator('body').evaluate(e=>e.classList.contains('is-transitioning')),false);
  await p.evaluate(()=>document.querySelector('.index-nav a[href="#equipment"]').click());await p.waitForTimeout(80);await p.goForward();await p.waitForTimeout(1250);assert.ok((await p.url()).endsWith('#films'));
  await p.evaluate(()=>{document.querySelector('[data-home-filter="earth"]').click();setTimeout(()=>document.querySelector('[data-home-filter="planet"]').click(),80)});await p.waitForURL('**/#works');await p.waitForTimeout(1000);assert.equal(await p.locator('.gallery-filters .active').getAttribute('data-filter'),'planet');assert.deepEqual(errors,[]);
+ await p.goto(base.replace(/\/$/,'')+'/?photo=sunmoon-04#works');await p.waitForFunction(()=>document.querySelector('[data-photo-dialog]').open);
+ await p.evaluate(()=>{document.querySelector('[data-photo-dialog]').close();document.querySelector('[data-gallery-directory-open]').click();document.querySelector('[data-directory-card]').click();});
+ await p.waitForFunction(()=>document.querySelector('[data-photo-dialog]').open&&document.querySelector('.photo-stage img').naturalWidth>0&&document.querySelector('.photo-stage img').hasAttribute('src'));
  for(const mode of ['transient','failed','timeout','manual-timeout']){
   const c=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const page=await c.newPage();let attempts=0,healthy=false,release;
   page.on('pageerror',e=>errors.push(e.message));

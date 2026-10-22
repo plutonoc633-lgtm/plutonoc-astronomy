@@ -36,6 +36,8 @@ const { chromium, launchOptions } = require('./browser-test-runtime.cjs');
     assert.equal(await page.locator('.bilibili-player').count(),0); assert.equal(await page.locator('.video-frame video').isVisible(),true);
     await page.locator('.video-dialog .dialog-close').click();
     assert.equal(await page.locator('.video-frame video').getAttribute('src'),null);
+    await page.evaluate(()=>{document.querySelectorAll('.film-card button')[1].click();document.querySelector('.video-dialog .dialog-close').click();document.querySelector('.film-card button').click();});
+    await page.waitForTimeout(100);assert.equal(await page.locator('.bilibili-player').count(),1,'A delayed close must not clear the reopened video');await page.keyboard.press('Escape');assert.equal(await page.locator('.bilibili-player').count(),0);
     await page.locator('.film-card').first().click(); assert.equal(await page.locator('.bilibili-player').count(),1); await page.keyboard.press('Escape');
     await page.locator('[data-guestbook]').scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>document.querySelector('[data-guestbook]').dataset.initialized==='true');
