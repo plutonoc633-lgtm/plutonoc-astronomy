@@ -13,10 +13,10 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20261020-mobile-1"
-ADMIN_STYLE_CACHE_VERSION = "20260914-guestbook-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20260914-guestbook-1"
-SCRIPT_CACHE_VERSION = "20261020-mobile-1"
+STYLE_CACHE_VERSION = "20261022-reliability-1"
+ADMIN_STYLE_CACHE_VERSION = "20261022-reliability-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20261022-reliability-1"
+SCRIPT_CACHE_VERSION = "20261022-reliability-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"
 CLOUDBASE_ADMIN_URL = "https://plutonoc-studio-activity-book-web-d7djhe7bb1e834.webapps.tcloudbase.com/"
@@ -230,7 +230,7 @@ def verify_local(root: Path) -> None:
         require(marker in admin + admin_script, f"Admin draft protection is missing: {marker}")
     require("sessionStorage" not in admin_script, "Admin draft protection must not use session credential storage")
     require("Pages 部署失败，网站尚未更新" in admin_script, "Admin does not report failed Pages deployments")
-    require("部署超时，网站尚未确认更新" in admin_script, "Admin deployment timeout is misleading")
+    require("尚未确认上线，可继续查询；无需重复提交" in admin_script and "600000" in admin_script and "data-deployment-recheck" in admin_script, "Admin must distinguish unconfirmed deployment from failure")
     require("app.callFunction" in admin_script and "plutonoc-content-publisher" in admin_script, "Admin server publisher bridge is missing")
     require(".collection(" not in admin_script, "Admin still queries the blocked CloudBase database")
     require("/git/trees" in publisher_script and "force: false" in publisher_script, "Server atomic Git publishing is missing")
@@ -412,7 +412,7 @@ def verify_local(root: Path) -> None:
     ):
         require(marker in style, f"Missing scroll reveal marker: {marker}")
     require('aria-describedby="gallery-drag-hint"' in index, "Visible canvas instructions must be associated with the canvas")
-    require('image-loader.js?v=20260905-loading-1' in index, "Bounded image loader is missing")
+    require('image-loader.js?v=20261022-reliability-1' in index, "Bounded image loader is missing")
     require('return film.previewUrl || \'\';' in script, "Hover previews must not fall back to full movies")
     require("if (canvasElement) archiveCanvas = new InfiniteArchiveCanvas" not in script, "Archive Canvas still initializes on the homepage")
     for marker in (

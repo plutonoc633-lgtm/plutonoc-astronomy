@@ -41,6 +41,16 @@ const base = process.env.PLUTONOC_TEST_URL || 'http://127.0.0.1:9011';
   // Real portrait / panorama works, plus an extreme-ratio fixture and long explanation.
   const targets=await page.evaluate(()=>{const works=qaMobile.works;return[works.find(w=>w.width/w.height<.7)?.id,works.find(w=>w.width/w.height>3)?.id].filter(Boolean)});
   for(const id of targets){await page.evaluate(id=>qaMobile.open(id),id);await page.waitForTimeout(200);const fit=await page.locator('.photo-stage').evaluate(e=>{const r=e.querySelector('img').getBoundingClientRect(),close=document.querySelector('.photo-dialog .dialog-close').getBoundingClientRect();return{w:r.width,h:r.height,ratio:r.width/r.height,target:Number(e.closest('dialog').style.getPropertyValue('--photo-ratio')),close:close.top>=0&&close.bottom<=innerHeight}});assert.ok(fit.w<=390&&fit.h<=844-100);assert.ok(Math.abs(fit.ratio-fit.target)<.02);assert.ok(fit.close);await page.locator('.photo-dialog .dialog-close').click();await page.waitForFunction(()=>!document.querySelector('[data-photo-dialog]').open);}
+  for(const viewport of [{width:720,height:450},{width:844,height:390},{width:320,height:568}]){
+   await page.setViewportSize(viewport);
+   for(const id of targets){
+    await page.evaluate(id=>qaMobile.open(id),id);await page.waitForTimeout(200);
+    const fit=await page.locator('.photo-stage').evaluate(e=>{const stage=e.getBoundingClientRect(),image=e.querySelector('img').getBoundingClientRect(),info=document.querySelector('.photo-information').getBoundingClientRect();return{inside:image.top>=stage.top-1&&image.bottom<=stage.bottom+1,below:info.top>=stage.bottom-1,scrollable:e.closest('dialog').scrollHeight>e.closest('dialog').clientHeight};});
+    assert.ok(fit.inside&&fit.below,JSON.stringify({viewport,id,fit}));
+    await page.locator('.photo-dialog .dialog-close').click();await page.waitForFunction(()=>!document.querySelector('[data-photo-dialog]').open);
+   }
+  }
+  await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>{const w=qaMobile.works[0];w.width=100;w.height=1000;w.details={...w.details,story:'长说明测试。'.repeat(150)};qaMobile.open(w.id)});await page.waitForTimeout(200);assert.equal(await page.locator('.photo-information').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
   await page.setViewportSize({width:1440,height:1000});await page.waitForTimeout(200);
   assert.deepEqual(await order(),['data-detail-object','data-detail-capture','data-detail-system','data-detail-process','data-detail-notes']);

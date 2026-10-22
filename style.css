@@ -796,7 +796,7 @@ dialog { color: inherit; }
   .gallery-directory-card strong { font-size: 13px; }
   .gallery-directory-card-copy { gap: 5px 8px; padding-top: 9px; }
   .gallery-directory-footer { min-height: 76px; padding-inline: 18px; }
-  .photo-dialog { grid-template-columns: 1fr; overflow-y: auto; }
+  .photo-dialog { grid-template-columns: 1fr; grid-template-rows: max-content max-content; overflow-y: auto; }
   .photo-stage { --photo-room: max(1px, calc(100dvh - 112px)); height: auto; min-height: 0; padding: 62px 18px 18px; }
   .photo-stage img { width: min(100%, calc(var(--photo-room) * var(--photo-ratio, 1.5))); height: auto; max-height: var(--photo-room); }
   .photo-information { padding-top: 20px; }
@@ -894,4 +894,14 @@ dialog { color: inherit; }
   .index-panel { padding-block: 16px; gap: 12px; }
   .index-foot { display: none; }
   .index-nav a { padding-block: 8px; }
+}
+
+/* Recovery controls appear only after a deferred image exhausts its retry. */
+.social-links { position: relative; }
+.deferred-media-errors { position: absolute; z-index: 6; inset: auto 12px 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; pointer-events: none; }
+.deferred-media-errors:empty { display: none; }
+.deferred-media-errors button { pointer-events: auto; max-width: 100%; min-height: 36px; padding: 8px 12px; background: #080a0d; border: 1px solid var(--line); color: var(--foreground); font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+  .gallery-directory-search input { font-size: 16px; }
+  .deferred-media-errors button { min-height: 44px; }
 }

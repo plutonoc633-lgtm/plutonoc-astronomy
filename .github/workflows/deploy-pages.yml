@@ -49,6 +49,7 @@ jobs:
           node --check cloudfunctions/analytics-shared/core.js
           node --test tools/test-analytics.cjs
           node --test tools/test-reliability.cjs
+          node --test tools/test-recovery.cjs
           node --check cloudfunctions/plutonoc-content-publisher/index.js
           node --check cloudfunctions/plutonoc-content-publisher/content-runtime.js
           node tools/build-content.mjs --check
@@ -67,6 +68,7 @@ jobs:
           for i in {1..30}; do curl -fsS http://127.0.0.1:9011/ > /dev/null && break || sleep 1; done
           node tools/test-mobile-layout-browser.cjs
           node tools/test-responsive-browser.cjs
+          node tools/test-recovery-browser.cjs
           node tools/test-ending-browser.cjs
           node tools/test-site-dialogs-browser.cjs
           node tools/test-guestbook-browser.cjs

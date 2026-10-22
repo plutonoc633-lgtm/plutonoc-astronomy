@@ -47,5 +47,41 @@
     }
   }
 
-  return { load };
+  // Load into the actual DOM image so <picture> keeps native source selection.
+  async function loadElement(image, { apply, clear, signal, timeout = 12000, retries = 1 } = {}) {
+    for (let index = 0; ; index += 1) {
+      try {
+        return await new Promise((resolve, reject) => {
+          if (signal?.aborted) { reject(abortError()); return; }
+          let settled = false, decoding = false;
+          const finish = error => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            signal?.removeEventListener('abort', cancel);
+            image.removeEventListener('load', ready);
+            image.removeEventListener('error', failed);
+            if (error) { clear?.(); reject(error); } else resolve(image);
+          };
+          const ready = () => {
+            if (decoding || settled) return;
+            decoding = true;
+            Promise.resolve().then(() => image.decode?.()).then(() => finish(), finish);
+          };
+          const failed = () => finish(new Error('Image loading failed'));
+          const cancel = () => finish(abortError());
+          const timer = setTimeout(() => finish(new Error('Image loading timed out')), timeout);
+          signal?.addEventListener('abort', cancel, { once: true });
+          image.addEventListener('load', ready);
+          image.addEventListener('error', failed);
+          try { apply(index); if (image.complete && image.naturalWidth) queueMicrotask(ready); }
+          catch (error) { finish(error); }
+        });
+      } catch (error) {
+        if (signal?.aborted || error.name === 'AbortError' || index >= retries) throw error;
+      }
+    }
+  }
+
+  return { load, loadElement };
 });

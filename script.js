@@ -16,21 +16,73 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
 
-  function hydrateDeferredMedia(element) {
-    if (!element || element.dataset.mediaHydrated === 'true') return;
-    const picture = element.closest?.('picture');
-    $$('source[data-deferred-srcset]', picture).forEach(source => {
-      source.srcset = source.dataset.deferredSrcset;
-      delete source.dataset.deferredSrcset;
+  const deferredImages = new WeakMap();
+  let deferredImageGeneration = 0;
+  function recoverySource(value, key) {
+    if (!value || !key || /^(data|blob):/.test(value)) return value;
+    return value.replace(/(^|,\s*)([^,\s]+)/g, (_, separator, source) => {
+      const url = new URL(source, location.href);
+      url.searchParams.set('__plutonoc_retry', key);
+      return separator + url.href;
     });
-    if (element.dataset.deferredSrc) {
-      element.src = element.dataset.deferredSrc;
-      delete element.dataset.deferredSrc;
+  }
+  function hydrateDeferredImage(image, retry = false) {
+    let state = deferredImages.get(image);
+    if (state && !retry && ['loading', 'loaded', 'error'].includes(state.phase)) return;
+    if (!state) {
+      const picture = image.closest('picture');
+      state = {
+        src: image.dataset.deferredSrc || image.getAttribute('src'),
+        srcset: image.dataset.deferredSrcset || image.getAttribute('srcset'),
+        sources: $$('source', picture).map(source => [source, source.dataset.deferredSrcset || source.getAttribute('srcset')])
+      };
+      deferredImages.set(image, state);
+      image.addEventListener('error', () => { if (state.phase === 'loaded') hydrateDeferredImage(image, true); });
     }
-    if (element.dataset.deferredPoster) {
-      element.poster = element.dataset.deferredPoster;
-      delete element.dataset.deferredPoster;
-    }
+    state.controller?.abort();
+    const controller = state.controller = new AbortController();
+    state.phase = image.dataset.mediaState = 'loading';
+    image.dataset.mediaHydrated = 'false';
+    state.button?.remove();
+    const recoveryKey = `${Date.now()}-${++deferredImageGeneration}`;
+    const apply = attempt => {
+      const key = retry || attempt > 0 ? `${recoveryKey}-${attempt}` : '';
+      state.sources.forEach(([source, value]) => { if (value) source.srcset = recoverySource(value, key); });
+      if (state.srcset) image.srcset = recoverySource(state.srcset, key);
+      if (state.src) image.src = key ? recoverySource(state.src, key) : state.src;
+    };
+    const clear = () => {
+      image.removeAttribute('src'); image.removeAttribute('srcset');
+      state.sources.forEach(([source]) => source.removeAttribute('srcset'));
+    };
+    window.PlutonoCImages.loadElement(image, { apply, clear, signal: controller.signal }).then(() => {
+      if (state.controller !== controller) return;
+      state.phase = image.dataset.mediaState = 'loaded';
+      image.dataset.mediaHydrated = 'true';
+      state.button?.remove();
+    }).catch(error => {
+      if (state.controller !== controller || error.name === 'AbortError') return;
+      state.phase = image.dataset.mediaState = 'error';
+      const host = image.closest('.descent-sheet, .film-visual, .equipment-track figure, .arrival-hero, .social-links') || image.parentElement;
+      let panel = host.querySelector(':scope > .deferred-media-errors');
+      if (!panel) {
+        panel = document.createElement('div'); panel.className = 'deferred-media-errors'; host.append(panel);
+      }
+      const button = state.button = document.createElement('button');
+      const label = image.closest('[data-home-filter]')?.querySelector('b')?.textContent;
+      button.type = 'button'; button.className = 'image-retry'; button.dataset.mediaRetry = '';
+      button.textContent = `${label || '图片'}加载失败 · 重新加载`;
+      button.setAttribute('aria-label', `${image.alt || '图片'}加载失败，重新加载`);
+      button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); hydrateDeferredImage(image, true); });
+      panel.append(button);
+    });
+  }
+  function hydrateDeferredMedia(element) {
+    if (!element) return;
+    if (element.tagName === 'IMG') { hydrateDeferredImage(element); return; }
+    if (element.dataset.mediaHydrated === 'true') return;
+    if (element.dataset.deferredPoster) element.poster = element.dataset.deferredPoster;
+    if (element.dataset.deferredSrc) element.src = element.dataset.deferredSrc;
     element.dataset.mediaHydrated = 'true';
   }
 
@@ -361,13 +413,28 @@
   const curtain = $('[data-page-curtain]');
   let transitionActive = false;
   let pendingGalleryFilter = null;
+  let navigationEpoch = 0;
+  const navigationTimers = new Set();
+  function cancelNavigation() {
+    navigationEpoch++;
+    navigationTimers.forEach(clearTimeout); navigationTimers.clear();
+    transitionActive = false; pendingGalleryFilter = null;
+    document.body.classList.remove('is-transitioning');
+  }
+  function navigationDelay(callback, delay, epoch) {
+    const timer = setTimeout(() => {
+      navigationTimers.delete(timer);
+      if (epoch === navigationEpoch) callback();
+    }, delay);
+    navigationTimers.add(timer);
+  }
   const normalizeHash = hash => hash === '#profile' ? '#home' : (hash || '#home');
 
   function updateCurtain(category, hash) {
     const config = categoryConfig[category];
     const destinations = {
       '#home': ['PLUTONOC', 'HOME', ''],
-      '#films': ['MOTION', 'DYNAMIC IMAGE', '00:06'],
+      '#films': ['MOTION', 'DYNAMIC IMAGE', ''],
       '#records': ['PUBLIC RECORDS', 'MEDIA & HONORS', ''],
       '#equipment': ['EQUIPMENT', 'SYSTEMS', ''],
       '#contact': ['PLUTONOC', '择日成星', ''],
@@ -388,14 +455,16 @@
     if (normalizedHash === '#works' || category) ensureArchiveCanvas();
     if (category && archiveCanvas) archiveCanvas.setFilter(category, true);
     target.scrollIntoView({ block: 'start', behavior: 'instant' });
-    if (pushHistory && location.hash !== normalizedHash) history.pushState({ category }, '', normalizedHash);
+    if (pushHistory && (location.hash !== normalizedHash || (history.state?.category || null) !== category)) history.pushState({ category }, '', normalizedHash);
     scrollDirty = true;
     requestMainFrame();
   }
 
   function transitionTo(hash, category = null) {
     const normalizedHash = normalizeHash(hash);
-    if (transitionActive || !$(normalizedHash)) return;
+    if (!$(normalizedHash)) return;
+    cancelNavigation();
+    const epoch = navigationEpoch;
     pendingGalleryFilter = category;
     updateCurtain(category, normalizedHash);
     if (reducedMotion) {
@@ -406,9 +475,9 @@
     transitionActive = true;
     document.body.classList.add('is-transitioning');
     closeIndex({ restoreFocus: false });
-    setTimeout(() => finishNavigation(normalizedHash, category), category ? 520 : 320);
-    setTimeout(() => document.body.classList.remove('is-transitioning'), category ? 960 : 650);
-    setTimeout(() => { transitionActive = false; pendingGalleryFilter = null; }, category ? 1180 : 760);
+    navigationDelay(() => finishNavigation(normalizedHash, category), category ? 520 : 320, epoch);
+    navigationDelay(() => document.body.classList.remove('is-transitioning'), category ? 960 : 650, epoch);
+    navigationDelay(() => { transitionActive = false; pendingGalleryFilter = null; }, category ? 1180 : 760, epoch);
   }
 
   $$('a[data-transition-link], [data-index-link]').forEach(link => {
@@ -420,7 +489,10 @@
     });
   });
 
+  window.addEventListener('pagehide', cancelNavigation);
+  window.addEventListener('hashchange', cancelNavigation);
   window.addEventListener('popstate', event => {
+    cancelNavigation();
     const linkedPhoto = photoIdFromUrl();
     if (linkedPhoto && openPhotoFromLocation()) return;
     if (!linkedPhoto && photoDialog?.open) {
@@ -1431,6 +1503,9 @@
   const galleryDirectory = $('[data-gallery-directory]');
   const galleryDirectoryGrid = $('[data-gallery-directory-grid]', galleryDirectory);
   let galleryDirectoryFocusTimer = 0;
+  let directoryInputMode = matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : 'keyboard';
+  document.addEventListener('pointerdown', event => { directoryInputMode = event.pointerType; }, true);
+  document.addEventListener('keydown', () => { directoryInputMode = 'keyboard'; }, true);
   const galleryDirectorySearch = $('[data-gallery-directory-search]', galleryDirectory);
   const galleryDirectorySummary = $('[data-gallery-directory-summary]', galleryDirectory);
   const galleryDirectoryResult = $('[data-gallery-directory-result]', galleryDirectory);
@@ -1589,10 +1664,14 @@
     galleryDirectoryRestoreFocus = true;
     syncDirectoryControls();
     renderGalleryDirectory();
+    const touch = ['touch', 'pen'].includes(directoryInputMode);
+    const close = $('[data-gallery-directory-close]', galleryDirectory);
+    close.autofocus = touch;
     if (!galleryDirectory.open) galleryDirectory.showModal();
     document.body.classList.add('dialog-open');
     clearTimeout(galleryDirectoryFocusTimer);
-    galleryDirectoryFocusTimer = setTimeout(() => { if (galleryDirectory.open) galleryDirectorySearch?.focus(); }, reducedMotion ? 0 : 100);
+    if (touch) close.focus();
+    else galleryDirectoryFocusTimer = setTimeout(() => { if (galleryDirectory.open) galleryDirectorySearch?.focus(); }, reducedMotion ? 0 : 100);
   }
 
   function closeGalleryDirectory({ restoreFocus = true } = {}) {
@@ -2090,6 +2169,7 @@
   }
 
   equipmentTrack?.addEventListener('pointerdown', event => {
+    if (event.target.closest('button')) return;
     clearTimeout(equipmentNormalizeTimer);
     equipmentWheelAccumulator = 0;
     normalizeEquipmentIndex(true);

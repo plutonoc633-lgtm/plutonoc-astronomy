@@ -16,6 +16,8 @@
   const publisher = $('[data-publisher]');
   const signOutButton = $('[data-sign-out]');
   const publishState = $('[data-publish-state]');
+  const deploymentRecheck = $('[data-deployment-recheck]');
+  let pendingDeployment = null;
   const photoForm = $('[data-photo-form]');
   const videoForm = $('[data-video-form]');
   const confirmDialog = $('[data-confirm-dialog]');
@@ -65,6 +67,7 @@
   }
   function invalidateSession() {
     authEpoch++; contentEpoch++; deploymentEpoch++;
+    pendingDeployment = null; deploymentRecheck.hidden = true;
     imageTasks.photo++; imageTasks.video++;
     preparing.photo = preparing.video = false;
     preparedPhoto = preparedPoster = null;
@@ -84,6 +87,7 @@
         setMessage($(`[data-${kind}-message]`), '内容版本已变化，当前表单已保留；请核对后重新选择作品进行编辑。', true); return;
       }
       publishing = true; publicationAuthEpoch = epoch; contentEpoch++; deploymentEpoch++;
+      pendingDeployment = null; deploymentRecheck.hidden = true;
       const controls = $$('button, input, select, textarea', dashboard).map(control => [control, control.disabled]);
       controls.forEach(([control]) => { control.disabled = true; });
       try { await handler(event, base); }
@@ -115,6 +119,7 @@
   }
 
   function setPublishState(text, state = '', detailsUrl = '') {
+    deploymentRecheck.hidden = true;
     publishState.replaceChildren(document.createTextNode(text));
     if (/^https:\/\/github\.com\/plutonoc633-lgtm\/plutonoc-astronomy\/actions\/runs\/\d+(?:\/job\/\d+)?$/.test(detailsUrl)) {
       const separator = document.createTextNode(' / ');
@@ -344,6 +349,7 @@
     if (publishing) return;
     const token = ++contentEpoch;
     deploymentEpoch++;
+    pendingDeployment = null;
     setPublishState('正在读取网站内容', 'working');
     const state = await publisherRequest('load').catch(error => { if (token !== contentEpoch) return null; throw error; });
     if (token !== contentEpoch || !state) return;
@@ -471,10 +477,14 @@
 
   async function pollDeployment(version, changed, commitSha) {
     const token = ++deploymentEpoch;
+    pendingDeployment = { version, changed, commitSha, authEpoch };
+    deploymentRecheck.hidden = true;
+    deploymentRecheck.disabled = true;
+    setPublishState('正在确认上线状态', 'working');
     const marker = changed === 'gallery' ? `gallery-data.js?v=${version}` : `video-data.js?v=${version}`;
     const started = Date.now();
     let lastCheck = null;
-    while (Date.now() - started < 180000) {
+    while (Date.now() - started < 600000) {
       await new Promise(resolve => setTimeout(resolve, 8000));
       if (token !== deploymentEpoch) return;
       try {
@@ -482,6 +492,7 @@
         const html = response.ok ? await response.text() : '';
         if (token !== deploymentEpoch) return;
         if (html.includes(marker)) {
+          pendingDeployment = null;
           setPublishState('Pages 已部署，内容已上线', 'success');
           return;
         }
@@ -490,18 +501,28 @@
       lastCheck = await fetchDeploymentCheck(commitSha) || lastCheck;
       if (token !== deploymentEpoch) return;
       if (!lastCheck) continue;
-      if (lastCheck.status === 'completed' && lastCheck.conclusion !== 'success') {
+      if (lastCheck.status === 'completed' && ['failure', 'timed_out', 'startup_failure'].includes(lastCheck.conclusion)) {
+        pendingDeployment = null;
         setPublishState('Pages 部署失败，网站尚未更新', 'error', lastCheck.html_url);
         return;
       }
-      if (lastCheck.status === 'completed') {
+      if (lastCheck.status === 'completed' && lastCheck.conclusion === 'success') {
         setPublishState('Pages 已构建，等待官网缓存刷新', 'working', lastCheck.html_url);
       } else {
         setPublishState('正在部署到网站', 'working', lastCheck.html_url);
       }
     }
-    if (token === deploymentEpoch) setPublishState('部署超时，网站尚未确认更新', 'error', lastCheck?.html_url || '');
+    if (token === deploymentEpoch) {
+      setPublishState('尚未确认上线，可继续查询；无需重复提交', '', lastCheck?.html_url || '');
+      deploymentRecheck.disabled = false; deploymentRecheck.hidden = false;
+    }
   }
+
+  deploymentRecheck.addEventListener('click', () => {
+    const target = pendingDeployment;
+    if (!target || target.authEpoch !== authEpoch || deploymentRecheck.disabled) return;
+    pollDeployment(target.version, target.changed, target.commitSha);
+  });
 
   async function decodeImage(blob) {
     if ('createImageBitmap' in window) {
