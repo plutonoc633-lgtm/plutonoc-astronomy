@@ -1143,7 +1143,7 @@
         const video = document.createElement('video');
         const timer = setTimeout(() => reject(new Error('读取超时，请手动填写时长与画幅')), 15000);
         video.preload = 'metadata';
-        video.crossOrigin = 'anonymous';
+        // Reading duration/dimensions needs no canvas access or CORS permission.
         video.onloadedmetadata = () => {
           clearTimeout(timer);
           resolve({ duration: video.duration, aspectRatio: video.videoWidth / video.videoHeight });

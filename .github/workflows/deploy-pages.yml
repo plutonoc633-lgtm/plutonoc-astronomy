@@ -76,6 +76,7 @@ jobs:
           node tools/test-ending-browser.cjs
           node tools/test-site-dialogs-browser.cjs
           node tools/test-guestbook-browser.cjs
+          node tools/test-media-admin-browser.cjs
           mv work "$RUNNER_TEMP/plutonoc-browser-results"
       - name: Configure Pages
         uses: actions/configure-pages@v5
