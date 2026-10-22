@@ -30,14 +30,14 @@
       "duration": 285.9,
       "id": "star-dream",
       "location": "",
+      "posterPreviewUrl": "assets/video-posters/previews/star-dream.webp",
       "posterUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/star-dream-27s-v2.jpg",
       "sortOrder": 2,
       "status": "published",
       "summary": "",
       "title": "星辰行梦",
       "updatedAt": "",
-      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.ap-shanghai.app.tcloudbase.com/media?id=star-dream",
-      "posterPreviewUrl": "assets/video-posters/previews/star-dream.webp"
+      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.ap-shanghai.app.tcloudbase.com/media?id=star-dream"
     },
     {
       "aspectRatio": 1.7777777777777777,
@@ -47,14 +47,14 @@
       "duration": 151.6,
       "id": "tianjian-promo",
       "location": "",
+      "posterPreviewUrl": "assets/video-posters/previews/tianjian-promo.webp",
       "posterUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/video-posters/tianjian-promo-title-v2.jpg",
       "sortOrder": 3,
       "status": "published",
       "summary": "",
       "title": "江南大学天文协会宣传片",
       "updatedAt": "",
-      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.ap-shanghai.app.tcloudbase.com/media?id=tianjian-promo",
-      "posterPreviewUrl": "assets/video-posters/previews/tianjian-promo.webp"
+      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.ap-shanghai.app.tcloudbase.com/media?id=tianjian-promo"
     },
     {
       "aspectRatio": 1.7777777777777777,
@@ -64,14 +64,14 @@
       "duration": 6.084,
       "id": "local-jupiter-observation",
       "location": "",
+      "posterPreviewUrl": "assets/video-posters/previews/local-jupiter-observation.webp",
       "posterUrl": "assets/videos/jupiter-poster.jpg",
       "sortOrder": 4,
       "status": "published",
       "summary": "",
       "title": "木星观测",
       "updatedAt": "",
-      "videoUrl": "assets/videos/jupiter.mp4",
-      "posterPreviewUrl": "assets/video-posters/previews/local-jupiter-observation.webp"
+      "videoUrl": "assets/videos/jupiter.mp4"
     }
   ],
   "version": 1
