@@ -50,6 +50,8 @@ jobs:
           node --test tools/test-analytics.cjs
           node --test tools/test-reliability.cjs
           node --test tools/test-recovery.cjs
+          node --check cloudfunctions/plutonoc-media/index.js
+          node --test tools/test-media.cjs
           node --check cloudfunctions/plutonoc-content-publisher/index.js
           node --check cloudfunctions/plutonoc-content-publisher/content-runtime.js
           node tools/build-content.mjs --check

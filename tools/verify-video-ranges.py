@@ -3,6 +3,7 @@
 Manual production diagnostic; intentionally separate from the static-site checks.
 """
 import concurrent.futures
+import argparse
 import hashlib
 import json
 import re
@@ -53,8 +54,14 @@ def check(video):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--endpoint', help='Test the media redirect before switching the published URLs')
+    options = parser.parse_args()
     videos = json.loads((ROOT / "content/videos.json").read_text(encoding="utf-8"))["items"]
-    direct = [v for v in videos if ".tcloudbaseapp.com/" in v.get("videoUrl", "")]
+    direct = [dict(v) for v in videos if v.get('sourceType') != 'bilibili' and v.get('videoUrl', '').startswith('https://')]
+    if options.endpoint:
+        for video in direct:
+            video['videoUrl'] = options.endpoint + '?id=' + video['id']
     if not direct:
         raise SystemExit("No configured CloudBase videos")
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:

@@ -1,5 +1,5 @@
 {
-  "contentVersion": "20260904-tokyo-vlog-1",
+  "contentVersion": "20261022-media-1",
   "items": [
     {
       "aspectRatio": 1.7777777777777777,
@@ -36,7 +36,7 @@
       "summary": "",
       "title": "星辰行梦",
       "updatedAt": "",
-      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/star-dream.mp4",
+      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.ap-shanghai.app.tcloudbase.com/media?id=star-dream",
       "posterPreviewUrl": "assets/video-posters/previews/star-dream.webp"
     },
     {
@@ -53,7 +53,7 @@
       "summary": "",
       "title": "江南大学天文协会宣传片",
       "updatedAt": "",
-      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.tcloudbaseapp.com/plutonoc/videos/tianjian-promo.mp4",
+      "videoUrl": "https://activity-book-web-d7djhe7bb1e834-1343388380.ap-shanghai.app.tcloudbase.com/media?id=tianjian-promo",
       "posterPreviewUrl": "assets/video-posters/previews/tianjian-promo.webp"
     },
     {

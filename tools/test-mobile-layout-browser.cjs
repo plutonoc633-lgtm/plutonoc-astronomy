@@ -11,6 +11,7 @@ const base = process.env.PLUTONOC_TEST_URL || 'http://127.0.0.1:9011';
   await page.route('https://qa.test/**',r=>r.fulfill({contentType:'application/json',body:'{"ok":true,"data":{"items":[],"nextCursor":null}}'}));
   await page.route('https://player.bilibili.com/**',r=>r.fulfill({contentType:'text/html',body:'<body>测试播放器</body>'}));
   await page.route('**/*.mp4',r=>r.abort());
+  await page.route('**/media?id=*',r=>r.abort());
   await page.route('**/script.js?*',async r=>{const response=await r.fetch();const source=(await response.text()).replace(/\r\n/g,'\n').replace("  setVisualStage('deepsky');\n  requestMainFrame();", "  window.qaMobile={works:allWorks,open:openDirectoryWork,canvas:()=>archiveCanvas};\n  setVisualStage('deepsky');\n  requestMainFrame();");await r.fulfill({response,body:source});});
   await page.goto(base);await page.waitForFunction(()=>window.qaMobile&&document.querySelector('.film-card'));
   for(const viewport of [{width:320,height:568},{width:390,height:844},{width:430,height:932},{width:640,height:360},{width:844,height:390}]){
@@ -58,7 +59,7 @@ const base = process.env.PLUTONOC_TEST_URL || 'http://127.0.0.1:9011';
   await page.locator('.photo-dialog .dialog-close').click();await page.waitForFunction(()=>!document.querySelector('[data-photo-dialog]').open);
   await page.locator('[data-equipment-tab="daily"]').click();await page.locator('[data-equipment-next]').click();
   const position=await page.locator('[data-equipment-position]').innerText();await page.setViewportSize({width:390,height:844});await page.waitForTimeout(200);assert.ok(await page.locator('[data-equipment-tab="daily"]').evaluate(e=>e.classList.contains('active')));assert.equal(await page.locator('[data-equipment-position]').innerText(),position);
-  assert.equal(requests.some(url=>/\.mp4(?:[?]|$)/.test(url)),false,'No full video requested before play');
+  assert.equal(requests.some(url=>/\.mp4(?:[?]|$)|\/media\?id=/.test(url)),false,'No full video requested before play');
   await page.locator('.film-card h3').first().click();assert.equal(await page.locator('[data-video-dialog]').evaluate(e=>e.open),false,'Caption must not act as an invisible play button');
   await page.locator('.film-card button').first().click();assert.ok(await page.locator('[data-video-dialog]').evaluate(e=>e.open));await page.locator('.video-dialog .dialog-close').click();
   await page.emulateMedia({reducedMotion:'reduce'});await page.reload();await page.waitForFunction(()=>window.qaMobile);

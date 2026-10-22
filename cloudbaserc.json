@@ -5,6 +5,15 @@
   "functionRoot": "cloudfunctions",
   "functions": [
     {
+      "name": "plutonoc-media",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "timeout": 10,
+      "memorySize": 128,
+      "installDependency": true,
+      "description": "Short-lived read links for the two existing portfolio films"
+    },
+    {
       "name": "plutonoc-analytics-collect",
       "runtime": "Nodejs20.19",
       "handler": "index.main",

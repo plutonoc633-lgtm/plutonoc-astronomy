@@ -10,6 +10,7 @@ const { chromium, launchOptions } = require('./browser-test-runtime.cjs');
     await page.route('https://qa.test/**', r => r.fulfill({ contentType: 'application/json', body: '{"ok":true,"data":{"items":[],"nextCursor":null}}' }));
     await page.route('https://player.bilibili.com/**', r => r.fulfill({ contentType: 'text/html', body: '<body style="background:#111;color:#888">B站播放器尺寸测试</body>' }));
     await page.route('**/*.mp4', r => r.abort());
+    await page.route('**/media?id=*', r => r.abort());
     await page.goto(process.env.PLUTONOC_TEST_URL || 'http://127.0.0.1:9011');
     await page.waitForTimeout(700);
     assert.equal(requests.some(url => /guestbook(?:-config)?\.js|qa\.test/.test(url)), false, 'No guestbook module/data at first screen');
