@@ -882,6 +882,8 @@
       this.dragged = false;
       this.opening = null;
       this.needsDraw = true;
+      this.visible = !('IntersectionObserver' in window);
+      this.prepared = false;
       this.lastFrame = performance.now();
       this.cache = new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024, isMobile ? 4 : 6);
       this.initialCamera = { x: 0, y: 0 };
@@ -892,6 +894,21 @@
       this.bind();
       this.resize();
       this.setFilter('all', true);
+      if ('IntersectionObserver' in window) {
+        this.visibilityObserver = new IntersectionObserver(entries => {
+          const visible = entries.some(entry => entry.isIntersecting);
+          if (visible === this.visible) return;
+          this.visible = visible;
+          if (visible) this.requestDraw();
+          else {
+            this.velocity.x = this.velocity.y = 0;
+            this.pendingPointerMove = null;
+            this.hovered = null;
+            this.cache.cancelPending();
+          }
+        });
+        this.visibilityObserver.observe(canvas);
+      }
     }
 
     bind() {
@@ -1005,6 +1022,7 @@
     }
 
     layout() {
+      this.prepared = false;
       const realCount = this.visibleWorks.length;
       if (!realCount || !this.width || !this.height) {
         this.nodes = [];
@@ -1165,6 +1183,12 @@
     }
 
     frame(time) {
+      // One preparation frame warms small thumbnails near the viewport. Further
+      // painting and preview upgrades wait until the canvas is actually visible.
+      if (this.visible === false && this.prepared && !this.opening) {
+        this.lastFrame = time;
+        return false;
+      }
       this.flushPointerMove();
       const delta = Math.min((time - this.lastFrame) / 16.667, 2);
       this.lastFrame = time;
@@ -1239,6 +1263,7 @@
       const retry = $('[data-canvas-retry]');
       if (retry) retry.hidden = !hasFailed;
       this.syncFocusedFromCenter();
+      this.prepared = true;
     }
 
     roundedRect(context, x, y, width, height, radius) {
@@ -1270,7 +1295,7 @@
       const bitmap = previewBitmap || thumbnailBitmap;
       if (!previewBitmap) {
         if (!thumbnailBitmap) this.cache.request(thumbnail, 0);
-        if (thumbnailBitmap || thumbnail === source || this.cache.failed(thumbnail)) this.cache.request(source, 1);
+        if (this.visible !== false && (thumbnailBitmap || thumbnail === source || this.cache.failed(thumbnail))) this.cache.request(source, 1);
       }
 
       context.save();
