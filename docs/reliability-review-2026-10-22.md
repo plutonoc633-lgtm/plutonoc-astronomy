@@ -16,6 +16,8 @@ Pages 代码提交为 `f228786bca82bea15b3479b6c223519caf2e783c`，[发布检查
 
 发布附记：首次部署后的综合检查发现 `cache_bust()` 会丢弃视频 URL 中的 `id`，造成校验请求 404；已改为保留原查询参数并追加校验参数，补充 3 项 Python 回归。修复后的全站线上校验及 [c29ba6e 发布检查](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/39769923797)通过，未把此前失败的检查当作成功。
 
+最终发布提交为 `e1568891375797ef3f9a70dbd1d5d1948381fb6c`，[完整检查、Pages 部署与部署后验证](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/39770647009)全部成功。官网 10 个文件与该提交逐字节一致，CloudBase 后台 7 个文件与本地一致；58 项 Node 测试、3 项 Python 回归及七套浏览器回归通过。
+
 ## 已修复
 
 - 导航使用可撤销的计时任务和版本标识，连续选择以最后一次为准；前进、后退、手动修改锚点与离开页面取消旧任务。同一摄影锚点内的不同分类也写入独立历史状态。
@@ -85,13 +87,15 @@ Pages 代码提交为 `f228786bca82bea15b3479b6c223519caf2e783c`，[发布检查
 自动化命令：
 
 ```powershell
-node --test tools/test-image-loading.cjs tools/test-interaction-polish.cjs tools/test-reliability.cjs tools/test-recovery.cjs tools/test-analytics.cjs tools/test-guestbook.cjs
+node --test tools/test-image-loading.cjs tools/test-interaction-polish.cjs tools/test-reliability.cjs tools/test-recovery.cjs tools/test-analytics.cjs tools/test-guestbook.cjs tools/test-media.cjs
 node tools/test-mobile-layout-browser.cjs
 node tools/test-responsive-browser.cjs
 node tools/test-recovery-browser.cjs
 node tools/test-ending-browser.cjs
 node tools/test-site-dialogs-browser.cjs
 node tools/test-guestbook-browser.cjs
+node tools/test-media-admin-browser.cjs
+python tools/test-site-verifier.py
 node tools/build-content.mjs --check
 node tools/build-guestbook-ui.mjs --check
 python tools/build-first-view-assets.py --check
@@ -99,7 +103,7 @@ python tools/verify-site.py --root .
 git diff --check
 ```
 
-58 项 Node 自动化测试通过。六套持续维护的浏览器回归通过；另运行了本机既有的 18 组大图布局检查和看图取消/重试/拖动检查。语法、内容一致性、关键样式同步、静态检查通过，零运行时网页字体。新增恢复及媒体鉴权测试已接入 Pages 发布工作流。
+58 项 Node 自动化测试、3 项 Python 回归及七套持续维护的浏览器回归通过；另运行了本机既有的 18 组大图布局检查和看图取消/重试/拖动检查。语法、内容一致性、关键样式同步、静态检查通过，零运行时网页字体。新增恢复、媒体鉴权、后台跨域视频元数据及验证地址参数保留测试已接入 Pages 发布工作流。
 
 发布后使用官网地址重复了六套浏览器回归，统计上报关闭、留言及播放器使用模拟接口，不写入正式留言库。桌面/手机布局、导航与历史、封面失败恢复、目录、大图、设备、留言及视频弹窗均通过相应检查。一次并行运行的触屏焦点断言失败；独立复测的四组网络情形均正确聚焦关闭按钮。该现象不据此宣称已在所有浏览器消失，真机及跨浏览器焦点行为仍需关注。
 
