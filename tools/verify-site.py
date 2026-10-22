@@ -13,7 +13,7 @@ from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
-STYLE_CACHE_VERSION = "20261022-reliability-1"
+STYLE_CACHE_VERSION = "20261022-video-caption-1"
 ADMIN_STYLE_CACHE_VERSION = "20261022-reliability-1"
 ADMIN_SCRIPT_CACHE_VERSION = "20261022-media-1"
 SCRIPT_CACHE_VERSION = "20261022-reliability-1"
