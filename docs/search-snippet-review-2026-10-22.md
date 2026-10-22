@@ -19,3 +19,5 @@
 再次读取官网，新的描述与两处排除标记均在；用户截图仍显示旧操作说明。没有站长平台最后抓取时间，不能断言必应尚未抓取，也不能将当前展示算作修复完成。
 
 本轮新增官网根目录的 IndexNow 所有权验证文件，准备仅提交发生过更新的首页 `https://plutonoc.cn/`。先核对线上文件内容与 HTTP 200，再向官方 IndexNow 接口提交一次；不提交所有作品链接，不建立定时任务。HTTP 200 只表示接口收到 URL，202 表示收到但验证仍在等待，两者均不等于摘要已经更新。依据：[IndexNow 官方协议](https://www.indexnow.org/documentation)。
+
+执行结果：提交 `15be81a38bcff81bc6f3723fd0849b52b42ab7e1` 的 [Pages 部署及检查](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/39776836958)成功。线上验证文件返回 HTTP 200、text/plain，内容与提交的验证标识一致；随后官方 `api.indexnow.org/indexnow` 接口对唯一的首页 URL 返回 **202 Accepted**，验证仍待平台处理。未重复提交，未确认抓取完成或摘要已替换；搜索结果保持为未验收状态。未改动官网页面、作品内容或 CloudBase 服务。
