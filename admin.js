@@ -55,6 +55,7 @@
   const editBases = { photo: null, video: null };
   const imageTasks = { photo: 0, video: 0 };
   const preparing = { photo: false, video: false };
+  let videoProbe = null;
   const publicAsset = path => path ? new URL(path, publicSiteUrl).href : '';
   function withTimeout(promise, ms = 65000) {
     let timer;
@@ -62,11 +63,21 @@
   }
   function syncPreparation() {
     for (const [kind, form] of [['photo', photoForm], ['video', videoForm]]) {
-      $('button[type="submit"]', form).disabled = publishing || preparing[kind];
+      $('button[type="submit"]', form).disabled = publishing || preparing[kind] || (kind === 'video' && Boolean(videoProbe));
     }
+    $('[data-probe-video]').disabled = publishing || Boolean(videoProbe);
+  }
+  function cancelVideoProbe() {
+    if (!videoProbe) return;
+    const previous = videoProbe;
+    videoProbe = null;
+    previous.cancel();
+    if ($('[data-video-message]').textContent === '正在读取视频信息') setMessage($('[data-video-message]'), '');
+    syncPreparation();
   }
   function invalidateSession() {
     authEpoch++; contentEpoch++; deploymentEpoch++;
+    cancelVideoProbe();
     pendingDeployment = null; deploymentRecheck.hidden = true;
     imageTasks.photo++; imageTasks.video++;
     preparing.photo = preparing.video = false;
@@ -81,11 +92,12 @@
   function onMutation(target, name, kind, handler) {
     target.addEventListener(name, async event => {
       event.preventDefault();
-      if (publishing || preparing[kind] || !repoState) return;
+      if (publishing || preparing[kind] || (kind === 'video' && videoProbe) || !repoState) return;
       const base = editBases[kind], epoch = authEpoch;
       if (!base || base.headSha !== repoState.headSha) {
         setMessage($(`[data-${kind}-message]`), '内容版本已变化，当前表单已保留；请核对后重新选择作品进行编辑。', true); return;
       }
+      cancelVideoProbe();
       publishing = true; publicationAuthEpoch = epoch; contentEpoch++; deploymentEpoch++;
       pendingDeployment = null; deploymentRecheck.hidden = true;
       const controls = $$('button, input, select, textarea', dashboard).map(control => [control, control.disabled]);
@@ -783,6 +795,7 @@
   }
 
   function resetVideoForm({ clearStoredDraft = true } = {}) {
+    cancelVideoProbe();
     imageTasks.video++; preparing.video = false;
     editBases.video = repoState ? deepClone(repoState) : null;
     syncPreparation();
@@ -1134,37 +1147,64 @@
     } catch (error) { throw error; }
   });
 
+  function createVideoMetadataProbe(url) {
+    const video = document.createElement('video');
+    let finish, timer;
+    const promise = new Promise((resolve, reject) => {
+      let settled = false;
+      finish = (metadata, error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        video.onloadedmetadata = video.onerror = null;
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        if (error) reject(error); else resolve(metadata);
+      };
+      const unreadable = () => finish(null, new Error('无法读取视频信息，请检查地址或手动填写时长与画幅'));
+      video.preload = 'metadata';
+      // Native duration/dimensions need no canvas access or CORS permission.
+      video.onloadedmetadata = () => {
+        const duration = video.duration, aspectRatio = video.videoWidth / video.videoHeight;
+        if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(aspectRatio) || aspectRatio <= 0) return unreadable();
+        finish({ duration, aspectRatio });
+      };
+      video.onerror = unreadable;
+      timer = setTimeout(() => finish(null, new Error('读取超时，请手动填写时长与画幅')), 15000);
+      try { video.src = url; } catch { unreadable(); }
+    });
+    return { promise, cancel: () => finish(null) };
+  }
+
   $('[data-probe-video]').addEventListener('click', async () => {
+    if (publishing || videoProbe || videoForm.elements.sourceType.value !== 'direct') return;
     const url = videoForm.elements.videoUrl.value.trim();
     if (!url) return setMessage($('[data-video-message]'), '请先填写公开 MP4 地址', true);
+    const epoch = authEpoch, recordId = videoForm.elements.recordId.value;
+    const probe = createVideoMetadataProbe(url);
+    const current = () => videoProbe === probe && epoch === authEpoch
+      && videoForm.elements.sourceType.value === 'direct'
+      && videoForm.elements.videoUrl.value.trim() === url && videoForm.elements.recordId.value === recordId;
+    videoProbe = probe;
+    syncPreparation();
     setMessage($('[data-video-message]'), '正在读取视频信息');
     try {
-      const metadata = await new Promise((resolve, reject) => {
-        const video = document.createElement('video');
-        const timer = setTimeout(() => reject(new Error('读取超时，请手动填写时长与画幅')), 15000);
-        video.preload = 'metadata';
-        // Reading duration/dimensions needs no canvas access or CORS permission.
-        video.onloadedmetadata = () => {
-          clearTimeout(timer);
-          resolve({ duration: video.duration, aspectRatio: video.videoWidth / video.videoHeight });
-          video.removeAttribute('src');
-        };
-        video.onerror = () => {
-          clearTimeout(timer);
-          reject(new Error('该地址不允许跨域读取，请手动填写时长与画幅'));
-        };
-        video.src = url;
-      });
+      const metadata = await probe.promise;
+      if (!metadata || !current()) return;
       videoForm.elements.duration.value = metadata.duration.toFixed(3);
       videoForm.elements.aspectRatio.value = metadata.aspectRatio.toFixed(4);
       markDraftDirty('video');
       setMessage($('[data-video-message]'), '视频信息已读取');
     } catch (error) {
-      setMessage($('[data-video-message]'), formatError(error), true);
+      if (current()) setMessage($('[data-video-message]'), formatError(error), true);
+    } finally {
+      if (videoProbe === probe) { videoProbe = null; syncPreparation(); }
     }
   });
 
   videoForm.elements.sourceType.addEventListener('change', () => {
+    cancelVideoProbe();
     syncVideoSourceFields();
     markDraftDirty('video');
   });
@@ -1180,6 +1220,7 @@
 
   for (const [kind, form] of [['photo', photoForm], ['video', videoForm]]) {
     const onDraftInput = event => {
+      if (kind === 'video' && ['videoUrl', 'sourceType', 'duration', 'aspectRatio'].includes(event.target.name)) cancelVideoProbe();
       if (event.target.type !== 'file') markDraftDirty(kind);
     };
     form.addEventListener('input', onDraftInput);

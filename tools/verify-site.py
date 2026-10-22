@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 
 STYLE_CACHE_VERSION = "20261022-video-caption-1"
 ADMIN_STYLE_CACHE_VERSION = "20261022-reliability-1"
-ADMIN_SCRIPT_CACHE_VERSION = "20261022-media-1"
+ADMIN_SCRIPT_CACHE_VERSION = "20261022-video-form-1"
 SCRIPT_CACHE_VERSION = "20261022-canvas-visibility-1"
 CLOUDBASE_CACHE_VERSION = "20260720-cloudbase-1"
 CLOUDBASE_SDK_URL = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"

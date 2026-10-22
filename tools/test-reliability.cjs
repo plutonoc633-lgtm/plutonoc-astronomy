@@ -24,15 +24,20 @@ function dom() {
   const document = { querySelector: node, querySelectorAll: () => [], createElement: tag => node(Symbol(tag)), createTextNode: text => ({ textContent: text }), addEventListener() {} };
   return { nodes, node, document };
 }
-function studio() {
+function studio(options = {}) {
   const d = dom();
+  if (options.videoFactory) {
+    const createElement = d.document.createElement;
+    d.document.createElement = tag => tag === 'video' ? options.videoFactory() : createElement(tag);
+  }
   const context = { ...d, window: { addEventListener() {} }, document: d.document, console, URL: { createObjectURL: blob => blob.name, revokeObjectURL() {} }, Blob, Uint8Array, AbortSignal, btoa, TextEncoder, crypto: require('node:crypto').webcrypto, setTimeout, clearTimeout, structuredClone, Date, location: { href: 'https://studio.invalid/' } };
+  if (options.timers) Object.assign(context, options.timers);
   const code = read('admin.js').replace('  initialize();', `renderAll = () => {}; pollDeployment = () => {}; window.qa = {
     setState(state) { repoState = state; editBases.photo = state; editBases.video = state; },
     setApp(value) { app = value; }, setFetch(fn) { globalThis.fetch = fn; }, fetchAsset, setPrepare(fn) { preparePhotoFile = fn; },
     prepared: () => preparedPhoto, preparing: () => preparing.photo,
     publishChanges, onMutation, loadRepositoryContent, invalidateSession, visitorAnalytics,
-    getState: () => repoState, resetPhotoForm, publisherRequest
+    getState: () => repoState, resetPhotoForm, resetVideoForm, publisherRequest
   };`);
   vm.runInNewContext(code, context);
   return { ...d, api: context.window.qa };
@@ -83,6 +88,83 @@ test('content responses arriving after sign-out cannot restore repository state'
   const request = s.api.loadRepositoryContent(); s.api.invalidateSession();
   release({ result: { ok: true, data: state() } });
   await request; assert.equal(s.api.getState(), null);
+});
+
+function videoStudio() {
+  const videos = [], timers = new Map(); let serial = 0;
+  const s = studio({ timers: {
+    setTimeout(fn, ms) { timers.set(++serial, { fn, ms }); return serial; },
+    clearTimeout(id) { timers.delete(id); },
+  }, videoFactory() {
+    const video = { duration: 12, videoWidth: 1920, videoHeight: 1080, paused: 0, loads: 0,
+      pause() { this.paused++; }, removeAttribute(name) { delete this[name]; }, load() { this.loads++; } };
+    videos.push(video); return video;
+  } });
+  s.api.setState(state()); s.api.resetVideoForm();
+  const form = s.node('[data-video-form]'), button = s.node('[data-probe-video]');
+  function start(url = 'https://media.test/first.mp4') {
+    form.elements.videoUrl.value = url;
+    return button.fire('click');
+  }
+  function released(video) {
+    assert.equal(video.src, undefined); assert.equal(video.onloadedmetadata, null); assert.equal(video.onerror, null);
+    assert.ok(video.paused > 0 && video.loads > 0, 'detached metadata reader stops its network request');
+  }
+  return { ...s, form, button, videos, timers, start, released, message: s.node('[data-video-message]') };
+}
+
+test('changing video URL cancels the old reader before another probe can update the form', async () => {
+  const s = videoStudio(), first = s.start(); const late = s.videos[0].onloadedmetadata;
+  assert.equal(s.form.querySelector('button[type="submit"]').disabled, true);
+  s.form.elements.videoUrl.value = 'https://media.test/second.mp4';
+  await s.form.fire('input', { target: { name: 'videoUrl', type: 'url' } }); await first;
+  s.released(s.videos[0]);
+  const second = s.start('https://media.test/second.mp4'); s.videos[1].duration = 24;
+  s.videos[1].onloadedmetadata(); await second; late();
+  assert.equal(s.form.elements.duration.value, '24.000'); s.released(s.videos[1]);
+  assert.equal(s.message.textContent, '视频信息已读取');
+  assert.equal(s.form.querySelector('button[type="submit"]').disabled, false);
+});
+
+test('manual metadata edits, source changes, reset and sign-out invalidate pending video results', async () => {
+  for (const action of ['duration', 'aspectRatio', 'sourceType', 'reset', 'sign-out']) {
+    const s = videoStudio(), pending = s.start(), late = s.videos[0].onloadedmetadata;
+    if (action === 'reset') s.api.resetVideoForm();
+    else if (action === 'sign-out') s.api.invalidateSession();
+    else {
+      s.form.elements[action].value = action === 'sourceType' ? 'bilibili' : '99';
+      await s.form.fire('change', { target: { name: action, type: 'text' } });
+    }
+    s.form.elements.duration.value = '99'; s.form.elements.aspectRatio.value = '2';
+    await pending; const message = s.message.textContent; late(); await tick();
+    assert.equal(s.form.elements.duration.value, '99', action); assert.equal(s.form.elements.aspectRatio.value, '2', action);
+    assert.equal(s.message.textContent, message, action); s.released(s.videos[0]);
+  }
+});
+
+test('video probe timeout, native error and invalid metadata release resources and allow retry', async () => {
+  for (const failure of ['timeout', 'error', 'invalid']) {
+    const s = videoStudio(), pending = s.start(), late = s.videos[0].onloadedmetadata;
+    if (failure === 'timeout') [...s.timers.values()].find(timer => timer.ms === 15000).fn();
+    else if (failure === 'error') s.videos[0].onerror();
+    else { s.videos[0].duration = Infinity; s.videos[0].onloadedmetadata(); }
+    await pending;
+    assert.match(s.message.textContent, /手动填写/); assert.doesNotMatch(s.message.textContent, /跨域/);
+    s.released(s.videos[0]); assert.equal(s.button.disabled, false); late();
+    const retry = s.start(); s.videos[1].onloadedmetadata(); await retry;
+    assert.equal(s.form.elements.duration.value, '12.000'); assert.equal(s.message.textContent, '视频信息已读取');
+    assert.equal([...s.timers.values()].some(timer => timer.ms === 15000), false);
+  }
+});
+
+test('repeated metadata clicks share one reader and video publication waits for its result', async () => {
+  const s = videoStudio(), pending = s.start(); await s.button.fire('click');
+  assert.equal(s.videos.length, 1);
+  let published = 0; const submit = s.node('qa-video-submit');
+  s.api.onMutation(submit, 'click', 'video', async () => { published++; });
+  await submit.fire('click'); assert.equal(published, 0);
+  s.videos[0].onloadedmetadata(); await pending;
+  await submit.fire('click'); assert.equal(published, 1);
 });
 
 function canvas() {
