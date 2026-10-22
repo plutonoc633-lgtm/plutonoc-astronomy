@@ -1726,6 +1726,7 @@
     if (event.target === galleryDirectory) closeGalleryDirectory();
   });
   galleryDirectory?.addEventListener('close', () => {
+    if (galleryDirectory.open) return; // A queued close must not clear a newly reopened directory.
     clearTimeout(galleryDirectoryFocusTimer);
     if (!photoDialog?.open) document.body.classList.remove('dialog-open');
     resetDirectoryImageLoader();

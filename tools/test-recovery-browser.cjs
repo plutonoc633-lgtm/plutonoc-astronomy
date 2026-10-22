@@ -27,8 +27,10 @@ const png=fs.readFileSync('assets/branding/favicon-32.png');
   if(release){release();await page.waitForTimeout(60);assert.equal(await image.getAttribute('data-media-state'),'loaded')}
   assert.ok(await page.locator('[data-video-dialog]').evaluate(e=>!e.open),'Retry does not open video');
   await page.locator('[data-gallery-directory-open]').tap();await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>document.activeElement.matches('[data-gallery-directory-close]')),true);
-  await page.locator('[data-gallery-directory-close]').tap();await page.locator('[data-gallery-directory-open]').focus();await page.keyboard.press('Enter');await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>document.activeElement.matches('[data-gallery-directory-search]')),true);
-  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.matches('[data-gallery-directory-open]')),true);
+  await page.locator('[data-gallery-directory-close]').tap();await page.locator('[data-gallery-directory-open]').focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>document.activeElement.matches('[data-gallery-directory-search]'));
+  await page.evaluate(()=>{document.querySelector('[data-gallery-directory-close]').click();document.querySelector('[data-gallery-directory-open]').click();});
+  await page.waitForFunction(()=>document.activeElement.matches('[data-gallery-directory-search]'));assert.ok(await page.locator('[data-directory-card]').count()>0,'A delayed close cannot empty the reopened directory');
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>document.activeElement.matches('[data-gallery-directory-open]'));
   await c.close();
  }
  const cover=await b.newPage({viewport:{width:1440,height:1000}});let coverHealthy=false,equipmentHealthy=false,equipmentRequests=0;
