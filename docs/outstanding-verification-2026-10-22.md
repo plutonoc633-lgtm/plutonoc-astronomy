@@ -24,6 +24,13 @@
 
 本次修复在本地重新通过 58 项 Node 测试、3 项 Python 检查、八套浏览器回归，以及语法、内容、关键样式同步和静态检查。新增原生缩放回归进入 Pages 发布检查，CI 选择完整 Chromium 的新无头模式，避免独立 headless shell 忽略缩放配置。128 张摄影作品、4 条视频及其顺序和文案没有变动。
 
+## 发布与官网复核
+
+- 官网代码版本 `e270ec6bba47a0cf856b27f5214f71801a1f4da2`，样式资源版本 `20261022-video-caption-1`。[Pages 发布及部署后检查](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/39783176757) 全部成功，包含新增的原生缩放回归。
+- 官网十个关键文件与该提交逐字节一致。实际域名运行 `python tools/verify-site.py --url https://plutonoc.cn/` 通过：128 张照片、4 条视频与封面、Pages/CloudBase 后台及 SDK 均可访问。
+- 新版官网再次运行真实 B站实播检查：正常播放至约 2.33 秒，readyState 4、无媒体错误，进入全屏、通过播放器退出全屏及关闭清理均通过。实际画面保存于本地 `work/bilibili-live-playback.png`，结果为 `work/bilibili-live-results.json`。
+- CloudBase 后台本轮无需重新部署，七个已上线文件与当前准备版本一致；实际管理员读取、发布和退出权限测试使用线上现有服务。
+
 ## 仍未完成的验收
 
 - 必应实际搜索结果采用新的摘要，以及站长平台中的最后抓取状态。已核验线上所有权文件并提交一次首页 IndexNow 通知，返回 202（已接收，验证待处理），不等于摘要更新成功。
