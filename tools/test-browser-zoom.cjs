@@ -20,7 +20,11 @@ const work = path.resolve('work');
     let context;
     try {
       context = await chromium.launchPersistentContext(profile, {
-        ...launchOptions, viewport: null,
+        ...launchOptions,
+        // Chromium's separate headless shell ignores profile zoom preferences.
+        // Use the full browser's new headless mode, as the local Edge run does.
+        ...(!launchOptions.executablePath ? { channel: 'chromium' } : {}),
+        viewport: null,
         args: ['--window-size=1440,1000', '--force-device-scale-factor=1']
       });
       const page = context.pages()[0];
