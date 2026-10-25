@@ -121,3 +121,5 @@ section { position: relative; scroll-margin-top: var(--header-height); }
   .profile-copy h1 { width: min(80vw, 310px); max-width: 100%; }
   .profile-watermark { width: min(19vw, 68px); margin-top: 15px; opacity: .84; }
 }
+
+.hero-handwriting-motion { display: block; }

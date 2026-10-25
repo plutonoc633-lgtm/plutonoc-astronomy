@@ -46,12 +46,12 @@ const { chromium, launchOptions } = require('./browser-test-runtime.cjs');
   await page.locator('#works').scrollIntoViewIfNeeded();
   await page.waitForFunction(()=>qa.canvas()?.nodes.length);
   await page.evaluate(()=>qa.canvas().setFilter('earth',true));
-  const anchor=()=>page.evaluate(()=>{const c=qa.canvas(),m=(v,n)=>(v%n+n)%n;const points=c.nodes.map(n=>({id:n.work.id,x:(m(n.x-c.camera.x+c.tile.width/2,c.tile.width)-c.tile.width/2)/c.width,y:(m(n.y-c.camera.y+c.tile.height/2,c.tile.height)-c.tile.height/2)/c.height}));return points.sort((a,b)=>Math.hypot(a.x*c.width,a.y*c.height)-Math.hypot(b.x*c.width,b.y*c.height))[0];});
+  const anchor=()=>page.evaluate(()=>{const c=qa.canvas(),m=(v,n)=>(v%n+n)%n;const points=c.nodes.map(n=>{const dx=m(n.x-c.camera.x+c.tile.width/2,c.tile.width)-c.tile.width/2,dy=m(n.y-c.camera.y+c.tile.height/2,c.tile.height)-c.tile.height/2;const point=c.project(dx,dy);return point&&{id:n.work.id,x:point.x/c.width,y:point.y/c.height,distance:Math.hypot(dx,dy)};}).filter(Boolean);return points.sort((a,b)=>a.distance-b.distance)[0];});
   for(const width of [390,844,390,1440]) {
    const before=await anchor();
    await page.setViewportSize({width,height:844});
    await page.waitForFunction(w=>qa.mobile()===(w<=760)&&qa.canvas().mobile===(w<=760),width);
-   const state=await page.evaluate(before=>{const c=qa.canvas(),m=(v,n)=>(v%n+n)%n;return {filter:c.filter,dpr:c.dpr,concurrency:c.cache.concurrency,matched:c.nodes.filter(n=>n.work.id===before.id).some(n=>Math.abs((m(n.x-c.camera.x+c.tile.width/2,c.tile.width)-c.tile.width/2)/c.width-before.x)<.001&&Math.abs((m(n.y-c.camera.y+c.tile.height/2,c.tile.height)-c.tile.height/2)/c.height-before.y)<.001)};},before);
+   const state=await page.evaluate(before=>{const c=qa.canvas(),m=(v,n)=>(v%n+n)%n;return {filter:c.filter,dpr:c.dpr,concurrency:c.cache.concurrency,matched:c.nodes.filter(n=>n.work.id===before.id).some(n=>{const p=c.project(m(n.x-c.camera.x+c.tile.width/2,c.tile.width)-c.tile.width/2,m(n.y-c.camera.y+c.tile.height/2,c.tile.height)-c.tile.height/2);return p&&Math.abs(p.x/c.width-before.x)<.001&&Math.abs(p.y/c.height-before.y)<.001;})};},before);
    assert.equal(state.filter,'earth'); assert.ok(state.matched,'same artwork retains relative position'); assert.equal(state.dpr,width<=760?1.2:1.75);assert.equal(state.concurrency,width<=760?4:6);
    assert.equal(await page.locator('.is-mobile-current').count(),width<=760?1:0);
   }

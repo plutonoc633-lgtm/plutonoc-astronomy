@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let reducedMotion = motionMedia.matches;
   const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const mobileMedia = window.matchMedia('(max-width: 760px), (max-width: 1060px) and (max-height: 560px) and (hover: none) and (pointer: coarse)');
   let isMobile = mobileMedia.matches;
@@ -628,7 +629,7 @@
     layoutMetrics.arrivalHeroTop = documentTop(arrivalHero || arrival);
   }
 
-  if ('IntersectionObserver' in window && !reducedMotion) {
+  if ('IntersectionObserver' in window) {
     const textMotionObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => entry.target.classList.toggle('is-motion-active', entry.isIntersecting));
     }, { threshold: .12 });
@@ -886,11 +887,19 @@
       this.prepared = false;
       this.lastFrame = performance.now();
       this.cache = new BitmapCache((isMobile ? 96 : 240) * 1024 * 1024, isMobile ? 4 : 6);
+      this.previewSources = new Set();
+      this.allPreviewSources = new Set(works.map(work => work.previewSrc || work.src));
+      this.allThumbnailSources = new Set(works.map(work => work.thumbnailSrc || work.previewSrc || work.src));
       this.initialCamera = { x: 0, y: 0 };
       this.live = $('[data-canvas-live]');
       this.status = $('[data-canvas-status]');
       this.currentElement = $('.gallery-current');
       this.totalElement = $('.gallery-total');
+      this.perspectiveSupported = Boolean(window.CSS?.supports('perspective', '1px') && window.CSS?.supports('transform-style', 'preserve-3d'));
+      this.wallLayer = document.createElement('div'); this.wallLayer.className = 'sphere-wall-layer'; this.wallLayer.setAttribute('aria-hidden', 'true');
+      this.wallWorld = document.createElement('div'); this.wallWorld.className = 'sphere-wall-world'; this.wallLayer.append(this.wallWorld);
+      this.wallPlanes = new Map(); this.canvas.before(this.wallLayer);
+      this.wallLayer.hidden = !this.perspectiveSupported;
       this.bind();
       this.resize();
       this.setFilter('all', true);
@@ -901,10 +910,7 @@
           this.visible = visible;
           if (visible) this.requestDraw();
           else {
-            this.velocity.x = this.velocity.y = 0;
-            this.pendingPointerMove = null;
-            this.hovered = null;
-            this.cache.cancelPending();
+            this.suspend();
           }
         });
         this.visibilityObserver.observe(canvas);
@@ -916,9 +922,44 @@
       this.canvas.addEventListener('pointermove', event => this.pointerMove(event));
       this.canvas.addEventListener('pointerup', event => this.pointerUp(event));
       this.canvas.addEventListener('pointercancel', event => this.pointerUp(event));
-      this.canvas.addEventListener('pointerleave', () => { if (!this.pointer) { this.pendingPointerMove = null; this.hovered = null; this.requestDraw(); } });
+      this.canvas.addEventListener('pointerleave', () => { if (!this.pointer) { this.pendingPointerMove = null; this.hovered = null; this.hoverPoint = null; this.requestDraw(); } });
       this.canvas.addEventListener('keydown', event => this.keyDown(event));
       this.canvas.addEventListener('contextmenu', event => event.preventDefault());
+    }
+
+    clearWallPlanes() {
+      for (const { element, image } of this.wallPlanes.values()) {
+        image.removeAttribute('src'); element.remove();
+      }
+      this.wallPlanes.clear();
+    }
+
+    releasePreviews() {
+      this.previewSources.clear();
+      for (const [source, entry] of this.cache.entries) {
+        if (!this.allPreviewSources.has(source) || this.allThumbnailSources.has(source)) continue;
+        entry.controller?.abort(); entry.bitmap?.close?.();
+        this.cache.bytes -= entry.bytes; this.cache.entries.delete(source);
+      }
+    }
+
+    suspend() {
+      this.velocity.x = this.velocity.y = 0;
+      this.pendingPointerMove = null; this.hovered = null; this.hoverPoint = null;
+      if (this.pointer && this.canvas.hasPointerCapture?.(this.pointer.id)) this.canvas.releasePointerCapture(this.pointer.id);
+      this.pointer = null; this.canvas.classList.remove('is-dragging');
+      if (this.opening && !this.opening.dialogOpened) { this.opening = null; cancelPhotoImages(); }
+      this.cache.cancelPending(); this.clearWallPlanes(); this.releasePreviews();
+    }
+
+    updateSceneSize() {
+      const left = this.mobile ? 18 : 40;
+      const titleWidth = Math.max(80, this.width - left * 2 - 100);
+      const lines = Math.max(1, ...this.visibleWorks.map(work => this.wrapTitle(work.title, titleWidth).length));
+      this.footerHeight = Math.max(76, 28 + lines * 20);
+      this.sceneHeight = Math.max(1, this.height - this.footerHeight);
+      this.wallLayer.style.height = `${this.sceneHeight}px`;
+      this.wallLayer.style.perspective = `${this.wallDistance()}px`;
     }
 
     resize() {
@@ -932,7 +973,8 @@
         dx: mod(node.x - this.camera.x + this.tile.width / 2, this.tile.width) - this.tile.width / 2,
         dy: mod(node.y - this.camera.y + this.tile.height / 2, this.tile.height) - this.tile.height / 2
       })).sort((a, b) => Math.hypot(a.dx, a.dy) - Math.hypot(b.dx, b.dy))[0];
-      const relative = anchor && { x: anchor.dx / this.width, y: anchor.dy / this.height };
+      const projectedAnchor = anchor && this.project(anchor.dx, anchor.dy);
+      const relative = projectedAnchor && { x: projectedAnchor.x / this.width, y: projectedAnchor.y / this.height };
       this.mobile = isMobile;
       this.cache.budget = (isMobile ? 96 : 240) * 1024 * 1024;
       this.cache.concurrency = isMobile ? 4 : 6;
@@ -942,13 +984,15 @@
       this.canvas.width = Math.round(bounds.width * dpr);
       this.canvas.height = Math.round(bounds.height * dpr);
       this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.updateSceneSize();
       this.layout();
-      if (anchor) {
+      if (anchor && relative) {
         const target = this.nodes.find(node => node.slotIndex === anchor.node.slotIndex && node.work.id === anchor.node.work.id)
           || this.nodes.find(node => node.work.id === anchor.node.work.id);
         if (target) {
-          this.camera.x = mod(target.x - relative.x * this.width, this.tile.width);
-          this.camera.y = mod(target.y - relative.y * this.height, this.tile.height);
+          const offset = this.unproject(relative.x * this.width, relative.y * this.height);
+          this.camera.x = mod(target.x - offset.x, this.tile.width);
+          this.camera.y = mod(target.y - offset.y, this.tile.height);
         }
       }
       this.velocity.x = this.velocity.y = 0;
@@ -970,6 +1014,8 @@
       if (normalized !== 'all' && !categoryConfig[normalized]) return;
       clearTimeout(this.filterTimer);
       this.cache.cancelPending();
+      this.clearWallPlanes(); this.releasePreviews();
+      this.hoverPoint = null; this.hovered = null;
       if (this.opening) cancelPhotoImages();
       this.pendingPointerMove = null;
       this.filter = normalized;
@@ -979,6 +1025,7 @@
       this.velocity.x = 0;
       this.velocity.y = 0;
       const apply = () => {
+        this.updateSceneSize();
         this.layout();
         this.camera.x = this.initialCamera.x;
         this.camera.y = this.initialCamera.y;
@@ -1111,6 +1158,11 @@
       const bottom = Math.max(...originals.map(node => node.y + node.height / 2));
       this.initialCamera.x = mod((left + right) / 2, this.tile.width);
       this.initialCamera.y = mod(top + this.height / 2, this.tile.height);
+      const initial = originals.reduce((best, node) => {
+        const distance = Math.hypot(node.x - this.initialCamera.x, node.y - this.initialCamera.y);
+        return !best || distance < best.distance ? { node, distance } : best;
+      }, null).node;
+      this.initialCamera = { x: initial.x, y: initial.y };
     }
 
     wrapTitle(title, width) {
@@ -1168,7 +1220,7 @@
       let closest = null;
       let closestDistance = Infinity;
       for (const item of this.rendered) {
-        const distance = (item.x - this.width / 2) ** 2 + (item.y - this.height / 2) ** 2;
+        const distance = (item.x - this.width / 2) ** 2 + (item.y - this.sceneHeight / 2) ** 2;
         if (distance < closestDistance) {
           closest = item;
           closestDistance = distance;
@@ -1183,6 +1235,7 @@
     }
 
     frame(time) {
+      if (document.hidden) { this.lastFrame = time; return false; }
       // One preparation frame warms small thumbnails near the viewport. Further
       // painting and preview upgrades wait until the canvas is actually visible.
       if (this.visible === false && this.prepared && !this.opening) {
@@ -1195,7 +1248,7 @@
       const moving = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04;
       let openingActive = false;
       if (this.opening && !this.opening.dialogOpened) {
-        const progress = clamp((time - this.opening.started) / this.opening.duration, 0, 1);
+        const progress = reducedMotion ? 1 : clamp((time - this.opening.started) / this.opening.duration, 0, 1);
         this.opening.progress = progress;
         this.needsDraw = true;
         openingActive = progress < 1;
@@ -1219,51 +1272,130 @@
       return openingActive || (!this.pointer?.dragging && (Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04));
     }
 
+    wallRadius() {
+      return Math.min(this.width, this.sceneHeight) * 1.18;
+    }
+
+    wallDistance() {
+      return this.wallRadius() * (this.mobile ? 1.8 : 1.2);
+    }
+
+    project(dx, dy) {
+      const radius = this.wallRadius(), distance = this.wallDistance();
+      const flat = reducedMotion || !this.perspectiveSupported;
+      let surface, facing = 1;
+      const theta = flat ? 0 : dx / radius;
+      const phi = flat ? 0 : dy / radius;
+      if (!flat && (Math.abs(theta) > 1.34 || Math.abs(phi) > 1.34)) return null;
+      if (flat) surface = { x: dx, y: dy, z: 0 };
+      else {
+        const cosine = Math.cos(theta) * Math.cos(phi);
+        surface = { x: radius * Math.sin(theta) * Math.cos(phi), y: radius * Math.sin(phi), z: radius * (cosine - 1) };
+        facing = ((distance + radius) * cosine - radius) / Math.hypot(surface.x, surface.y, distance - surface.z);
+        if (facing <= .12) return null;
+      }
+      const perspective = distance / (distance - surface.z);
+      const photoScale = flat ? 1 : this.mobile ? .94 : .88;
+      return { x: this.width / 2 + surface.x * perspective, y: this.sceneHeight / 2 + surface.y * perspective,
+        surface, theta, phi, perspective, scale: perspective * photoScale, photoScale,
+        distance: distance - surface.z, facing, opacity: flat ? 1 : clamp((facing - .12) / .13, 0, 1) };
+    }
+
+    unproject(x, y, pointer = false) {
+      const distance = this.wallDistance(), radius = this.wallRadius();
+      const flat = reducedMotion || !this.perspectiveSupported;
+      if (pointer) {
+        x -= this.pointer?.grabOffsetX || 0;
+        y -= this.pointer?.grabOffsetY || 0;
+      }
+      let sx = x - this.width / 2, sy = y - this.sceneHeight / 2;
+      if (flat || (pointer && !this.pointer?.surfaceGrab)) return { x: sx, y: sy };
+      const projectedRadius = distance * radius / Math.sqrt(distance * distance + 2 * distance * radius);
+      const length = Math.hypot(sx, sy), limit = projectedRadius * .999;
+      const extension = length > limit ? 1 - limit / length : 0;
+      const extraX = sx * extension, extraY = sy * extension;
+      if (extension) { sx *= limit / length; sy *= limit / length; }
+      const a = 1 + (sx * sx + sy * sy) / (distance * distance);
+      const camera = distance + radius;
+      const discriminant = Math.max(0, camera * camera - a * (camera * camera - radius * radius));
+      const depth = (camera - Math.sqrt(discriminant)) / a;
+      const worldX = sx * depth / distance, worldY = sy * depth / distance, worldZ = camera - depth;
+      return { x: radius * Math.atan2(worldX, worldZ) + extraX * 1.7,
+        y: radius * Math.asin(clamp(worldY / radius, -1, 1)) + extraY * 1.7 };
+    }
+
     draw() {
       this.needsDraw = false;
       const context = this.context;
       context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       context.clearRect(0, 0, this.width, this.height);
+      context.fillStyle = '#050609';
+      context.fillRect(0, this.sceneHeight, this.width, this.height - this.sceneHeight);
       this.rendered = [];
       this.frameSources = new Set();
+      this.wallUsed = new Set();
       const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
-      const openingProgress = this.opening ? 1 - Math.pow(1 - (this.opening.progress || 0), 3) : 0;
-
-      const repeatX = Math.ceil(this.width / Math.max(this.tile.width, 1)) + 1;
-      const repeatY = Math.ceil(this.height / Math.max(this.tile.height, 1)) + 1;
+      const progress = this.opening ? 1 - Math.pow(1 - (this.opening.progress || 0), 3) : 0;
+      const candidates = [];
       for (const node of this.nodes) {
-        for (let offsetX = -repeatX; offsetX <= repeatX; offsetX += 1) {
-          for (let offsetY = -repeatY; offsetY <= repeatY; offsetY += 1) {
-            let x = node.x - this.camera.x + this.width / 2 + offsetX * this.tile.width;
-            let y = node.y - this.camera.y + this.height / 2 + offsetY * this.tile.height;
-            if (x + node.width / 2 < -80 || x - node.width / 2 > this.width + 80 || y + node.height / 2 + (node.captionHeight || 0) + 14 < -80 || y - node.height / 2 > this.height + 80) continue;
-            let opacity = 1;
-            let emphasis = 1;
-            if (this.opening) {
-              const selected = node === this.opening.node
-                && Math.abs(x - this.opening.originX) < 2
-                && Math.abs(y - this.opening.originY) < 2;
-              if (!selected) opacity = 1 - openingProgress;
-              else {
-                const targetScale = clamp(Math.min(this.width * .68 / node.width, this.height * .68 / node.height), 1.08, 1.7);
-                x += (this.width / 2 - x) * openingProgress;
-                y += (this.height / 2 - y) * openingProgress;
-                emphasis = 1 + (targetScale - 1) * openingProgress;
-              }
-            }
-            if (opacity > .01) this.drawNode(context, node, x, y, slow, opacity, emphasis);
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+          for (let offsetY = -1; offsetY <= 1; offsetY++) {
+            const latticeX = node.x - this.camera.x + offsetX * this.tile.width;
+            const latticeY = node.y - this.camera.y + offsetY * this.tile.height;
+            const point = this.project(latticeX, latticeY);
+            if (!point) continue;
+            const width = node.width * point.scale, height = node.height * point.scale;
+            if (point.x + width / 2 < -40 || point.x - width / 2 > this.width + 40 || point.y + height / 2 < -40 || point.y - height / 2 > this.sceneHeight + 40) continue;
+            if (!reducedMotion && this.perspectiveSupported) point.opacity *= clamp((point.y + 24) / 64, 0, 1) * clamp((this.sceneHeight + 24 - point.y) / 64, 0, 1);
+            const key = `${node.slotIndex}:${offsetX}:${offsetY}:${node.work.id}`;
+            const focused = node.index === this.focusedIndex && document.activeElement === this.canvas;
+            candidates.push({ node, key, ...point, width, height, latticeX, latticeY,
+              planeWidth: node.width * point.photoScale, planeHeight: node.height * point.photoScale, hovered: false, focused });
           }
         }
       }
+      candidates.sort((a, b) => b.distance - a.distance);
+      const hover = !this.opening && this.hoverPoint && [...candidates].reverse().find(i => this.containsPoint(i, this.hoverPoint.x, this.hoverPoint.y));
+      for (const item of candidates) item.hovered = item.key === hover?.key;
+      this.hovered = hover || null;
+      const score = item => item.key === this.opening?.key || item.hovered || item.focused ? -Infinity : -item.width * item.height * item.opacity;
+      this.previewSources = new Set((this.visible === false ? [] : [...candidates]).sort((a, b) => score(a) - score(b)).slice(0, this.mobile ? 4 : 6).map(i => i.node.work.previewSrc || i.node.work.src));
+      for (const [source, entry] of this.cache.entries) {
+        if (!this.allPreviewSources.has(source) || this.allThumbnailSources.has(source) || this.previewSources.has(source)) continue;
+        entry.controller?.abort(); entry.bitmap?.close?.(); this.cache.bytes -= entry.bytes; this.cache.entries.delete(source);
+      }
+      candidates.sort((a, b) => b.distance - a.distance);
+      for (const original of candidates) {
+        let item = original, opacity = item.opacity;
+        if (this.opening) {
+          const opening = this.opening;
+          if (item.key !== opening.key) opacity *= 1 - progress;
+          else {
+            const targetScale = Math.min(this.width * .68 / opening.originWidth, this.sceneHeight * .72 / opening.originHeight);
+            const surface = { x: opening.originSurface.x * (1 - progress), y: opening.originSurface.y * (1 - progress), z: opening.originSurface.z * (1 - progress) };
+            const planeWidth = opening.originPlaneWidth + (opening.originWidth * targetScale - opening.originPlaneWidth) * progress;
+            const planeHeight = opening.originPlaneHeight + (opening.originHeight * targetScale - opening.originPlaneHeight) * progress;
+            const perspective = this.wallDistance() / (this.wallDistance() - surface.z);
+            item = { ...item, surface, planeWidth, planeHeight, perspective,
+              x: this.width / 2 + surface.x * perspective, y: this.sceneHeight / 2 + surface.y * perspective,
+              width: planeWidth * perspective, height: planeHeight * perspective };
+            opacity = original.opacity + (1 - original.opacity) * progress;
+          }
+        }
+        if (opacity > .015) this.drawNode(context, item, slow, opacity);
+      }
+      for (const [key, plane] of this.wallPlanes) {
+        if (this.wallUsed.has(key)) continue;
+        plane.image.removeAttribute('src'); plane.element.remove(); this.wallPlanes.delete(key);
+      }
+      const front = this.rendered.slice().reverse();
+      const label = front.find(i => i.hovered) || front.find(i => i.focused);
+      if (label && !this.opening && slow) this.drawSpaceCaption(context, label);
       this.cache.protect(this.frameSources);
-      const hasFailed = this.rendered.some(({ node }) => {
-        const preview = node.work.previewSrc || node.work.src;
-        return this.cache.failed(preview) || (!this.cache.get(preview) && this.cache.failed(node.work.thumbnailSrc || preview));
-      });
-      const retry = $('[data-canvas-retry]');
-      if (retry) retry.hidden = !hasFailed;
-      this.syncFocusedFromCenter();
-      this.prepared = true;
+      const retry = document.querySelector('[data-canvas-retry]');
+      if (retry) retry.hidden = !this.rendered.some(({ node }) => this.cache.failed(node.work.thumbnailSrc) || (this.previewSources.has(node.work.previewSrc) && this.cache.failed(node.work.previewSrc)));
+      this.syncFocusedFromCenter(); this.prepared = true;
+      if (this.visible === false) this.clearWallPlanes();
     }
 
     roundedRect(context, x, y, width, height, radius) {
@@ -1280,75 +1412,66 @@
       }
     }
 
-    drawNode(context, node, x, y, slow, opacity = 1, emphasis = 1) {
-      const hovered = this.hovered?.node === node && Math.abs(this.hovered.x - x) < 2 && Math.abs(this.hovered.y - y) < 2;
-      const focused = node.index === this.focusedIndex && document.activeElement === this.canvas;
-      const scale = (hovered || focused ? 1.035 : 1) * emphasis;
-      const width = node.width * scale;
-      const height = node.height * scale;
+    drawNode(context, item, slow, opacity = 1) {
+      const { node, key } = item;
       const source = node.work.previewSrc || node.work.src;
-      this.frameSources.add(source);
       const thumbnail = node.work.thumbnailSrc || source;
       this.frameSources.add(thumbnail);
-      const previewBitmap = this.cache.get(source);
-      const thumbnailBitmap = this.cache.get(thumbnail);
-      const bitmap = previewBitmap || thumbnailBitmap;
-      if (!previewBitmap) {
-        if (!thumbnailBitmap) this.cache.request(thumbnail, 0);
-        if (this.visible !== false && (thumbnailBitmap || thumbnail === source || this.cache.failed(thumbnail))) this.cache.request(source, 1);
+      if (this.previewSources.has(source)) this.frameSources.add(source);
+      const preview = this.previewSources.has(source) ? this.cache.get(source) : null;
+      const small = this.cache.get(thumbnail);
+      const bitmap = preview || small;
+      if (!small) this.cache.request(thumbnail, 0);
+      if (!preview && this.previewSources.has(source) && this.visible !== false && (small || thumbnail === source || this.cache.failed(thumbnail))) this.cache.request(source, 1);
+      if (!this.perspectiveSupported) {
+        context.save(); context.beginPath(); context.rect(0, 0, this.width, this.sceneHeight); context.clip(); context.globalAlpha = opacity;
+        this.roundedRect(context, item.x - item.width / 2, item.y - item.height / 2, item.width, item.height, 12);
+        context.fillStyle = '#0b0d11'; context.fill(); context.clip();
+        if (bitmap) context.drawImage(bitmap, item.x - item.width / 2, item.y - item.height / 2, item.width, item.height);
+        context.restore(); this.rendered.push(item); return;
       }
+      let plane = this.wallPlanes.get(key);
+      if (!plane) {
+        const element = document.createElement('div'); element.className = 'sphere-wall-photo'; element.setAttribute('aria-hidden', 'true');
+        const image = document.createElement('img'); image.alt = ''; image.decoding = 'async'; element.append(image);
+        this.wallWorld.append(element); plane = { element, image, source: '' }; this.wallPlanes.set(key, plane);
+      }
+      const style = plane.element.style;
+      style.width = `${item.planeWidth}px`; style.height = `${item.planeHeight}px`;
+      style.transform = `translate3d(${item.surface.x - item.planeWidth / 2}px,${item.surface.y - item.planeHeight / 2}px,${item.surface.z}px)`;
+      style.opacity = `${opacity}`;
+      if (bitmap && plane.source !== bitmap.src) { plane.source = bitmap.src; plane.image.src = bitmap.src; }
+      plane.image.style.visibility = bitmap ? 'visible' : 'hidden';
+      this.wallUsed.add(key); this.rendered.push(item);
+    }
 
-      context.save();
-      context.translate(x, y);
-      context.globalAlpha = opacity;
-      if (hovered || focused) {
-        context.shadowColor = 'rgba(0,0,0,.82)';
-        context.shadowBlur = 28;
-        context.shadowOffsetY = 12;
-      }
-      context.fillStyle = '#0a0c10';
-      this.roundedRect(context, -width / 2, -height / 2, width, height, 12);
-      context.fill();
-      context.shadowBlur = 0;
-      context.shadowOffsetY = 0;
-      context.save();
-      this.roundedRect(context, -width / 2, -height / 2, width, height, 12);
-      context.clip();
-      if (bitmap) {
-        context.imageSmoothingEnabled = true;
-        context.imageSmoothingQuality = 'high';
-        context.drawImage(bitmap, -width / 2, -height / 2, width, height);
-      } else {
-        const gradient = context.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
-        gradient.addColorStop(0, '#0b0d11');
-        gradient.addColorStop(1, '#141820');
-        context.fillStyle = gradient;
-        context.fillRect(-width / 2, -height / 2, width, height);
-      }
-      context.restore();
-      context.restore();
+    drawSpaceCaption(context, item) {
+      this.captionWorkId = item.node.work.id;
+      const left = this.mobile ? 18 : 40;
+      const width = Math.max(80, this.width - left * 2 - 100);
+      const lines = this.wrapTitle(item.node.work.title, width);
+      context.save(); context.fillStyle = 'rgba(238,234,224,.94)'; context.font = '14px "Source Han Sans CN", sans-serif';
+      lines.forEach((line, index) => context.fillText(line, left, this.sceneHeight + 25 + index * 20, width));
+      context.fillStyle = categoryConfig[item.node.work.category]?.color || '#8d9097'; context.font = '9px "IBM Plex Sans", monospace';
+      context.fillText(`${categoryEnglish(item.node.work.category)} / ${pad(item.node.index + 1)}`, left, this.sceneHeight + 25 + lines.length * 20, width);
+      context.restore(); this.captionBounds = { left, right: left + width, top: this.sceneHeight, bottom: this.sceneHeight + 28 + lines.length * 20 };
+    }
 
-      if (!this.opening && slow && (hovered || focused)) {
-        context.save();
-        context.globalAlpha = opacity;
-        context.fillStyle = 'rgba(238,234,224,.92)';
-        context.font = '14px "Source Han Sans CN", sans-serif';
-        const captionX = x - node.width / 2;
-        const captionY = y + node.height * 1.035 / 2 + 24;
-        const lines = node.titleLines || [node.work.title];
-        lines.forEach((line, index) => context.fillText(line, captionX, captionY + index * 20));
-        context.fillStyle = categoryConfig[node.work.category]?.color || '#8d9097';
-        context.font = '9px "IBM Plex Sans", monospace';
-        context.fillText(`${categoryEnglish(node.work.category)} / ${pad(node.index + 1)}`, captionX, captionY + lines.length * 20 + 1, node.width);
-        context.restore();
-      }
-      this.rendered.push({ node, x, y, width, height });
+    containsPoint(item, x, y) {
+      if ((item.opacity ?? 1) < .1) return false;
+      const dx = Math.abs(x - item.x), dy = Math.abs(y - item.y);
+      if (dx > item.width / 2 || dy > item.height / 2) return false;
+      const radius = Math.min(12 * (item.perspective ?? 1), item.width / 2, item.height / 2);
+      const cornerX = Math.max(0, dx - item.width / 2 + radius);
+      const cornerY = Math.max(0, dy - item.height / 2 + radius);
+      return cornerX * cornerX + cornerY * cornerY <= radius * radius;
     }
 
     hitTest(x, y) {
+      if (y < 0 || y >= this.sceneHeight) return null;
       for (let index = this.rendered.length - 1; index >= 0; index -= 1) {
         const item = this.rendered[index];
-        if (x >= item.x - item.width / 2 && x <= item.x + item.width / 2 && y >= item.y - item.height / 2 && y <= item.y + item.height / 2) return item;
+        if (this.containsPoint(item, x, y)) return item;
       }
       return null;
     }
@@ -1366,8 +1489,14 @@
       }
       this.opening = {
         node: item.node,
+        key: item.key,
+        originSurface: { ...item.surface },
+        originPlaneWidth: item.planeWidth,
+        originPlaneHeight: item.planeHeight,
         originX: item.x,
         originY: item.y,
+        originWidth: item.width,
+        originHeight: item.height,
         started: performance.now(),
         duration: 420,
         progress: 0,
@@ -1381,7 +1510,12 @@
       if (event.button !== undefined && event.button !== 0) return;
       this.velocity.x = 0;
       this.velocity.y = 0;
+      const bounds = this.canvas.getBoundingClientRect();
+      const grabbed = this.hitTest(event.clientX - bounds.left, event.clientY - bounds.top);
       this.pointer = {
+        surfaceGrab: Boolean(grabbed),
+        grabOffsetX: grabbed ? event.clientX - bounds.left - grabbed.x : 0,
+        grabOffsetY: grabbed ? event.clientY - bounds.top - grabbed.y : 0,
         id: event.pointerId,
         type: event.pointerType,
         startX: event.clientX,
@@ -1411,6 +1545,7 @@
       const bounds = this.canvas.getBoundingClientRect();
       const localX = event.clientX - bounds.left;
       const localY = event.clientY - bounds.top;
+      this.hoverPoint = { x: localX, y: localY };
       if (!this.pointer || this.pointer.id !== event.pointerId) {
         const hit = this.hitTest(localX, localY);
         const changed = hit?.node !== this.hovered?.node || hit?.x !== this.hovered?.x || hit?.y !== this.hovered?.y;
@@ -1436,12 +1571,14 @@
       if (!this.pointer.dragging) return;
       const now = event.time;
       const elapsed = Math.max(now - this.pointer.lastTime, 1);
-      const deltaX = event.clientX - this.pointer.lastX;
-      const deltaY = event.clientY - this.pointer.lastY;
+      const previous = this.unproject(this.pointer.lastX - bounds.left, this.pointer.lastY - bounds.top, true);
+      const current = this.unproject(localX, localY, true);
+      const deltaX = current.x - previous.x;
+      const deltaY = current.y - previous.y;
       this.camera.x = mod(this.camera.x - deltaX, this.tile.width);
       this.camera.y = mod(this.camera.y - deltaY, this.tile.height);
-      this.velocity.x = -deltaX / elapsed * 16;
-      this.velocity.y = -deltaY / elapsed * 16;
+      this.velocity.x = clamp(-deltaX / elapsed * 16, isMobile ? -22 : -32, isMobile ? 22 : 32);
+      this.velocity.y = clamp(-deltaY / elapsed * 16, isMobile ? -22 : -32, isMobile ? 22 : 32);
       this.pointer.lastX = event.clientX;
       this.pointer.lastY = event.clientY;
       this.pointer.lastTime = now;
@@ -1455,6 +1592,8 @@
       const bounds = this.canvas.getBoundingClientRect();
       const localX = event.clientX - bounds.left;
       const localY = event.clientY - bounds.top;
+      this.hoverPoint = { x: localX, y: localY };
+      if (performance.now() - this.pointer.lastTime > 100) this.velocity.x = this.velocity.y = 0;
       const wasDragging = this.pointer.dragging;
       const wasPageGesture = this.pointer.verticalPageGesture;
       this.canvas.classList.remove('is-dragging');
@@ -1470,6 +1609,7 @@
 
     keyDown(event) {
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' ', 'Escape'].includes(event.key)) return;
+      this.hoverPoint = null; this.hovered = null;
       if (event.key === 'Escape') { this.canvas.blur(); return; }
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -1523,6 +1663,25 @@
   $('[data-canvas-retry]')?.addEventListener('click', () => archiveCanvas?.cache.retryFailed());
   $('.gallery-prev')?.addEventListener('click', () => ensureArchiveCanvas()?.go(-1));
   $('.gallery-next')?.addEventListener('click', () => ensureArchiveCanvas()?.go(1));
+
+  motionMedia.addEventListener('change', event => {
+    reducedMotion = event.matches;
+    if (archiveCanvas) {
+      archiveCanvas.velocity.x = archiveCanvas.velocity.y = 0;
+      archiveCanvas.hovered = null; archiveCanvas.hoverPoint = null;
+      archiveCanvas.requestDraw();
+    }
+    scrollDirty = true; syncTimecode(); requestMainFrame();
+  });
+  function syncPageVisibility() {
+    document.documentElement.toggleAttribute('data-page-hidden', document.hidden);
+    if (document.hidden) archiveCanvas?.suspend();
+    else if (archiveCanvas?.visible) archiveCanvas.requestDraw();
+  }
+  document.addEventListener('visibilitychange', syncPageVisibility);
+  window.addEventListener('pagehide', () => archiveCanvas?.suspend());
+  window.addEventListener('pageshow', syncPageVisibility);
+  syncPageVisibility();
 
   /* Searchable photography directory */
   const galleryDirectory = $('[data-gallery-directory]');
