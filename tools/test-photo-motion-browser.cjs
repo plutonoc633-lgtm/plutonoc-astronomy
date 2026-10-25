@@ -40,6 +40,14 @@ async function clickWork(p) {
   await p.mouse.click(r.x+item.x, r.y+item.y);
   return item;
 }
+async function displayed(p) {
+  return p.evaluate(()=>{const w=qaMotion.state.displayed;return{id:w.id,title:document.querySelector('[data-photo-title]').textContent,url:location.href,sources:[document.querySelector('.photo-stage img').getAttribute('src'),w.thumbnailSrc,w.previewSrc,w.src].filter(Boolean)};});
+}
+async function assertRetained(p,before) {
+  const current=await p.evaluate(()=>({id:qaMotion.state.displayed?.id,src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href}));
+  assert.equal(current.id,before.id);assert.equal(current.title,before.title);assert.equal(current.url,before.url);
+  assert(current.src&&before.sources.some(source=>new URL(source,base).href===new URL(current.src,base).href),'The displayed source must still belong to the previous work; its own quality upgrade is allowed.');
+}
 async function opened(p) { await p.waitForFunction(() => qaMotion.state.phase==='open' && qaMotion.state.committed); }
 async function closed(p) { await p.waitForFunction(() => !document.querySelector('[data-photo-dialog]').open && qaMotion.state.phase==='closed'); await p.waitForTimeout(40); }
 async function check(name, run) {
@@ -81,13 +89,12 @@ async function check(name, run) {
   });
   await check('slow next preview retains the displayed image, title and history until ready',async p=>{
     await gallery(p);await clickWork(p);await opened(p);
-    const before=await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href}));
+    const before=await displayed(p);
     let release;const hold=new Promise(resolve=>release=resolve);
     await p.route('**/*motion_slow*',async r=>{await hold;try{const response=await r.fetch();await r.fulfill({response});}catch{}});
     const target=await p.evaluate(()=>{const w=qaCanvas.visibleWorks[(qaMotion.index()+1)%qaCanvas.visibleWorks.length];for(const key of ['thumbnailSrc','previewSrc','src'])if(w[key]){const u=new URL(w[key],location.href);u.searchParams.set('motion_slow','1');w[key]=u.href;}return w.title;});
     await p.locator('.photo-dialog .dialog-next').click();await p.waitForTimeout(230);
-    assert.deepEqual(await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href})),before);
-    release();await p.waitForFunction(title=>qaMotion.state.phase==='open'&&document.querySelector('[data-photo-title]').textContent===title,target);await p.waitForFunction(()=>!qaMotion.state.flight,null,{timeout:3000});
+    try { await assertRetained(p,before); } finally { release(); }await p.waitForFunction(title=>qaMotion.state.phase==='open'&&document.querySelector('[data-photo-title]').textContent===title,target);await p.waitForFunction(()=>!qaMotion.state.flight,null,{timeout:3000});
     assert(await p.locator('.photo-stage img').getAttribute('src'));assert.equal(await p.locator('.photo-transition-image').count(),0);
   });
   await check('rapid switches and closing discard all late image/animation results',async p=>{
@@ -132,12 +139,12 @@ async function check(name, run) {
   });
   await check('failed next target retains its image until a successful manual retry',async p=>{
     await gallery(p);await clickWork(p);await opened(p);
-    const before=await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href}));
+    const before=await displayed(p);
     let healthy=false;
     await p.route('**/*motion_failed*',async r=>{try {if(healthy)await r.fulfill({response:await r.fetch()});else await r.fulfill({status:503,body:'unavailable'});}catch{await r.abort().catch(()=>{});}});
     const target=await p.evaluate(()=>{const w=qaCanvas.visibleWorks[(qaMotion.index()+1)%qaCanvas.visibleWorks.length];for(const key of ['thumbnailSrc','previewSrc','src'])if(w[key]){const u=new URL(w[key],location.href);u.searchParams.set('motion_failed','1');w[key]=u.href;}return w.title;});
     await p.locator('.photo-dialog .dialog-next').click();await p.locator('[data-photo-retry]').waitFor({state:'visible'});
-    assert.deepEqual(await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href})),before);
+    await assertRetained(p,before);
     healthy=true;await p.locator('[data-photo-retry]').click();await p.waitForFunction(title=>qaMotion.state.displayed?.title===title,target);
     await p.keyboard.press('Escape');await closed(p);assert.equal(await p.locator('.photo-transition-image').count(),0);
   });
