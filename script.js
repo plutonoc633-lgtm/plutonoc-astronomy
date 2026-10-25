@@ -193,6 +193,11 @@
       isMobile = mobileMedia.matches;
       syncMobileContent();
       archiveCanvas?.resize();
+      if (photoDialog?.open && photoMotion.context && archiveCanvas) {
+        photoMotion.context.camera = { ...archiveCanvas.camera }; photoMotion.context.focused = archiveCanvas.focusedIndex;
+        if (photoMotion.phase === 'opening') settlePhotoOpening();
+        else if (photoMotion.phase === 'closing') { photoMotion.phase = 'open'; requestPhotoClose({ immediate: true }); }
+      }
       directoryImageConcurrency = isMobile ? 4 : 6;
       syncTimecode();
       updateEquipmentTrack(0, true);
@@ -420,7 +425,7 @@
     navigationEpoch++;
     navigationTimers.forEach(clearTimeout); navigationTimers.clear();
     transitionActive = false; pendingGalleryFilter = null;
-    document.body.classList.remove('is-transitioning');
+    document.body.classList.remove('is-transitioning', 'is-transition-exiting');
   }
   function navigationDelay(callback, delay, epoch) {
     const timer = setTimeout(() => {
@@ -476,9 +481,9 @@
     transitionActive = true;
     document.body.classList.add('is-transitioning');
     closeIndex({ restoreFocus: false });
-    navigationDelay(() => finishNavigation(normalizedHash, category), category ? 520 : 320, epoch);
-    navigationDelay(() => document.body.classList.remove('is-transitioning'), category ? 960 : 650, epoch);
-    navigationDelay(() => { transitionActive = false; pendingGalleryFilter = null; }, category ? 1180 : 760, epoch);
+    navigationDelay(() => finishNavigation(normalizedHash, category), 220, epoch);
+    navigationDelay(() => { document.body.classList.add('is-transition-exiting'); document.body.classList.remove('is-transitioning'); }, 320, epoch);
+    navigationDelay(() => { document.body.classList.remove('is-transition-exiting'); transitionActive = false; pendingGalleryFilter = null; }, 540, epoch);
   }
 
   $$('a[data-transition-link], [data-index-link]').forEach(link => {
@@ -493,13 +498,22 @@
   window.addEventListener('pagehide', cancelNavigation);
   window.addEventListener('hashchange', cancelNavigation);
   window.addEventListener('popstate', event => {
-    cancelNavigation();
     const linkedPhoto = photoIdFromUrl();
+    const pendingReturn = photoMotion.pendingReturn;
+    if (!linkedPhoto && pendingReturn) {
+      photoMotion.pendingReturn = null;
+      if (normalizeHash(location.hash) === '#works' && (event.state?.category || null) === (pendingReturn.history.category || null)) return;
+    }
+    cancelNavigation();
     if (linkedPhoto && openPhotoFromLocation()) return;
     if (!linkedPhoto && photoDialog?.open) {
+      const context = photoMotion.context;
+      const sameGallery = normalizeHash(location.hash) === '#works' && context
+        && (event.state?.category || null) === (context.history.category || null);
       photoHistoryEntryOwned = false;
-      photoClosingFromHistory = true;
+      resetPhotoAnimation(); cancelPhotoImages(); photoMotion.restore = Boolean(sameGallery);
       photoDialog.close();
+      if (sameGallery) return;
     }
     const category = event.state?.category || null;
     finishNavigation(normalizeHash(location.hash), category, false);
@@ -944,6 +958,7 @@
     }
 
     suspend() {
+      this.finishFilterTransition();
       this.velocity.x = this.velocity.y = 0;
       this.pendingPointerMove = null; this.hovered = null; this.hoverPoint = null;
       if (this.pointer && this.canvas.hasPointerCapture?.(this.pointer.id)) this.canvas.releasePointerCapture(this.pointer.id);
@@ -1009,40 +1024,66 @@
       this.requestDraw();
     }
 
+    finishFilterTransition() {
+      const transition = this.filterTransition;
+      if (!transition) return;
+      clearTimeout(this.filterTimer);
+      this.filterTransition = null;
+      for (const animation of transition.animations) animation.cancel();
+      transition.snapshot.querySelectorAll('img').forEach(image => image.removeAttribute('src'));
+      transition.snapshot.remove(); this.wallLayer.style.opacity = '1';
+      this.canvas.removeAttribute('aria-busy'); this.releasePreviews(); this.requestDraw();
+    }
+
+    beginFilterTransition() {
+      const transition = this.filterTransition;
+      if (!transition || transition.started) return;
+      transition.started = true; clearTimeout(this.filterTimer);
+      if (reducedMotion || !this.wallLayer.animate) { this.finishFilterTransition(); return; }
+      const options = { duration: 200, easing: 'ease', fill: 'both' };
+      transition.animations = [this.wallLayer.animate([{ opacity: 0 }, { opacity: 1 }], options),
+        transition.snapshot.animate([{ opacity: 1 }, { opacity: 0 }], options)];
+      Promise.all(transition.animations.map(animation => animation.finished.catch(() => {}))).then(() => {
+        if (this.filterTransition === transition) this.finishFilterTransition();
+      });
+    }
+
     setFilter(filter, immediate = false) {
       const normalized = filter === 'planetary' ? 'planet' : filter;
       if (normalized !== 'all' && !categoryConfig[normalized]) return;
       clearTimeout(this.filterTimer);
-      this.cache.cancelPending();
-      this.clearWallPlanes(); this.releasePreviews();
+      let snapshot = null;
+      if (!immediate && !reducedMotion && this.visible && this.perspectiveSupported && this.wallPlanes.size) {
+        const current = this.filterTransition;
+        snapshot = current && Number(getComputedStyle(this.wallLayer).opacity) < .5
+          ? current.snapshot.cloneNode(true) : this.wallLayer.cloneNode(true);
+        snapshot.classList.add('sphere-wall-snapshot'); snapshot.style.opacity = '1';
+      }
+      this.finishFilterTransition();
+      this.cache.cancelPending(); this.clearWallPlanes();
+      if (snapshot) { this.previewSources.clear(); this.wallLayer.before(snapshot); }
+      else this.releasePreviews();
       this.hoverPoint = null; this.hovered = null;
-      if (this.opening) cancelPhotoImages();
+      if (this.opening) abortPhotoPresentation({ restore: false });
       this.pendingPointerMove = null;
       this.filter = normalized;
       this.visibleWorks = normalized === 'all' ? [...this.allWorks] : this.allWorks.filter(work => work.category === normalized);
-      this.focusedIndex = 0;
-      this.opening = null;
-      this.velocity.x = 0;
-      this.velocity.y = 0;
-      const apply = () => {
-        this.updateSceneSize();
-        this.layout();
-        this.camera.x = this.initialCamera.x;
-        this.camera.y = this.initialCamera.y;
-        this.totalElement.textContent = pad(this.visibleWorks.length);
-        this.currentElement.textContent = this.visibleWorks.length ? '01' : '00';
-        this.status.textContent = `${normalized === 'all' ? '全部' : categoryLabel(normalized)} / ${this.visibleWorks.length}`;
-        $$('.gallery-filters [data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === normalized));
-        $$('[data-index-link][data-gallery-target]').forEach(link => link.classList.toggle('is-current', activeSection?.id === 'works' && link.dataset.galleryTarget === (normalized === 'all' ? 'deepsky' : normalized)));
-        if (normalized !== 'all') setVisualStage(normalized);
-        this.requestDraw();
-      };
-      const stage = $('[data-canvas-stage]');
-      if (immediate || reducedMotion) { apply(); stage.classList.remove('is-changing'); }
-      else {
-        stage.classList.add('is-changing');
-        this.filterTimer = setTimeout(() => { apply(); stage.classList.remove('is-changing'); }, 180);
+      this.focusedIndex = 0; this.opening = null; this.velocity.x = this.velocity.y = 0;
+      this.updateSceneSize(); this.layout();
+      this.camera.x = this.initialCamera.x; this.camera.y = this.initialCamera.y;
+      this.totalElement.textContent = pad(this.visibleWorks.length);
+      this.currentElement.textContent = this.visibleWorks.length ? '01' : '00';
+      this.status.textContent = `${normalized === 'all' ? '全部' : categoryLabel(normalized)} / ${this.visibleWorks.length}`;
+      $$('.gallery-filters [data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === normalized));
+      $$('[data-index-link][data-gallery-target]').forEach(link => link.classList.toggle('is-current', activeSection?.id === 'works' && link.dataset.galleryTarget === (normalized === 'all' ? 'deepsky' : normalized)));
+      if (normalized !== 'all') setVisualStage(normalized);
+      $('[data-canvas-stage]').classList.remove('is-changing');
+      if (snapshot) {
+        this.filterTransition = { snapshot, started: false, animations: [] };
+        this.wallLayer.style.opacity = '0'; this.canvas.setAttribute('aria-busy', 'true');
+        this.filterTimer = setTimeout(() => this.beginFilterTransition(), 300);
       }
+      this.requestDraw();
     }
 
     orderedWorks() {
@@ -1079,6 +1120,7 @@
       }
 
       const gap = isMobile ? 18 : 30;
+      const rowGap = isMobile ? 32 : 30;
       const targetRowHeight = clamp(this.height * (isMobile ? .23 : .255), isMobile ? 145 : 190, isMobile ? 205 : 285);
       const minimumTileWidth = Math.max(this.width * 3, isMobile ? 1240 : 3200);
       const minimumTileHeight = Math.max(this.height * 2.15, isMobile ? 1240 : 1840);
@@ -1125,12 +1167,8 @@
 
         const rowHeight = Math.max((contentWidth - gap * (row.length - 1)) / Math.max(aspectTotal, .08), 72);
         let left = gap;
-        let captionHeight = 0;
         row.forEach(slot => {
           const width = rowHeight * slot.aspect;
-          const titleLines = this.wrapTitle(slot.work.title, Math.max(1, width));
-          const textHeight = titleLines.length * 20 + 19;
-          captionHeight = Math.max(captionHeight, textHeight);
           this.nodes.push({
             work: slot.work,
             index: slot.index,
@@ -1140,14 +1178,12 @@
             y: rowTop + rowHeight / 2,
             width,
             height: rowHeight,
-            titleLines,
-            captionHeight: textHeight,
             featured: false
           });
           left += width + gap;
         });
-        // Reserve captions before hover, including image expansion on both rows.
-        rowTop += rowHeight * 1.035 + captionHeight + 14 + gap;
+        // Titles live in the independent footer, not between photo rows.
+        rowTop += rowHeight + rowGap;
       }
 
       this.tile.height = Math.max(rowTop, minimumTileHeight);
@@ -1246,17 +1282,6 @@
       const delta = Math.min((time - this.lastFrame) / 16.667, 2);
       this.lastFrame = time;
       const moving = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04;
-      let openingActive = false;
-      if (this.opening && !this.opening.dialogOpened) {
-        const progress = reducedMotion ? 1 : clamp((time - this.opening.started) / this.opening.duration, 0, 1);
-        this.opening.progress = progress;
-        this.needsDraw = true;
-        openingActive = progress < 1;
-        if (progress >= 1) {
-          this.opening.dialogOpened = true;
-          openPhoto(this.opening.node.index);
-        }
-      }
       if (!this.opening && !this.pointer?.dragging && moving && !reducedMotion) {
         this.camera.x = mod(this.camera.x + this.velocity.x * delta, this.tile.width);
         this.camera.y = mod(this.camera.y + this.velocity.y * delta, this.tile.height);
@@ -1269,7 +1294,7 @@
         this.velocity.y = 0;
       }
       if (this.needsDraw) this.draw();
-      return openingActive || (!this.pointer?.dragging && (Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04));
+      return !this.pointer?.dragging && (Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04);
     }
 
     wallRadius() {
@@ -1335,7 +1360,6 @@
       this.frameSources = new Set();
       this.wallUsed = new Set();
       const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
-      const progress = this.opening ? 1 - Math.pow(1 - (this.opening.progress || 0), 3) : 0;
       const candidates = [];
       for (const node of this.nodes) {
         for (let offsetX = -1; offsetX <= 1; offsetX++) {
@@ -1359,29 +1383,14 @@
       for (const item of candidates) item.hovered = item.key === hover?.key;
       this.hovered = hover || null;
       const score = item => item.key === this.opening?.key || item.hovered || item.focused ? -Infinity : -item.width * item.height * item.opacity;
-      this.previewSources = new Set((this.visible === false ? [] : [...candidates]).sort((a, b) => score(a) - score(b)).slice(0, this.mobile ? 4 : 6).map(i => i.node.work.previewSrc || i.node.work.src));
+      this.previewSources = new Set((this.visible === false || this.filterTransition ? [] : [...candidates]).sort((a, b) => score(a) - score(b)).slice(0, this.mobile ? 4 : 6).map(i => i.node.work.previewSrc || i.node.work.src));
       for (const [source, entry] of this.cache.entries) {
-        if (!this.allPreviewSources.has(source) || this.allThumbnailSources.has(source) || this.previewSources.has(source)) continue;
+        if (this.filterTransition || !this.allPreviewSources.has(source) || this.allThumbnailSources.has(source) || this.previewSources.has(source)) continue;
         entry.controller?.abort(); entry.bitmap?.close?.(); this.cache.bytes -= entry.bytes; this.cache.entries.delete(source);
       }
       candidates.sort((a, b) => b.distance - a.distance);
       for (const original of candidates) {
-        let item = original, opacity = item.opacity;
-        if (this.opening) {
-          const opening = this.opening;
-          if (item.key !== opening.key) opacity *= 1 - progress;
-          else {
-            const targetScale = Math.min(this.width * .68 / opening.originWidth, this.sceneHeight * .72 / opening.originHeight);
-            const surface = { x: opening.originSurface.x * (1 - progress), y: opening.originSurface.y * (1 - progress), z: opening.originSurface.z * (1 - progress) };
-            const planeWidth = opening.originPlaneWidth + (opening.originWidth * targetScale - opening.originPlaneWidth) * progress;
-            const planeHeight = opening.originPlaneHeight + (opening.originHeight * targetScale - opening.originPlaneHeight) * progress;
-            const perspective = this.wallDistance() / (this.wallDistance() - surface.z);
-            item = { ...item, surface, planeWidth, planeHeight, perspective,
-              x: this.width / 2 + surface.x * perspective, y: this.sceneHeight / 2 + surface.y * perspective,
-              width: planeWidth * perspective, height: planeHeight * perspective };
-            opacity = original.opacity + (1 - original.opacity) * progress;
-          }
-        }
+        const item = original, opacity = item.opacity;
         if (opacity > .015) this.drawNode(context, item, slow, opacity);
       }
       for (const [key, plane] of this.wallPlanes) {
@@ -1391,6 +1400,7 @@
       const front = this.rendered.slice().reverse();
       const label = front.find(i => i.hovered) || front.find(i => i.focused);
       if (label && !this.opening && slow) this.drawSpaceCaption(context, label);
+      if (this.filterTransition && this.rendered.some(item => this.cache.get(item.node.work.thumbnailSrc || item.node.work.previewSrc))) this.beginFilterTransition();
       this.cache.protect(this.frameSources);
       const retry = document.querySelector('[data-canvas-retry]');
       if (retry) retry.hidden = !this.rendered.some(({ node }) => this.cache.failed(node.work.thumbnailSrc) || (this.previewSources.has(node.work.previewSrc) && this.cache.failed(node.work.previewSrc)));
@@ -1477,32 +1487,14 @@
     }
 
     startOpening(item) {
-      if (!item || this.opening || item.node.work !== this.visibleWorks[item.node.index]) return;
-      this.focusedIndex = item.node.index;
-      this.velocity.x = 0;
-      this.velocity.y = 0;
-      this.hovered = null;
-      preparePhotoImages(this.visibleWorks[item.node.index]);
-      if (reducedMotion) {
-        openPhoto(item.node.index);
-        return;
-      }
-      this.opening = {
-        node: item.node,
-        key: item.key,
-        originSurface: { ...item.surface },
-        originPlaneWidth: item.planeWidth,
-        originPlaneHeight: item.planeHeight,
-        originX: item.x,
-        originY: item.y,
-        originWidth: item.width,
-        originHeight: item.height,
-        started: performance.now(),
-        duration: 420,
-        progress: 0,
-        dialogOpened: false
-      };
-      this.requestDraw();
+      if (!item || item.node.work !== this.visibleWorks[item.node.index] || this.filterTransition) return;
+      this.focusedIndex = item.node.index; this.velocity.x = this.velocity.y = 0; this.hovered = null;
+      const bounds = this.canvas.getBoundingClientRect();
+      const source = this.wallPlanes.get(item.key)?.image.currentSrc
+        || this.cache.get(item.node.work.previewSrc)?.src || this.cache.get(item.node.work.thumbnailSrc)?.src;
+      openPhoto(item.node.index, { key: item.key, source,
+        origin: { left: bounds.left + item.x - item.width / 2, top: bounds.top + item.y - item.height / 2,
+          width: item.width, height: item.height, radius: 12 * (item.perspective || 1) } });
     }
 
     pointerDown(event) {
@@ -1666,6 +1658,12 @@
 
   motionMedia.addEventListener('change', event => {
     reducedMotion = event.matches;
+    if (reducedMotion) archiveCanvas?.finishFilterTransition();
+    if (photoDialog?.open) {
+      if (photoMotion.phase === 'closing') { photoMotion.phase = 'open'; requestPhotoClose({ immediate: true }); }
+      else if (photoMotion.phase === 'opening') settlePhotoOpening();
+      else if (reducedMotion && photoMotion.phase === 'open' && photoMotion.flight) resetPhotoAnimation();
+    }
     if (archiveCanvas) {
       archiveCanvas.velocity.x = archiveCanvas.velocity.y = 0;
       archiveCanvas.hovered = null; archiveCanvas.hoverPoint = null;
@@ -1679,7 +1677,7 @@
     else if (archiveCanvas?.visible) archiveCanvas.requestDraw();
   }
   document.addEventListener('visibilitychange', syncPageVisibility);
-  window.addEventListener('pagehide', () => archiveCanvas?.suspend());
+  window.addEventListener('pagehide', () => { archiveCanvas?.suspend(); if (photoDialog?.open) abortPhotoPresentation({ restore: false }); });
   window.addEventListener('pageshow', syncPageVisibility);
   syncPageVisibility();
 
@@ -1962,14 +1960,11 @@
   let photoSwipeStart = null;
   let returnToGalleryDirectory = false;
   let photoHistoryEntryOwned = false;
-  let photoClosingFromHistory = false;
   let photoReturnScrollY = 0;
   let photoCopyResetTimer = 0;
-  let photoRenderTimer = 0;
   let photoImageTask = null;
 
   function cancelPhotoImages() {
-    clearTimeout(photoRenderTimer);
     photoImageTask?.controller.abort();
     photoImageTask = null;
   }
@@ -1981,24 +1976,25 @@
     const task = { work, controller, source: '', fullReady: false, failed: false, render: null };
     photoImageTask = task;
     const current = () => photoImageTask === task && !controller.signal.aborted;
-    const preview = work.previewSrc && archiveCanvas?.cache.get(work.previewSrc)
-      ? work.previewSrc : (work.thumbnailSrc || work.previewSrc);
+    const cached = archiveCanvas?.cache.get(work.previewSrc) || archiveCanvas?.cache.get(work.thumbnailSrc);
+    const preview = cached?.src || (work.thumbnailSrc || work.previewSrc);
+    if (cached) task.source = cached.src;
     if (preview && preview !== work.src) {
       window.PlutonoCImages.load(preview, { signal: controller.signal, priority: 'high' }).then(() => {
         if (!current() || task.fullReady) return;
         task.source = preview;
-        task.render?.();
+        task.render?.(); task.onChange?.();
       }).catch(() => { /* Full image loading owns the visible error state. */ });
     }
     window.PlutonoCImages.load(work.src, { signal: controller.signal, priority: 'high' }).then(() => {
       if (!current()) return;
       task.fullReady = true;
       task.source = work.src;
-      task.render?.();
+      task.render?.(); task.onChange?.();
     }).catch(error => {
       if (!current() || error.name === 'AbortError') return;
       task.failed = true;
-      task.render?.();
+      task.render?.(); task.onChange?.();
     });
     return task;
   }
@@ -2021,7 +2017,7 @@
 
   $('[data-photo-retry]')?.addEventListener('click', () => {
     const work = archiveCanvas?.visibleWorks[photoIndex];
-    if (work) { cancelPhotoImages(); loadPhotoImages(work, Boolean(photoImage.getAttribute('src'))); }
+    if (work) { cancelPhotoImages(); if (photoMotion.displayed !== work) updatePhotoDialog(1); else loadPhotoImages(work, true); }
   });
 
   function detailValue(work, key) {
@@ -2037,49 +2033,228 @@
     return Boolean(value);
   }
 
+  const photoMotion = { epoch: 0, phase: 'closed', animations: new Set(), flight: null, context: null,
+    committed: false, displayed: null, displayedIndex: -1, historyMode: 'push' };
+
+  function resetPhotoAnimation() {
+    photoMotion.epoch++;
+    for (const animation of photoMotion.animations) animation.cancel();
+    photoMotion.animations.clear();
+    photoMotion.flight?.remove(); photoMotion.flight = null;
+    photoDialog.style.opacity = '1';
+    photoImage.style.visibility = ''; photoImage.style.opacity = '1';
+    $('.photo-information', photoDialog).style.opacity = '';
+    return photoMotion.epoch;
+  }
+
+  function photoAnimate(element, frames, duration) {
+    if (reducedMotion || !element.animate || !duration) return Promise.resolve();
+    const animation = element.animate(frames, { duration, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'both' });
+    photoMotion.animations.add(animation);
+    return animation.finished.then(() => Object.assign(element.style, frames[frames.length - 1])).catch(() => {}).finally(() => { animation.cancel(); photoMotion.animations.delete(animation); });
+  }
+
+  function photoRect(work) {
+    const box = photoImage.getBoundingClientRect();
+    const scale = Math.min(box.width / work.width, box.height / work.height);
+    return { left: box.left + (box.width - work.width * scale) / 2, top: box.top + (box.height - work.height * scale) / 2,
+      width: work.width * scale, height: work.height * scale };
+  }
+
+  function photoOrigin(work) {
+    if (!archiveCanvas?.visible || !work) return null;
+    const bounds = archiveCanvas.canvas.getBoundingClientRect();
+    const preferredKey = photoMotion.originWorkId === work.id ? photoMotion.originKey : null;
+    const preferred = preferredKey && archiveCanvas.rendered.find(item => item.key === preferredKey);
+    const items = archiveCanvas.rendered.filter(item => item.node.work.id === work.id && (!preferred || item.key === preferredKey) && item.opacity >= .1
+      && archiveCanvas.hitTest(item.x, item.y)?.key === item.key
+      && item.y - item.height / 2 >= 0 && item.y + item.height / 2 <= archiveCanvas.sceneHeight
+      && bounds.top + item.y - item.height / 2 >= layoutMetrics.headerHeight
+      && bounds.top + item.y + item.height / 2 <= innerHeight);
+    const item = items.sort((a, b) => a.distance - b.distance)[0];
+    if (!item) return null;
+    return { left: bounds.left + item.x - item.width / 2, top: bounds.top + item.y - item.height / 2,
+      width: item.width, height: item.height, radius: 12 * item.perspective };
+  }
+
+  function photoFlight(source, start, end, duration) {
+    if (!source || !start || !end || !start.width || !end.width) return null;
+    const image = document.createElement('img'); image.className = 'photo-transition-image';
+    image.alt = ''; image.setAttribute('aria-hidden', 'true'); image.src = source;
+    Object.assign(image.style, { left: `${start.left}px`, top: `${start.top}px`, width: `${start.width}px`, height: `${start.height}px`,
+      borderRadius: `${start.radius ?? 0}px` });
+    photoDialog.append(image); photoMotion.flight = image;
+    return photoAnimate(image, [
+      { transform: 'translate3d(0,0,0) scale(1)', borderRadius: `${start.radius ?? 0}px` },
+      { transform: `translate3d(${end.left - start.left}px,${end.top - start.top}px,0) scale(${end.width / start.width})`, borderRadius: `${(end.radius ?? 0) * start.width / end.width}px` }
+    ], duration);
+  }
+
+  function commitPhoto(work, index, historyMode) {
+    if (!photoDialog.open || !work) return;
+    markWorkSeen(work); recordWorkOpen('photo', work.id, work.title);
+    setPhotoHistory(work, historyMode);
+    photoMotion.committed = true; photoMotion.displayed = work; photoMotion.displayedIndex = index;
+    photoMotion.historyMode = 'replace';
+  }
+
+  function paintPhotoDetails(work, index) {
+    photoDialog.style.setProperty('--photo-ratio', work.width / work.height);
+    $('[data-photo-current]').textContent = pad(index + 1);
+    $('[data-photo-total]').textContent = pad(archiveCanvas.visibleWorks.length);
+    $('[data-photo-title]').textContent = work.title;
+    $('[data-photo-category]').textContent = `${categoryLabel(work.category)} / ${categoryEnglish(work.category)}`;
+    $('[data-object-label]').textContent = work.category === 'earth' ? 'FRAME' : 'OBJECT';
+    const hasDate = setDetailRow('[data-detail-date]', detailValue(work, 'date'));
+    const hasLocation = setDetailRow('[data-detail-location]', detailValue(work, 'location'));
+    $('[data-detail-capture]').hidden = !(hasDate || hasLocation);
+    const hasEquipment = setDetailRow('[data-detail-equipment]', detailValue(work, 'equipment'));
+    const hasParameters = setDetailRow('[data-detail-parameters]', detailValue(work, 'parameters'));
+    $('[data-detail-system]').hidden = !(hasEquipment || hasParameters);
+    const process = detailValue(work, 'process'); $('[data-detail-process]').hidden = !process;
+    if (process) $('p', $('[data-detail-process]')).textContent = process;
+    const story = detailValue(work, 'story'), notes = detailValue(work, 'notes');
+    $('[data-detail-story]').hidden = !story; $('[data-detail-note]').hidden = !notes;
+    if (story) $('[data-detail-story]').textContent = story;
+    if (notes) $('[data-detail-note]').textContent = notes;
+    $('[data-detail-notes]').hidden = !(story || notes);
+  }
+
   function updatePhotoDialog(direction = 0) {
     const work = archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
-    clearTimeout(photoRenderTimer);
+    const index = photoIndex;
     const task = preparePhotoImages(work);
-    if (direction) {
-      photoDialog.style.setProperty('--photo-direction', `${direction * 20}px`);
-      photoDialog.classList.add('is-switching');
-    }
-    const render = () => {
-      if (photoImageTask !== task || task.controller.signal.aborted) return;
-      markWorkSeen(work);
-      photoDialog.style.setProperty('--photo-ratio', work.width / work.height);
-      loadPhotoImages(work);
-      recordWorkOpen('photo', work.id, work.title);
-      $('[data-photo-current]').textContent = pad(photoIndex + 1);
-      $('[data-photo-total]').textContent = pad(archiveCanvas.visibleWorks.length);
-      $('[data-photo-title]').textContent = work.title;
-      $('[data-photo-category]').textContent = `${categoryLabel(work.category)} / ${categoryEnglish(work.category)}`;
-      $('[data-object-label]').textContent = work.category === 'earth' ? 'FRAME' : 'OBJECT';
-
-      const hasDate = setDetailRow('[data-detail-date]', detailValue(work, 'date'));
-      const hasLocation = setDetailRow('[data-detail-location]', detailValue(work, 'location'));
-      const hasCapture = hasDate || hasLocation;
-      $('[data-detail-capture]').hidden = !hasCapture;
-      const hasEquipment = setDetailRow('[data-detail-equipment]', detailValue(work, 'equipment'));
-      const hasParameters = setDetailRow('[data-detail-parameters]', detailValue(work, 'parameters'));
-      const hasSystem = hasEquipment || hasParameters;
-      $('[data-detail-system]').hidden = !hasSystem;
-      const process = detailValue(work, 'process');
-      $('[data-detail-process]').hidden = !process;
-      if (process) $('p', $('[data-detail-process]')).textContent = process;
-      const story = detailValue(work, 'story');
-      const notes = detailValue(work, 'notes');
-      $('[data-detail-story]').hidden = !story;
-      $('[data-detail-note]').hidden = !notes;
-      if (story) $('[data-detail-story]').textContent = story;
-      if (notes) $('[data-detail-note]').textContent = notes;
-      $('[data-detail-notes]').hidden = !(story || notes);
-      photoDialog.classList.remove('is-switching');
+    if (!direction) { paintPhotoDetails(work, index); loadPhotoImages(work, true); return task; }
+    const epoch = resetPhotoAnimation();
+    photoMotion.phase = 'switching';
+    $('[data-photo-load-message]').textContent = '正在加载高清图片…';
+    $('[data-photo-retry]').hidden = true;
+    let applied = false;
+    task.onChange = () => {
+      if (epoch !== photoMotion.epoch || photoImageTask !== task || !photoDialog.open) return;
+      if (!task.source) {
+        if (task.failed) { $('[data-photo-load-message]').textContent = '图片暂未加载完成'; $('[data-photo-retry]').hidden = false; }
+        return;
+      }
+      if (applied) return;
+      applied = true;
+      const oldSource = photoImage.getAttribute('src'), oldWork = photoMotion.displayed;
+      const oldRect = oldSource && oldWork ? photoRect(oldWork) : null;
+      paintPhotoDetails(work, index); loadPhotoImages(work, true);
+      photoMotion.phase = 'open';
+      commitPhoto(work, index, photoMotion.historyMode);
+      if (oldSource && oldRect && !reducedMotion) {
+        const old = document.createElement('img'); old.className = 'photo-transition-image'; old.alt = ''; old.src = oldSource;
+        Object.assign(old.style, { left: `${oldRect.left}px`, top: `${oldRect.top}px`, width: `${oldRect.width}px`, height: `${oldRect.height}px` });
+        photoDialog.append(old); photoMotion.flight = old;
+        Promise.all([photoAnimate(old, [{ opacity: 1 }, { opacity: 0 }], 180), photoAnimate(photoImage, [{ opacity: 0 }, { opacity: 1 }], 180)])
+          .then(() => { if (epoch === photoMotion.epoch) { old.remove(); photoMotion.flight = null; } });
+      }
     };
-    if (direction && !reducedMotion) photoRenderTimer = setTimeout(render, 150);
-    else render();
+    task.onChange();
+    return task;
+  }
+
+  function openPhoto(index, options = {}) {
+    if (!archiveCanvas?.visibleWorks.length) return;
+    const continuing = photoDialog.open, fromOpacity = continuing ? getComputedStyle(photoDialog).opacity : 0;
+    const continuingRect = photoMotion.flight?.getBoundingClientRect();
+    const continuingSource = photoMotion.flight?.getAttribute('src');
+    const continuingWork = photoMotion.displayed;
+    if (!photoDialog.open) {
+      photoReturnScrollY = scrollY; photoReturnFocus = document.activeElement;
+      photoMotion.context = { filter: archiveCanvas.filter, camera: { ...archiveCanvas.camera }, focused: archiveCanvas.focusedIndex,
+        scroll: scrollY, history: { ...(history.state || {}) }, hash: normalizeHash(location.hash) };
+      photoMotion.committed = false; photoMotion.displayed = null; photoMotion.displayedIndex = -1;
+    }
+    const epoch = resetPhotoAnimation();
+    photoMotion.restore = true;
+    photoMotion.phase = 'opening'; photoMotion.historyMode = options.historyMode || (photoMotion.committed ? 'replace' : 'push');
+    photoIndex = mod(index, archiveCanvas.visibleWorks.length);
+    const work = archiveCanvas.visibleWorks[photoIndex];
+    if (options.key || !continuing) { photoMotion.originKey = options.key || null; photoMotion.originWorkId = work.id; }
+    const task = updatePhotoDialog();
+    if (options.source && !task.source) { task.source = options.source; task.render?.(); }
+    archiveCanvas.velocity.x = archiveCanvas.velocity.y = 0;
+    archiveCanvas.opening = { node: archiveCanvas.primaryNodeForIndex(photoIndex), key: options.key, dialogOpened: true };
+    if (!photoDialog.open) photoDialog.showModal();
+    document.body.classList.add('dialog-open');
+    let animationDone = reducedMotion;
+    task.onChange = () => {
+      if (!animationDone || !task.source || epoch !== photoMotion.epoch || photoImageTask !== task || !photoDialog.open) return;
+      if (!photoMotion.committed || photoMotion.displayed !== work) commitPhoto(work, photoIndex, photoMotion.historyMode);
+    };
+    const target = photoRect(work);
+    const sameWork = continuingWork === work;
+    const flight = !reducedMotion && photoFlight(sameWork && continuingSource || options.source || task.source, sameWork && continuingRect || options.origin, target, 300);
+    if (flight) photoImage.style.visibility = 'hidden';
+    const information = $('.photo-information', photoDialog);
+    const animations = [photoAnimate(photoDialog, [{ opacity: fromOpacity }, { opacity: 1 }], 300),
+      photoAnimate(information, [{ opacity: 0 }, { opacity: 1 }], 300)];
+    if (flight) animations.push(flight);
+    const complete = () => {
+      if (epoch !== photoMotion.epoch || !photoDialog.open) return;
+      photoMotion.flight?.remove(); photoMotion.flight = null; photoImage.style.visibility = '';
+      photoMotion.phase = 'open'; animationDone = true; task.onChange?.();
+    };
+    if (reducedMotion) complete(); else Promise.all(animations).then(complete);
+  }
+
+  function settlePhotoOpening() {
+    const task = photoImageTask, work = archiveCanvas?.visibleWorks[photoIndex], mode = photoMotion.historyMode;
+    const epoch = resetPhotoAnimation(); photoMotion.phase = 'open';
+    if (!task || !work) return;
+    task.onChange = () => {
+      if (epoch === photoMotion.epoch && task === photoImageTask && task.source && photoDialog.open
+        && (!photoMotion.committed || photoMotion.displayed !== work)) commitPhoto(work, photoIndex, mode);
+    };
+    task.onChange();
+  }
+
+  function movePhoto(offset) {
+    if (!archiveCanvas?.visibleWorks.length || photoMotion.phase === 'closing') return;
+    photoIndex = mod(photoIndex + offset, archiveCanvas.visibleWorks.length);
+    updatePhotoDialog(offset);
+  }
+
+  function abortPhotoPresentation({ restore = false } = {}) {
+    resetPhotoAnimation(); cancelPhotoImages();
+    photoMotion.restore = restore;
+    photoMotion.phase = 'closed';
+    if (photoDialog.open) photoDialog.close();
+    if (archiveCanvas) { archiveCanvas.opening = null; archiveCanvas.requestDraw(); }
+  }
+
+  function requestPhotoClose({ returnDirectory = false, immediate = false } = {}) {
+    if (!photoDialog?.open || photoMotion.phase === 'closing') return;
+    returnToGalleryDirectory = returnDirectory;
+    const currentOpacity = getComputedStyle(photoDialog).opacity;
+    const crossfade = photoMotion.phase !== 'opening' && photoMotion.flight;
+    const fadingOpacity = crossfade && getComputedStyle(crossfade).opacity;
+    const imageOpacity = getComputedStyle(photoImage).opacity;
+    if (crossfade) photoMotion.flight = null;
+    const work = photoMotion.displayed || archiveCanvas?.visibleWorks[photoIndex];
+    const source = photoMotion.flight?.getAttribute('src') || photoImage.getAttribute('src');
+    const box = photoMotion.flight?.getBoundingClientRect() || (work ? photoRect(work) : null);
+    const origin = photoOrigin(work);
+    const epoch = resetPhotoAnimation(); cancelPhotoImages();
+    if (crossfade) { crossfade.style.opacity = fadingOpacity; photoImage.style.opacity = imageOpacity; photoMotion.flight = crossfade; }
+    photoMotion.phase = 'closing'; photoMotion.restore = true;
+    const finish = () => {
+      if (epoch !== photoMotion.epoch || !photoDialog.open) return;
+      if (photoMotion.committed && photoHistoryEntryOwned && history.state?.photoOverlay) {
+        photoMotion.pendingReturn = photoMotion.context;
+        photoDialog.close(); history.back();
+      } else {
+        if (photoIdFromUrl()) history.replaceState({ ...(history.state || {}), photoId: null, photoOverlay: false }, '', photoUrl('', '#works'));
+        photoDialog.close();
+      }
+    };
+    if (immediate || reducedMotion) { finish(); return; }
+    const flight = !crossfade && photoFlight(source, box, origin, 240);
+    if (flight) photoImage.style.visibility = 'hidden';
+    Promise.all([photoAnimate(photoDialog, [{ opacity: currentOpacity }, { opacity: 0 }], 240), ...(flight ? [flight] : [])]).then(finish);
   }
 
   function setPhotoHistory(work, mode) {
@@ -2099,27 +2274,6 @@
     }
   }
 
-  function openPhoto(index, options = {}) {
-    if (!archiveCanvas?.visibleWorks.length) return;
-    if (!photoDialog.open) photoReturnScrollY = scrollY;
-    photoIndex = mod(index, archiveCanvas.visibleWorks.length);
-    photoReturnFocus = document.activeElement;
-    updatePhotoDialog();
-    setPhotoHistory(archiveCanvas.visibleWorks[photoIndex], options.historyMode || 'push');
-    if (!photoDialog.open) photoDialog.showModal();
-    document.body.classList.add('dialog-open');
-    requestAnimationFrame(() => {
-      if (scrollY > 0) photoReturnScrollY = scrollY;
-    });
-  }
-
-  function movePhoto(offset) {
-    if (!archiveCanvas?.visibleWorks.length) return;
-    photoIndex = mod(photoIndex + offset, archiveCanvas.visibleWorks.length);
-    updatePhotoDialog(offset);
-    setPhotoHistory(archiveCanvas.visibleWorks[photoIndex], 'replace');
-  }
-
   function openPhotoFromLocation() {
     const id = photoIdFromUrl();
     if (!id) return false;
@@ -2129,32 +2283,20 @@
       return false;
     }
     const canvas = ensureArchiveCanvas();
-    canvas.setFilter('all', true);
-    const index = canvas.focusWorkById(work.id);
+    const returningOverlay = Boolean(history.state?.photoOverlay && canvas.visibleWorks.some(item => item.id === work.id));
+    if (!returningOverlay) canvas.setFilter('all', true);
+    const index = returningOverlay ? canvas.visibleWorks.findIndex(item => item.id === work.id) : canvas.focusWorkById(work.id);
     if (index < 0) {
       history.replaceState({ ...(history.state || {}), photoId: null, photoOverlay: false }, '', photoUrl('', '#works'));
       return false;
     }
-    photoHistoryEntryOwned = false;
+    photoHistoryEntryOwned = Boolean(history.state?.photoOverlay);
     openPhoto(index, { historyMode: 'none' });
     return true;
   }
 
-  function requestPhotoClose({ returnDirectory = false } = {}) {
-    if (!photoDialog?.open) return;
-    returnToGalleryDirectory = returnDirectory;
-    if (scrollY > 0) photoReturnScrollY = scrollY;
-    if (photoHistoryEntryOwned && history.state?.photoOverlay) {
-      history.back();
-      return;
-    }
-    history.replaceState({ ...(history.state || {}), photoId: null, photoOverlay: false }, '', photoUrl('', '#works'));
-    photoClosingFromHistory = true;
-    photoDialog.close();
-  }
-
   async function copyPhotoLink() {
-    const work = archiveCanvas?.visibleWorks[photoIndex];
+    const work = photoMotion.displayed || archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
     const absolute = new URL(photoUrl(work.id), location.origin).href;
     try {
@@ -2217,22 +2359,28 @@
   photoDialog?.addEventListener('pointercancel', () => { photoSwipeStart = null; });
   photoDialog?.addEventListener('close', () => {
     if (photoDialog.open) return;
-    cancelPhotoImages();
-    const reopenDirectory = returnToGalleryDirectory;
-    returnToGalleryDirectory = false;
+    const restore = photoMotion.restore !== false, context = photoMotion.context;
+    const epoch = resetPhotoAnimation(); cancelPhotoImages(); photoMotion.phase = 'closed';
+    photoMotion.restore = true; photoMotion.committed = false; photoMotion.displayed = null;
+    const reopenDirectory = returnToGalleryDirectory; returnToGalleryDirectory = false;
     photoHistoryEntryOwned = false;
-    photoClosingFromHistory = false;
     if (!galleryDirectory?.open) document.body.classList.remove('dialog-open');
     photoImage.removeAttribute('src');
     if (archiveCanvas) {
       archiveCanvas.opening = null;
+      if (restore && context) {
+        if (archiveCanvas.filter !== context.filter) archiveCanvas.setFilter(context.filter, true);
+        archiveCanvas.camera = { ...context.camera }; archiveCanvas.setFocusedIndex(context.focused);
+      }
       archiveCanvas.requestDraw();
     }
-    if (reopenDirectory) setTimeout(() => openGalleryDirectory(), 0);
-    else {
-      requestAnimationFrame(() => scrollTo(0, photoReturnScrollY));
-      photoReturnFocus?.focus?.();
-    }
+    if (!restore) return;
+    if (reopenDirectory) setTimeout(() => { if (epoch === photoMotion.epoch && !photoDialog.open) openGalleryDirectory(); }, 0);
+    else requestAnimationFrame(() => {
+      if (epoch !== photoMotion.epoch || photoDialog.open) return;
+      scrollTo(0, context?.scroll ?? photoReturnScrollY);
+      photoReturnFocus?.focus?.({ preventScroll: true });
+    });
   });
 
   document.addEventListener('keydown', event => {

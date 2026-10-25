@@ -180,23 +180,20 @@ function canvas() {
 test('rapid filters and immediate directory selection discard old callbacks', () => {
   const { instance: c, timers } = canvas(); c.layout = () => {};
   c.allWorks = [{ category: 'earth' }, { category: 'deepsky' }];
-  c.setFilter('deepsky'); c.setFilter('earth'); assert.equal(timers.size, 1);
+  c.setFilter('deepsky'); c.setFilter('earth'); assert.equal(timers.size, 0); // Flat fallback needs no deferred transition.
   c.setFilter('deepsky', true); assert.equal(timers.size, 0); assert.equal(c.status.textContent, 'deepsky / 1');
 });
-test('caption space accommodates long narrow titles, hover growth and the repeated tile boundary', () => {
+test('compact rows keep exact spacing independently of long titles and repeat boundaries', () => {
   const { instance: c } = canvas();
   c.visibleWorks = [{ title: '很长的竖幅作品标题'.repeat(5) }, { title: '宽幅' }];
   c.orderedWorks = () => c.visibleWorks.map((work, index) => ({ work, index, aspect: index ? 2 : .2 }));
   c.layout();
-  const rows = [...new Set(c.nodes.map(n => n.y - n.height / 2))].sort((a, b) => a - b);
-  for (let i = 0; i < rows.length; i++) {
-    const current = c.nodes.filter(n => Math.abs(n.y - n.height / 2 - rows[i]) < .001);
-    const next = i + 1 < rows.length ? c.nodes.filter(n => Math.abs(n.y - n.height / 2 - rows[i + 1]) < .001) : c.nodes.filter(n => Math.abs(n.y - n.height / 2 - rows[0]) < .001).map(n => ({ ...n, y: n.y + c.tile.height }));
-    const captionBottom = Math.max(...current.map(n => n.y + n.height * 1.035 / 2 + 24 + n.titleLines.length * 20 + 3));
-    const nextTop = Math.min(...next.map(n => n.y - n.height * 1.035 / 2));
-    assert.ok(captionBottom < nextTop, `${captionBottom} < ${nextTop}`);
-    current.forEach(n => n.titleLines.forEach(line => assert.ok([...line].length * 14 <= n.width + 14)));
+  const tops = [...new Set(c.nodes.map(n => n.y - n.height / 2))].sort((a,b)=>a-b);
+  for (let i=0;i<tops.length-1;i++) {
+    const row=c.nodes.filter(n=>Math.abs(n.y-n.height/2-tops[i])<.001);
+    assert.ok(Math.abs(tops[i+1]-tops[i]-row[0].height-30)<.001);
   }
+  assert.ok(c.nodes.every(n=>!('captionHeight' in n)&&!('titleLines' in n)));
 });
 
 test('statistics pagination uses submitted dates and late responses cannot render after reset', async () => {

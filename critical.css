@@ -14,7 +14,7 @@
   --font-meta: var(--font-system);
 }
 * { box-sizing: border-box; }
-html { background: var(--background); scroll-behavior: smooth; }
+html { scrollbar-gutter: stable; background: var(--background); scroll-behavior: smooth; }
 body {
   margin: 0;
   min-width: 320px;

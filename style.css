@@ -281,8 +281,8 @@ body[data-visual-stage="earth"] .background-art-earth { opacity: 1; visibility: 
 .index-preview figcaption { position: absolute; inset: auto 0 0; display: flex; justify-content: space-between; padding: 18px; background: linear-gradient(transparent, rgba(0, 0, 0, .9)); font: 11px/1 var(--font-meta); }
 .index-foot { position: absolute; left: clamp(24px, 4vw, 64px); right: clamp(24px, 4vw, 64px); bottom: 28px; }
 
-.page-curtain { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; visibility: hidden; background: #020304; clip-path: inset(50% 0); transition: clip-path .55s var(--ease-cinematic); }
-.page-curtain p { display: grid; gap: 6px; text-align: center; opacity: 0; transition: opacity .25s ease .2s; }
+.page-curtain { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; visibility: hidden; background: #020304; clip-path: inset(50% 0); transition: clip-path .22s var(--ease-cinematic); }
+.page-curtain p { display: grid; gap: 6px; text-align: center; opacity: 0; transition: opacity .12s ease .06s; }
 .page-curtain span,
 .page-curtain em { color: var(--muted); font: normal 10px/1.5 var(--font-meta); letter-spacing: .2em; }
 .page-curtain b { font: 500 clamp(30px, 5vw, 72px)/1.12 var(--font-display); letter-spacing: 0; }
@@ -612,7 +612,7 @@ dialog { color: inherit; }
 .video-dialog::backdrop { background: #020304; }
 .photo-dialog { display: none; grid-template-columns: minmax(0, 1.7fr) minmax(330px, .7fr); grid-template-rows: minmax(0, 1fr); }
 .photo-dialog[open] { display: grid; }
-.photo-stage { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 5vh 5vw; background: #000; }
+.photo-stage { position: relative; touch-action: pan-y pinch-zoom; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 5vh 5vw; background: #000; }
 .photo-stage img { display: block; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; transition: opacity .2s ease, transform .35s var(--ease-cinematic); }
 .photo-dialog.is-switching .photo-stage img { opacity: 0; transform: translateX(var(--photo-direction, 18px)); }
 .photo-information { min-width: 0; min-height: 0; overflow-y: auto; overflow-wrap: anywhere; padding: 80px 44px 60px; border-left: 1px solid var(--line); background: #080a0d; }
@@ -941,3 +941,14 @@ html[data-page-hidden] .profile-copy .hero-handwriting-motion { animation-play-s
 @media (prefers-reduced-motion: reduce) { .sphere-wall-layer { transition: none; } }
 
 .sphere-wall-layer[hidden] { display: none; }
+
+/* Interruptible photo presentation; layout stays identical to the normal dialog. */
+.photo-dialog::backdrop { background: transparent; }
+.photo-stage img { transition: none; }
+.photo-dialog.is-switching .photo-stage img { opacity: 1; transform: none; }
+.photo-transition-image { position: fixed; z-index: 3; max-width: none; max-height: none; object-fit: contain; pointer-events: none; transform-origin: 0 0; }
+body.is-transition-exiting .page-curtain { visibility: visible; clip-path: inset(50% 0); }
+body.is-transition-exiting .page-curtain p { opacity: 0; }
+
+/* Keep page width and retained photo layers stable when an overlay locks scroll. */
+html { scrollbar-gutter: stable; }

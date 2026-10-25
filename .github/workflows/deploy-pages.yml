@@ -80,6 +80,7 @@ jobs:
           node tools/test-browser-zoom.cjs
           node tools/test-canvas-visibility-browser.cjs
           node tools/test-sphere-browser.cjs
+          node tools/test-photo-motion-browser.cjs
           mv work "$RUNNER_TEMP/plutonoc-browser-results"
       - name: Configure Pages
         uses: actions/configure-pages@v5
