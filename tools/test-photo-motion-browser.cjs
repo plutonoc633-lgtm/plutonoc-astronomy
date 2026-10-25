@@ -123,6 +123,13 @@ async function check(name, run) {
     await p.emulateMedia({reducedMotion:'no-preference'});await clickWork(p);await p.goto(base+'/#equipment');await p.waitForTimeout(600);
     assert.equal(await p.locator('[data-photo-dialog]').evaluate(e=>e.open),false);assert.equal(await p.locator('.photo-transition-image').count(),0);assert(p.url().endsWith('#equipment'));
   });
+  await check('enabling reduced motion settles the pending navigation once without leaving its curtain',async p=>{
+    await gallery(p);const before=await p.evaluate(()=>history.length);
+    await p.evaluate(()=>document.querySelector('.index-nav a[href="#films"]').click());await p.waitForTimeout(60);
+    await p.emulateMedia({reducedMotion:'reduce'});
+    await p.waitForFunction(()=>location.hash==='#films'&&!document.body.classList.contains('is-transitioning')&&!document.body.classList.contains('is-transition-exiting'),null,{timeout:250});
+    await p.waitForTimeout(600);assert.equal(await p.evaluate(()=>history.length),before+1);
+  });
   await check('failed next target retains its image until a successful manual retry',async p=>{
     await gallery(p);await clickWork(p);await opened(p);
     const before=await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href}));

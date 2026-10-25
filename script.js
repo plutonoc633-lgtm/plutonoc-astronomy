@@ -417,14 +417,13 @@
 
   /* Navigation transition */
   const curtain = $('[data-page-curtain]');
-  let transitionActive = false;
-  let pendingGalleryFilter = null;
+  let pendingNavigation = null;
   let navigationEpoch = 0;
   const navigationTimers = new Set();
   function cancelNavigation() {
     navigationEpoch++;
     navigationTimers.forEach(clearTimeout); navigationTimers.clear();
-    transitionActive = false; pendingGalleryFilter = null;
+    pendingNavigation = null;
     document.body.classList.remove('is-transitioning', 'is-transition-exiting');
   }
   function navigationDelay(callback, delay, epoch) {
@@ -471,19 +470,18 @@
     if (!$(normalizedHash)) return;
     cancelNavigation();
     const epoch = navigationEpoch;
-    pendingGalleryFilter = category;
     updateCurtain(category, normalizedHash);
     if (reducedMotion) {
       closeIndex({ restoreFocus: false });
       finishNavigation(normalizedHash, category);
       return;
     }
-    transitionActive = true;
+    pendingNavigation = { hash: normalizedHash, category, applied: false };
     document.body.classList.add('is-transitioning');
     closeIndex({ restoreFocus: false });
-    navigationDelay(() => finishNavigation(normalizedHash, category), 220, epoch);
+    navigationDelay(() => { finishNavigation(normalizedHash, category); pendingNavigation.applied = true; }, 220, epoch);
     navigationDelay(() => { document.body.classList.add('is-transition-exiting'); document.body.classList.remove('is-transitioning'); }, 320, epoch);
-    navigationDelay(() => { document.body.classList.remove('is-transition-exiting'); transitionActive = false; pendingGalleryFilter = null; }, 540, epoch);
+    navigationDelay(() => { document.body.classList.remove('is-transition-exiting'); pendingNavigation = null; }, 540, epoch);
   }
 
   $$('a[data-transition-link], [data-index-link]').forEach(link => {
@@ -1658,7 +1656,11 @@
 
   motionMedia.addEventListener('change', event => {
     reducedMotion = event.matches;
-    if (reducedMotion) archiveCanvas?.finishFilterTransition();
+    if (reducedMotion) {
+      const destination = pendingNavigation; cancelNavigation();
+      if (destination && !destination.applied) finishNavigation(destination.hash, destination.category);
+      archiveCanvas?.finishFilterTransition();
+    }
     if (photoDialog?.open) {
       if (photoMotion.phase === 'closing') { photoMotion.phase = 'open'; requestPhotoClose({ immediate: true }); }
       else if (photoMotion.phase === 'opening') settlePhotoOpening();
