@@ -15,7 +15,7 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 - 离开首页、页面后台时暂停；减少动态效果保持静态。无新增JS逐帧循环、无新增图片、无星轨背景。
 - 样式版本`20261025-hero-drift-1`；主脚本仍为`20261025-photo-motion-2`。关键样式同步更新。
 - `tools/test-hero-drift-browser.cjs`加入Pages检查，覆盖6组窗口、3组模拟触屏尺寸、轨迹持续移动/循环接缝、离屏及后台暂停、减少动态效果与无脚本布局。本地专项、62项单元、内容与静态检查已通过；真实手机及物理显示流畅度未实测。
-- 发布结果待补齐。
+- 已发布提交`2176c85a43c627e773d093202815d967cffa45c5`；[Pages运行40190367901](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/40190367901)全部检查、部署与部署验证成功。官网首页、主脚本和样式逐文件比对提交一致；正式网址的首页专项（6组窗口、3组触屏尺寸、持续移动与循环、离屏/后台暂停、减少动态效果及无脚本布局）通过。检查记录位于本机`work/hero-drift-live-report.json`及`work/hero-drift-live-files.json`。
 
 ## 2026-10-25 画布间距与看图交互更新
 
