@@ -2334,7 +2334,21 @@
 
   $('.dialog-prev', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(-1); });
   $('.dialog-next', photoDialog)?.addEventListener('click', event => { event.stopPropagation(); movePhoto(1); });
-  $('.dialog-close', photoDialog)?.addEventListener('click', () => requestPhotoClose());
+  const photoCloseButton = $('.dialog-close', photoDialog);
+  let photoCloseTouch = null;
+  photoCloseButton?.addEventListener('pointerdown', event => {
+    photoCloseTouch = event.pointerType === 'touch' && event.isPrimary ? { x: event.clientX, y: event.clientY } : null;
+  });
+  photoCloseButton?.addEventListener('pointercancel', () => { photoCloseTouch = null; });
+  photoCloseButton?.addEventListener('touchcancel', () => { photoCloseTouch = null; });
+  // Browsers may suppress the synthetic click immediately after a horizontal swipe.
+  // Handle a completed touch tap directly and suppress its delayed duplicate click.
+  photoCloseButton?.addEventListener('touchend', event => {
+    const start = photoCloseTouch, touch = event.changedTouches[0]; photoCloseTouch = null;
+    if (!start || !touch || event.touches.length || Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > 10) return;
+    event.preventDefault(); requestPhotoClose();
+  }, { passive: false });
+  photoCloseButton?.addEventListener('click', () => { photoCloseTouch = null; requestPhotoClose(); });
   $('[data-photo-copy-link]', photoDialog)?.addEventListener('click', copyPhotoLink);
   $('[data-gallery-directory-return]', photoDialog)?.addEventListener('click', () => {
     requestPhotoClose({ returnDirectory: true });

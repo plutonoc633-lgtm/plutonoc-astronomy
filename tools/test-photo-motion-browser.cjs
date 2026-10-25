@@ -45,7 +45,7 @@ async function closed(p) { await p.waitForFunction(() => !document.querySelector
 async function check(name, run) {
   let p;
   try { p=await page(); await run(p); report.checks.push({name,passed:true}); console.log('PASS',name); }
-  catch(error) { report.checks.push({name,passed:false,error:error.stack}); console.log('FAIL',name,error.message); }
+  catch(error) { report.checks.push({name,passed:false,error:error.stack}); console.log('FAIL',name,error.stack); }
   finally { await p?.close(); }
 }
 (async()=>{
@@ -148,11 +148,16 @@ async function check(name, run) {
       await clickWork(m);await opened(m);const id=await m.evaluate(()=>qaMotion.state.displayed.id);
       const r=await m.locator('.photo-stage').boundingBox(),y=Math.min(650,Math.max(150,r.y+r.height*.5));
       report.mobileStart={stage:r,y,hit:await m.evaluate(y=>document.elementFromPoint(290,y)?.outerHTML.slice(0,250),y)};
+      await m.evaluate(()=>{window.motionTouches=[];for(const type of ['pointerdown','pointerup','pointercancel','click'])document.addEventListener(type,e=>motionTouches.push({type,x:e.clientX,y:e.clientY,target:e.target.tagName,cls:e.target.className,phase:qaMotion.state.phase,button:!!e.target.closest('button')}),true);});
       const cd=await m.context().newCDPSession(m);await cd.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:290,y}]});
       for(let i=1;i<=10;i++){await cd.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:290-i*17,y}]});await m.waitForTimeout(18);}
       await cd.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-      await m.waitForFunction(id=>qaMotion.state.phase==='open'&&qaMotion.state.displayed?.id!==id,id);
-      await m.locator('.photo-dialog .dialog-close').tap();await closed(m);await m.waitForTimeout(80);
+      try { await m.waitForFunction(id=>qaMotion.state.phase==='open'&&qaMotion.state.displayed?.id!==id,id,{timeout:5000}); }
+      catch(error) { throw new Error(JSON.stringify({start:report.mobileStart,state:await m.evaluate(()=>({phase:qaMotion.state.phase,id:qaMotion.state.displayed?.id,touches:motionTouches,src:document.querySelector('.photo-stage img').src}))})); }
+      await m.locator('.photo-dialog .dialog-close').tap();
+      try { await m.waitForFunction(()=>!document.querySelector('[data-photo-dialog]').open&&qaMotion.state.phase==='closed',null,{timeout:3000}); }
+      catch(error){throw new Error(JSON.stringify(await m.evaluate(()=>({phase:qaMotion.state.phase,open:document.querySelector('[data-photo-dialog]').open,touches:motionTouches,anims:qaMotion.state.animations.size,flight:!!qaMotion.state.flight}))))}
+      await m.waitForTimeout(80);
       assert.deepEqual(await m.evaluate(()=>({camera:{...qaCanvas.camera},scroll:scrollY})),before);
     } finally { await m.close(); }
   });
