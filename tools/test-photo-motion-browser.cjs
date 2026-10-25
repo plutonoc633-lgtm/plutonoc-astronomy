@@ -115,7 +115,7 @@ async function check(name, run) {
     await gallery(p);
     for(const width of [1440,320,390,430,844]){
       await p.setViewportSize({width,height:844});await p.waitForTimeout(100);
-      const result=await p.evaluate(()=>{const a=qaCanvas,tops=[...new Set(a.nodes.map(n=>n.y-n.height/2))].sort((a,b)=>a-b),gap=a.mobile?32:30;return{valid:tops.slice(0,-1).every((t,i)=>{const n=a.nodes.find(n=>Math.abs(n.y-n.height/2-t)<.001);return Math.abs(tops[i+1]-t-n.height-gap)<.001}),overflow:document.documentElement.scrollWidth>innerWidth,footer:a.footerHeight,ratios:a.rendered.every(i=>Math.abs(i.width/i.height-i.node.width/i.node.height)<.001)};});assert(result.valid&&!result.overflow&&result.ratios&&result.footer>=76);
+      const result=await p.evaluate(()=>{const a=qaCanvas,tops=[...new Set(a.nodes.map(n=>n.y-n.height/2))].sort((a,b)=>a-b),gap=a.mobile?32:30;return{valid:tops.slice(0,-1).every((t,i)=>{const n=a.nodes.find(n=>Math.abs(n.y-n.height/2-t)<.001);return Math.abs(tops[i+1]-t-n.height-gap)<.001})&&Math.abs(tops[0]+a.tile.height-(tops.at(-1)+a.nodes.find(n=>Math.abs(n.y-n.height/2-tops.at(-1))<.001).height)-gap)<.001,overflow:document.documentElement.scrollWidth>innerWidth,footer:a.footerHeight,ratios:a.rendered.every(i=>Math.abs(i.width/i.height-i.node.width/i.node.height)<.001)};});assert(result.valid&&!result.overflow&&result.ratios&&result.footer>=76);
     }
   });
   await check('cross-section back and reduced-motion changes interrupt without stranded overlays',async p=>{
@@ -134,7 +134,7 @@ async function check(name, run) {
     await gallery(p);await clickWork(p);await opened(p);
     const before=await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href}));
     let healthy=false;
-    await p.route('**/*motion_failed*',async r=>healthy?r.fulfill({response:await r.fetch()}):r.fulfill({status:503,body:'unavailable'}));
+    await p.route('**/*motion_failed*',async r=>{try {if(healthy)await r.fulfill({response:await r.fetch()});else await r.fulfill({status:503,body:'unavailable'});}catch{await r.abort().catch(()=>{});}});
     const target=await p.evaluate(()=>{const w=qaCanvas.visibleWorks[(qaMotion.index()+1)%qaCanvas.visibleWorks.length];for(const key of ['thumbnailSrc','previewSrc','src'])if(w[key]){const u=new URL(w[key],location.href);u.searchParams.set('motion_failed','1');w[key]=u.href;}return w.title;});
     await p.locator('.photo-dialog .dialog-next').click();await p.locator('[data-photo-retry]').waitFor({state:'visible'});
     assert.deepEqual(await p.evaluate(()=>({src:document.querySelector('.photo-stage img').getAttribute('src'),title:document.querySelector('[data-photo-title]').textContent,url:location.href})),before);

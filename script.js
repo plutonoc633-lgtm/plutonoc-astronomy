@@ -1151,7 +1151,7 @@
 
       let rowTop = gap;
       let safety = 0;
-      while ((slotIndex < realCount || rowTop < minimumTileHeight) && safety < 1200) {
+      while ((slotIndex < realCount || rowTop - gap < minimumTileHeight) && safety < 1200) {
         const row = [];
         let aspectTotal = 0;
         let projectedWidth = 0;
@@ -1184,7 +1184,7 @@
         rowTop += rowHeight + rowGap;
       }
 
-      this.tile.height = Math.max(rowTop, minimumTileHeight);
+      this.tile.height = rowTop - gap;
       const originals = this.nodes.filter(node => !node.clone);
       const left = Math.min(...originals.map(node => node.x - node.width / 2));
       const right = Math.max(...originals.map(node => node.x + node.width / 2));

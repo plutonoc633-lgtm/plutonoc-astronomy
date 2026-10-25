@@ -193,6 +193,8 @@ test('compact rows keep exact spacing independently of long titles and repeat bo
     const row=c.nodes.filter(n=>Math.abs(n.y-n.height/2-tops[i])<.001);
     assert.ok(Math.abs(tops[i+1]-tops[i]-row[0].height-30)<.001);
   }
+  const last=c.nodes.find(n=>Math.abs(n.y-n.height/2-tops.at(-1))<.001);
+  assert.ok(Math.abs(tops[0]+c.tile.height-tops.at(-1)-last.height-30)<.001);
   assert.ok(c.nodes.every(n=>!('captionHeight' in n)&&!('titleLines' in n)));
 });
 
