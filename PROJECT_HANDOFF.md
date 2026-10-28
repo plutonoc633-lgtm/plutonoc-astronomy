@@ -13,7 +13,9 @@ GitHub Pages：https://plutonoc633-lgtm.github.io/plutonoc-astronomy/
 - 原CSS照片墙上方的Canvas不再随每次位移整块清空；独立下沿标题仅内容或尺寸变化时重绘，拖动及惯性中不反复刷新悬停标题。不改变标题位置、字体及照片尺寸。
 - 相同宽高、透明度、可见状态及变换不重复写入DOM；退出视野的空照片元素最多复用桌面12个／手机8个，清除图片地址，离屏／分类切换释放复用池。原小图预热、高清上限、内存预算保留。
 - 新增边缘连续性及Canvas失效范围单元回归，球面浏览器检查新增静止帧无重绘／样式改写、元素复用上限及后台释放。69项单元、31项球面、响应式、离屏暂停、14项看图及4项图片加载回归通过。脚本版本`20261028-canvas-drag-1`，未修改样式及云端服务。
-- 本机1920／3840宽真实指针回放与浏览器渲染追踪记录在`work/drag-before-*.json`和`work/drag-after-*.json`；脚本绘制通常低于2ms，不能据此证明物理显示流畅。真实手机及用户显示器上的手感未实测，发布结果随后补记。
+- 本机1920／3840宽指针回放与浏览器渲染追踪记录在`work/drag-before-*.json`和`work/drag-after-*.json`；脚本绘制通常低于2ms，不能据此证明物理显示流畅。浏览器实际指针事件的边缘逐3px拖动对比见`work/drag-edge-pointer-comparison.json`，同一路线225个采样，新版消除了旧版的突发位移增益，无误开照片。
+- 发布提交`24d2d4e897a2cca87075ef0673213e5ab959b0c8`，[Pages运行40630735872](https://github.com/plutonoc633-lgtm/plutonoc-astronomy/actions/runs/40630735872)全套检查、部署与部署验证成功。官网首页、脚本、作品JSON逐文件一致；正式网址31项球面及4项图片加载回归通过，记录为本机`work/drag-live-files.json`、`work/drag-live-sphere-report.json`、`work/drag-live-loading-report.json`。静止检测先等待图片队列及绘制失效标记清空，避免把正常补图误判为无意义重绘。
+- 真实手机触摸及用户物理显示器上的手感未实测，不宣称所有设备、所有场景完全无长帧。
 
 ## 2026-10-28 拖动画布图片加载
 
