@@ -171,6 +171,26 @@ test('speculative thumbnails cannot occupy all visible-image download slots', as
   } finally { fake.restore(); }
 });
 
+test('a thumbnail leaving view yields its queued slot to the current view', async () => {
+  const fake = fakeImages(() => {});
+  try {
+    const Cache = cacheWith();
+    const cache = new Cache(1000000, 1);
+    cache.request('busy');
+    cache.request('previously-visible');
+    cache.protect(['busy', 'previously-visible']);
+    await tick();
+    cache.request('currently-visible');
+    cache.request('previously-visible', .5);
+    cache.protect(['busy', 'previously-visible', 'currently-visible']);
+    fake.requests[0].onload();
+    await tick();
+    assert.equal(fake.requests[1].source, 'currently-visible');
+    cache.cancelPending();
+    await tick();
+  } finally { fake.restore(); }
+});
+
 test('cancelling outdated upgrades immediately lets new thumbnails proceed', async () => {
   const fake = fakeImages(() => {});
   try {

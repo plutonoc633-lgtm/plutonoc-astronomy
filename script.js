@@ -783,7 +783,7 @@
       if (!source) return;
       const existing = this.entries.get(source);
       if (existing) {
-        if (existing.pending) existing.priority = Math.min(existing.priority, priority);
+        if (existing.pending) existing.priority = priority;
         return;
       }
       const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true, queued: true, priority };
