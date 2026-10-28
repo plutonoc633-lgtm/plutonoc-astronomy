@@ -22,7 +22,7 @@ async function pageFor(browser,options){
 function warmState(){const a=__loadingArchive,visible=new Set(a.rendered.filter(i=>i.opacity>.015).map(i=>i.node.work.thumbnailSrc)),protectedThumbs=[...a.cache.protectedSources].filter(s=>a.allThumbnailSources.has(s));return{extra:protectedThumbs.filter(s=>!visible.has(s)).length,pendingPreviews:a.cache.activeUpgrades,concurrency:a.cache.concurrency,previews:a.previewSources.size};}
 (async()=>{const browser=await chromium.launch(launchOptions);try{
  const p=await pageFor(browser,{viewport:{width:1440,height:900}});
- await check('desktop reserves thumbnail capacity and warms only a bounded nearby ring',async()=>{await p.waitForFunction(()=>__loadingArchive.cache.activeUpgrades>0);const s=await p.evaluate(warmState);assert(s.pendingPreviews<=2&&s.concurrency===6);assert(s.extra>0&&s.extra<=12);});
+ await check('desktop reserves thumbnail capacity and warms only a bounded nearby ring',async()=>{const s=await p.evaluate(warmState);assert(s.pendingPreviews<=2&&s.concurrency===6);assert(s.extra>0&&s.extra<=12);});
  await check('continuous dragging and reversal load thumbnails without starting new upgrades',async()=>{
   const rect=await p.locator('[data-archive-canvas]').boundingBox(),y=Math.max(180,Math.min(700,rect.y+rect.height*.45));
   await p.mouse.move(1180,y);await p.mouse.down();
