@@ -174,7 +174,7 @@ function canvas() {
     $: () => ({ classList: { add() {}, remove() {} } }), $$: () => [], setVisualStage() {},
     setTimeout: fn => { timers.set(++serial, fn); return serial; }, clearTimeout: token => timers.delete(token) };
   const Class = vm.runInNewContext(source.slice(source.indexOf('  class InfiniteArchiveCanvas {'), source.indexOf('  const canvasElement')) + '\nInfiniteArchiveCanvas', context);
-  const instance = Object.assign(Object.create(Class.prototype), { width: 1200, height: 700, wallPlanes: new Map(), wallLayer: { style: {} }, previewSources: new Set(), allPreviewSources: new Set(), allThumbnailSources: new Set(), tile: {}, cache: { entries: new Map(), cancelPending() {} }, velocity: {}, camera: {}, initialCamera: {}, totalElement: {}, currentElement: {}, status: {}, requestDraw() {}, context: { save() {}, restore() {}, measureText: text => ({ width: [...text].length * 14 }) } });
+  const instance = Object.assign(Object.create(Class.prototype), { width: 1200, height: 700, wallPlanes: new Map(), wallPlanePool: [], wallLayer: { style: {} }, previewSources: new Set(), allPreviewSources: new Set(), allThumbnailSources: new Set(), tile: {}, cache: { entries: new Map(), cancelPending() {} }, velocity: {}, camera: {}, initialCamera: {}, totalElement: {}, currentElement: {}, status: {}, requestDraw() {}, context: { save() {}, restore() {}, measureText: text => ({ width: [...text].length * 14 }) } });
   return { instance, timers };
 }
 test('rapid filters and immediate directory selection discard old callbacks', () => {

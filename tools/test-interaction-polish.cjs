@@ -9,3 +9,24 @@ test('pending movement is flushed on release so dragging cannot become a photo c
 test('cancelled touch never opens a photo; vertical gestures preserve page scrolling',()=>{const {c}=harness();let opened=0;c.startOpening=()=>opened++;c.pointerDown({pointerId:1,pointerType:'touch',clientX:60,clientY:70,button:0});c.pointerMove({pointerId:1,pointerType:'touch',clientX:65,clientY:130});c.pointerUp({pointerId:1,pointerType:'touch',clientX:65,clientY:130,type:'pointerup'});assert.equal(opened,0);assert.equal(c.camera.y,0);c.pointerDown({pointerId:2,pointerType:'touch',clientX:60,clientY:70,button:0});c.pointerMove({pointerId:2,pointerType:'touch',clientX:100,clientY:70});c.pointerUp({pointerId:2,type:'pointercancel'});assert.equal(opened,0);assert.equal(c.pendingPointerMove,null)});
 
 test('a stale tile from the previous category cannot start opening a different work',()=>{const {c}=harness();c.visibleWorks=[{id:'new'}];c.startOpening({node:{index:0,work:{id:'old'}}});assert.equal(c.opening,undefined)});
+
+test('captured dragging crosses the sphere silhouette without an input gain spike',()=>{
+ const {c}=harness();c.perspectiveSupported=true;c.mobile=false;c.pointer={surfaceGrab:true};
+ const radius=c.wallRadius(),distance=c.wallDistance(),edge=distance*radius/Math.sqrt(distance*distance+2*distance*radius);
+ for(const angle of [0,.6,1.2]){
+  let previous=null,lastGain=null;
+  for(let r=edge*.84;r<edge*1.2;r+=1){
+   const point=c.unproject(c.width/2+Math.cos(angle)*r,c.sceneHeight/2+Math.sin(angle)*r,true);
+   if(previous){const gain=Math.hypot(point.x-previous.x,point.y-previous.y);assert(gain<8,`Excessive edge gain: ${gain}`);if(lastGain!==null)assert(Math.abs(gain-lastGain)<.2,`Discontinuous gain: ${lastGain} -> ${gain}`);lastGain=gain;}
+   previous=point;
+  }
+ }
+});
+
+test('unchanged sphere captions do not repaint the viewport during movement',()=>{
+ const {c}=harness();c.perspectiveSupported=true;const clears=[];const context={clearRect:(...a)=>clears.push(a),fillRect(){}};
+ c.drawFooter(context,null);for(let n=0;n<100;n++){c.camera.x++;c.drawFooter(context,null);}
+ assert.equal(clears.length,1);assert.equal(clears[0][1],c.sceneHeight);assert.equal(clears[0][3],c.height-c.sceneHeight);
+ c.footerPaintKey=null;c.drawFooter(context,null);assert.equal(clears.length,2);
+ c.perspectiveSupported=false;c.drawFooter(context,null);assert.equal(clears.length,3);
+});

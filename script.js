@@ -933,7 +933,7 @@
       this.perspectiveSupported = Boolean(window.CSS?.supports('perspective', '1px') && window.CSS?.supports('transform-style', 'preserve-3d'));
       this.wallLayer = document.createElement('div'); this.wallLayer.className = 'sphere-wall-layer'; this.wallLayer.setAttribute('aria-hidden', 'true');
       this.wallWorld = document.createElement('div'); this.wallWorld.className = 'sphere-wall-world'; this.wallLayer.append(this.wallWorld);
-      this.wallPlanes = new Map(); this.canvas.before(this.wallLayer);
+      this.wallPlanes = new Map(); this.wallPlanePool = []; this.canvas.before(this.wallLayer);
       this.wallLayer.hidden = !this.perspectiveSupported;
       this.bind();
       this.resize();
@@ -967,6 +967,13 @@
         image.removeAttribute('src'); element.remove();
       }
       this.wallPlanes.clear();
+      this.wallPlanePool.length = 0;
+    }
+
+    retireWallPlane(key, plane) {
+      plane.image.removeAttribute('src'); plane.source = ''; plane.element.remove();
+      this.wallPlanes.delete(key);
+      if (this.wallPlanePool.length < (this.mobile ? 8 : 12)) this.wallPlanePool.push(plane);
     }
 
     releasePreviews() {
@@ -1019,6 +1026,7 @@
       this.dpr = dpr;
       this.canvas.width = Math.round(bounds.width * dpr);
       this.canvas.height = Math.round(bounds.height * dpr);
+      this.footerPaintKey = null;
       this.context.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.updateSceneSize();
       this.layout();
@@ -1357,6 +1365,18 @@
       let sx = x - this.width / 2, sy = y - this.sceneHeight / 2;
       if (flat || (pointer && !this.pointer?.surfaceGrab)) return { x: sx, y: sy };
       const projectedRadius = distance * radius / Math.sqrt(distance * distance + 2 * distance * radius);
+      // A sphere's inverse has unbounded gain at its silhouette. Continue along
+      // the inner tangent for captured drags instead of accelerating then snapping
+      // to a different gain when the pointer crosses that edge.
+      const dragLimit = projectedRadius * .9;
+      const dragLength = Math.hypot(sx, sy);
+      if (pointer && dragLength > dragLimit) {
+        const ux = sx / dragLength, uy = sy / dragLength, step = .01;
+        const edge = this.unproject(this.width / 2 + ux * dragLimit, this.sceneHeight / 2 + uy * dragLimit);
+        const inner = this.unproject(this.width / 2 + ux * (dragLimit - step), this.sceneHeight / 2 + uy * (dragLimit - step));
+        const extra = (dragLength - dragLimit) / step;
+        return { x: edge.x + (edge.x - inner.x) * extra, y: edge.y + (edge.y - inner.y) * extra };
+      }
       const length = Math.hypot(sx, sy), limit = projectedRadius * .999;
       const extension = length > limit ? 1 - limit / length : 0;
       const extraX = sx * extension, extraY = sy * extension;
@@ -1374,9 +1394,7 @@
       this.needsDraw = false;
       const context = this.context;
       context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      context.clearRect(0, 0, this.width, this.height);
-      context.fillStyle = '#050609';
-      context.fillRect(0, this.sceneHeight, this.width, this.height - this.sceneHeight);
+      if (!this.perspectiveSupported) context.clearRect(0, 0, this.width, this.height);
       this.rendered = [];
       this.frameSources = new Set();
       this.wallUsed = new Set();
@@ -1418,7 +1436,7 @@
         }
       }
       candidates.sort((a, b) => b.distance - a.distance);
-      const hover = !this.opening && this.hoverPoint && [...candidates].reverse().find(i => this.containsPoint(i, this.hoverPoint.x, this.hoverPoint.y));
+      const hover = !this.opening && !loadingMotion && this.hoverPoint && [...candidates].reverse().find(i => this.containsPoint(i, this.hoverPoint.x, this.hoverPoint.y));
       for (const item of candidates) item.hovered = item.key === hover?.key;
       this.hovered = hover || null;
       const score = item => item.key === this.opening?.key || item.hovered || item.focused ? -Infinity : -item.width * item.height * item.opacity;
@@ -1449,11 +1467,11 @@
       }
       for (const [key, plane] of this.wallPlanes) {
         if (this.wallUsed.has(key)) continue;
-        plane.image.removeAttribute('src'); plane.element.remove(); this.wallPlanes.delete(key);
+        this.retireWallPlane(key, plane);
       }
       const front = this.rendered.slice().reverse();
       const label = front.find(i => i.hovered) || front.find(i => i.focused);
-      if (label && !this.opening && slow) this.drawSpaceCaption(context, label);
+      this.drawFooter(context, label && !this.opening && !loadingMotion && slow ? label : null);
       if (this.filterTransition && this.rendered.some(item => this.cache.get(item.node.work.thumbnailSrc || item.node.work.previewSrc))) this.beginFilterTransition();
       this.cache.protect(this.frameSources);
       const retry = document.querySelector('[data-canvas-retry]');
@@ -1498,17 +1516,34 @@
       }
       let plane = this.wallPlanes.get(key);
       if (!plane) {
-        const element = document.createElement('div'); element.className = 'sphere-wall-photo'; element.setAttribute('aria-hidden', 'true');
-        const image = document.createElement('img'); image.alt = ''; image.decoding = 'async'; element.append(image);
-        this.wallWorld.append(element); plane = { element, image, source: '' }; this.wallPlanes.set(key, plane);
+        plane = this.wallPlanePool.pop();
+        if (!plane) {
+          const element = document.createElement('div'); element.className = 'sphere-wall-photo'; element.setAttribute('aria-hidden', 'true');
+          const image = document.createElement('img'); image.alt = ''; image.decoding = 'async'; element.append(image);
+          plane = { element, image, source: '' };
+        }
+        this.wallWorld.append(plane.element); this.wallPlanes.set(key, plane);
       }
       const style = plane.element.style;
-      style.width = `${item.planeWidth}px`; style.height = `${item.planeHeight}px`;
-      style.transform = `translate3d(${item.surface.x - item.planeWidth / 2}px,${item.surface.y - item.planeHeight / 2}px,${item.surface.z}px)`;
-      style.opacity = `${opacity}`;
+      if (plane.width !== item.planeWidth) { style.width = `${item.planeWidth}px`; plane.width = item.planeWidth; }
+      if (plane.height !== item.planeHeight) { style.height = `${item.planeHeight}px`; plane.height = item.planeHeight; }
+      const transform = `translate3d(${item.surface.x - item.planeWidth / 2}px,${item.surface.y - item.planeHeight / 2}px,${item.surface.z}px)`;
+      if (plane.transform !== transform) { style.transform = transform; plane.transform = transform; }
+      if (plane.opacity !== opacity) { style.opacity = `${opacity}`; plane.opacity = opacity; }
       if (bitmap && plane.source !== bitmap.src) { plane.source = bitmap.src; plane.image.src = bitmap.src; }
-      plane.image.style.visibility = bitmap ? 'visible' : 'hidden';
+      if (plane.visible !== Boolean(bitmap)) { plane.image.style.visibility = bitmap ? 'visible' : 'hidden'; plane.visible = Boolean(bitmap); }
       this.wallUsed.add(key); this.rendered.push(item);
+    }
+
+    drawFooter(context, item) {
+      const key = `${this.width}:${this.height}:${this.sceneHeight}:${item?.node.work.id || ''}:${item?.node.index ?? ''}`;
+      if (this.perspectiveSupported && this.footerPaintKey === key) return;
+      this.footerPaintKey = key;
+      context.clearRect(0, this.sceneHeight, this.width, this.height - this.sceneHeight);
+      context.fillStyle = '#050609';
+      context.fillRect(0, this.sceneHeight, this.width, this.height - this.sceneHeight);
+      this.captionWorkId = null; this.captionBounds = null;
+      if (item) this.drawSpaceCaption(context, item);
     }
 
     drawSpaceCaption(context, item) {
