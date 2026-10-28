@@ -83,6 +83,7 @@ jobs:
           node tools/test-canvas-loading-browser.cjs
           node tools/test-photo-motion-browser.cjs
           node tools/test-hero-drift-browser.cjs
+          PLUTONOC_SKIP_PERF=1 node tools/test-visitor-interactions-browser.cjs
           mv work "$RUNNER_TEMP/plutonoc-browser-results"
       - name: Configure Pages
         uses: actions/configure-pages@v5

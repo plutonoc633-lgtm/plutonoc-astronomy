@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#08090b">
   <title>PlutonoC 管理后台</title>
-  <link rel="stylesheet" href="admin.css?v=20261022-reliability-1">
+  <link rel="stylesheet" href="admin.css?v=20261028-interactions-1">
 </head>
 <body>
   <header class="studio-header">
@@ -203,8 +203,10 @@
           <section class="stats-card"><h2>热门作品</h2><ol class="stats-list" data-stats-works></ol></section>
           <section class="stats-card"><h2>设备类型</h2><ul class="stats-list" data-stats-devices></ul></section>
           <section class="stats-card"><h2>访问来源</h2><ul class="stats-list" data-stats-sources></ul></section>
+          <section class="stats-card"><h2>常用功能</h2><ul class="stats-list" data-stats-interactions></ul></section>
+          <section class="stats-card"><h2>热门外链</h2><ol class="stats-list" data-stats-outbound></ol></section>
         </div>
-        <section class="stats-card"><h2>访问记录</h2><p class="stats-muted">点击展开浏览过程。打开或刷新网页记一次访问；30 分钟无活动后开始新的浏览过程。同一过程中的栏目和作品各记录一次。设备与来源按访问次数统计，时间为北京时间。</p><div data-stats-visits></div><div class="stats-pagination"><button type="button" data-stats-prev disabled>上一页</button><span data-stats-page></span><button type="button" data-stats-next disabled>下一页</button></div></section>
+        <section class="stats-card"><h2>访问记录</h2><p class="stats-muted">点击展开浏览过程。打开或刷新网页记一次访问；30 分钟无活动后开始新的浏览过程。同一过程中的栏目和作品各记录一次；互动按实际生效操作计数，外链仅表示点击跳转。设备与来源按访问次数统计，时间为北京时间。</p><div data-stats-visits></div><div class="stats-pagination"><button type="button" data-stats-prev disabled>上一页</button><span data-stats-page></span><button type="button" data-stats-next disabled>下一页</button></div></section>
       </section>
     </section>
   </main>
@@ -219,7 +221,7 @@
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js"></script>
   <script src="cloudbase-config.js?v=20260720-cloudbase-1"></script>
-  <script src="admin-analytics.js?v=20260908-reliability-1"></script>
+  <script src="admin-analytics.js?v=20261028-interactions-1"></script>
   <script src="admin-guestbook.js?v=20260914-guestbook-1"></script>
   <script src="admin.js?v=20261022-video-form-1"></script>
 </body>

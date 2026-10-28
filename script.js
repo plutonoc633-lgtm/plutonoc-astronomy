@@ -16,6 +16,33 @@
   const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
+  // Discrete successful actions only; never called from canvas/frame/pointermove paths.
+  const interactionTokens = new WeakSet();
+  function recordInteraction(key, target, title, entry = 'gallery', token = null) {
+    try {
+      const config = window.PLUTONOC_ANALYTICS;
+      if (config && (!config.enabled || config.interactionEnabled !== true)) return;
+      if (navigator.globalPrivacyControl || navigator.doNotTrack === '1') return;
+      if (token && typeof token === 'object') {
+        if (interactionTokens.has(token)) return;
+        interactionTokens.add(token);
+      }
+      if (window.PlutonoCAnalytics) window.PlutonoCAnalytics.interaction?.(key, target, title, entry);
+      else {
+        const queue = window.plutonoCEarlyInteractions ||= [];
+        if (queue.length < 100) queue.push([key, target, title, entry, null, Date.now()]);
+      }
+    } catch { /* keep navigation and animation independent of reporting */ }
+  }
+  function recordOutbound(event) {
+    if (event.defaultPrevented || (event.type === 'auxclick' && event.button !== 1)) return;
+    const link = event.target.closest?.('a[data-analytics-outbound]');
+    if (!link?.href || link.hidden) return;
+    const target = link.dataset.analyticsTarget || link.dataset.analyticsOutbound;
+    recordInteraction('outbound', target, link.dataset.analyticsTitle || $('b', link)?.textContent || link.getAttribute('aria-label') || link.textContent.trim(), link.dataset.analyticsEntry, event);
+  }
+  document.addEventListener('click', recordOutbound, { passive: true });
+  document.addEventListener('auxclick', recordOutbound, { passive: true });
 
   const deferredImages = new WeakMap();
   let deferredImageGeneration = 0;
@@ -331,10 +358,12 @@
   }
 
   function openIndex(event) {
+    const alreadyOpen = siteIndex.classList.contains('is-open');
     indexReturnFocus = event?.currentTarget || document.activeElement;
     siteIndex.classList.add('is-open');
     siteIndex.setAttribute('aria-hidden', 'false');
     document.body.classList.add('index-open');
+    if (!alreadyOpen) recordInteraction('index-open', 'index', '打开 INDEX', 'index', event);
     updateIndexPreview(indexPreviewLink);
     clearTimeout(indexFocusTimer);
     indexFocusTimer = setTimeout(() => {
@@ -453,7 +482,7 @@
     $('[data-curtain-count]').textContent = copy[2];
   }
 
-  function finishNavigation(hash, category, pushHistory = true) {
+  function finishNavigation(hash, category, pushHistory = true, interaction = null) {
     const normalizedHash = normalizeHash(hash);
     const target = $(normalizedHash);
     if (!target) return;
@@ -461,11 +490,16 @@
     if (category && archiveCanvas) archiveCanvas.setFilter(category, true);
     target.scrollIntoView({ block: 'start', behavior: 'instant' });
     if (pushHistory && (location.hash !== normalizedHash || (history.state?.category || null) !== category)) history.pushState({ category }, '', normalizedHash);
+    if (interaction) {
+      const targetId = category ? `works:${category}` : normalizedHash.slice(1);
+      if (category) recordInteraction('category', category, categoryLabel(category), interaction.entry, interaction.token);
+      else if (interaction.entry === 'index') recordInteraction('index-select', targetId, interaction.title, 'index', interaction.token);
+    }
     scrollDirty = true;
     requestMainFrame();
   }
 
-  function transitionTo(hash, category = null) {
+  function transitionTo(hash, category = null, interaction = null) {
     const normalizedHash = normalizeHash(hash);
     if (!$(normalizedHash)) return;
     cancelNavigation();
@@ -473,13 +507,13 @@
     updateCurtain(category, normalizedHash);
     if (reducedMotion) {
       closeIndex({ restoreFocus: false });
-      finishNavigation(normalizedHash, category);
+      finishNavigation(normalizedHash, category, true, interaction);
       return;
     }
     pendingNavigation = { hash: normalizedHash, category, applied: false };
     document.body.classList.add('is-transitioning');
     closeIndex({ restoreFocus: false });
-    navigationDelay(() => { finishNavigation(normalizedHash, category); pendingNavigation.applied = true; }, 220, epoch);
+    navigationDelay(() => { finishNavigation(normalizedHash, category, true, interaction); pendingNavigation.applied = true; }, 220, epoch);
     navigationDelay(() => { document.body.classList.add('is-transition-exiting'); document.body.classList.remove('is-transitioning'); }, 320, epoch);
     navigationDelay(() => { document.body.classList.remove('is-transition-exiting'); pendingNavigation = null; }, 540, epoch);
   }
@@ -489,7 +523,7 @@
       if (!link.hash || !$(link.hash)) return;
       event.preventDefault();
       const category = link.dataset.homeFilter || link.dataset.galleryTarget || null;
-      transitionTo(link.hash, category);
+      transitionTo(link.hash, category, { entry: link.hasAttribute('data-index-link') ? 'index' : 'home', title: $('b', link)?.textContent || link.hash.slice(1), token: event });
     });
   });
 
@@ -1742,7 +1776,12 @@
       };
     } else if (location.hash === '#works') ensureArchiveCanvas();
   }
-  $$('.gallery-filters [data-filter]').forEach(button => button.addEventListener('click', () => ensureArchiveCanvas()?.setFilter(button.dataset.filter)));
+  $$('.gallery-filters [data-filter]').forEach(button => button.addEventListener('click', event => {
+    const canvas = ensureArchiveCanvas(), category = button.dataset.filter;
+    if (!canvas || canvas.filter === category) return;
+    canvas.setFilter(category);
+    recordInteraction('category', category, category === 'all' ? '全部' : categoryLabel(category), 'gallery', event);
+  }));
   $('[data-canvas-retry]')?.addEventListener('click', () => archiveCanvas?.cache.retryFailed());
   $('.gallery-prev')?.addEventListener('click', () => ensureArchiveCanvas()?.go(-1));
   $('.gallery-next')?.addEventListener('click', () => ensureArchiveCanvas()?.go(1));
@@ -1794,6 +1833,15 @@
   let directoryImageActive = 0;
   let directoryImageGeneration = 0;
   let directoryImageConcurrency = isMobile ? 4 : 6;
+  let directorySearchTimer = 0, directoryComposing = false, directoryResultCount = 0;
+  function cancelDirectorySearchReport() { clearTimeout(directorySearchTimer); directorySearchTimer = 0; }
+  function scheduleDirectorySearchReport() {
+    cancelDirectorySearchReport();
+    if (directoryComposing || !galleryDirectory.open || !galleryDirectoryState.search.trim()) return;
+    directorySearchTimer = setTimeout(() => {
+      if (galleryDirectory.open && !directoryComposing) recordInteraction('directory-search', `results:${directoryResultCount}`, `搜索结果 ${directoryResultCount} 张`, 'directory');
+    }, 500);
+  }
 
   function directorySearchText(work) {
     const details = work.details || {};
@@ -1908,6 +1956,7 @@
     resetDirectoryImageLoader();
     const generation = directoryImageGeneration;
     const works = directoryWorks();
+    directoryResultCount = works.length;
     const resultText = `${works.length} / ${allWorks.length} 张作品`;
     galleryDirectorySummary.textContent = resultText;
     galleryDirectoryResult.textContent = resultText;
@@ -1934,6 +1983,9 @@
 
   function openGalleryDirectory(options = {}) {
     if (!galleryDirectory) return;
+    cancelDirectorySearchReport();
+    directoryComposing = false;
+    const wasOpen = galleryDirectory.open;
     if (options.status) galleryDirectoryState.status = options.status;
     if (options.category) galleryDirectoryState.category = options.category;
     if (typeof options.search === 'string') galleryDirectoryState.search = options.search;
@@ -1945,6 +1997,7 @@
     const close = $('[data-gallery-directory-close]', galleryDirectory);
     close.autofocus = touch;
     if (!galleryDirectory.open) galleryDirectory.showModal();
+    if (!wasOpen && options.reportOpen !== false) recordInteraction('directory-open', 'directory', '打开作品目录', 'directory');
     document.body.classList.add('dialog-open');
     clearTimeout(galleryDirectoryFocusTimer);
     if (touch) close.focus();
@@ -1952,6 +2005,7 @@
   }
 
   function closeGalleryDirectory({ restoreFocus = true } = {}) {
+    cancelDirectorySearchReport();
     if (!galleryDirectory?.open) return;
     clearTimeout(galleryDirectoryFocusTimer);
     galleryDirectoryRestoreFocus = restoreFocus;
@@ -1972,6 +2026,7 @@
     if (index < 0) return;
     closeGalleryDirectory({ restoreFocus: false });
     openPhoto(index);
+    recordInteraction('directory-select', work.id, work.title, 'directory');
   }
 
   $('[data-gallery-directory-open]')?.addEventListener('click', event => {
@@ -1979,13 +2034,15 @@
     galleryDirectoryReturnFocus = event.currentTarget;
   });
   $('[data-gallery-unseen]')?.addEventListener('click', event => {
-    openGalleryDirectory({ status: 'unseen', search: '' });
+    openGalleryDirectory({ status: 'unseen', search: '', reportOpen: false });
+    recordInteraction('directory-unseen', 'directory', '查看未看作品', 'directory', event);
     galleryDirectoryReturnFocus = event.currentTarget;
   });
   $('[data-gallery-continue]')?.addEventListener('click', () => {
     const nextWork = allWorks.find(work => !seenWorkIds.has(String(work.id)));
     if (!nextWork) {
-      openGalleryDirectory({ status: 'all', search: '' });
+      openGalleryDirectory({ status: 'all', search: '', reportOpen: false });
+      recordInteraction('directory-continue', 'directory', '继续浏览：已全部看过，打开目录', 'directory');
       return;
     }
     const fromDirectory = galleryDirectory.open;
@@ -1995,6 +2052,7 @@
     const index = canvas.focusWorkById(nextWork.id);
     if (index >= 0) {
       openPhoto(index);
+      recordInteraction('directory-continue', nextWork.id, nextWork.title, 'directory');
       if (fromDirectory) photoReturnFocus = $('[data-gallery-directory-open]');
     }
   });
@@ -2004,6 +2062,7 @@
   });
   galleryDirectory?.addEventListener('close', () => {
     if (galleryDirectory.open) return; // A queued close must not clear a newly reopened directory.
+    cancelDirectorySearchReport();
     clearTimeout(galleryDirectoryFocusTimer);
     if (!photoDialog?.open) document.body.classList.remove('dialog-open');
     resetDirectoryImageLoader();
@@ -2013,26 +2072,44 @@
   galleryDirectorySearch?.addEventListener('input', () => {
     galleryDirectoryState.search = galleryDirectorySearch.value;
     renderGalleryDirectory();
+    scheduleDirectorySearchReport();
   });
+  galleryDirectorySearch?.addEventListener('compositionstart', () => { directoryComposing = true; cancelDirectorySearchReport(); });
+  galleryDirectorySearch?.addEventListener('compositionend', () => { directoryComposing = false; scheduleDirectorySearchReport(); });
+  window.addEventListener('pagehide', cancelDirectorySearchReport);
+  function reportDirectoryFilter(type, value, previous) {
+    cancelDirectorySearchReport();
+    if (value === previous) return;
+    if (type === 'category') recordInteraction('category', value, value === 'all' ? '全部' : categoryLabel(value), 'directory');
+    else recordInteraction('directory-filter', `${type}:${value}`, { all: '全部', seen: '已看', unseen: '未看' }[value], 'directory');
+  }
   $$('[data-directory-category]', galleryDirectory).forEach(button => button.addEventListener('click', () => {
+    const previous = galleryDirectoryState.category;
     galleryDirectoryState.category = button.dataset.directoryCategory;
     syncDirectoryControls();
     renderGalleryDirectory();
+    reportDirectoryFilter('category', galleryDirectoryState.category, previous);
   }));
   $$('[data-directory-status]', galleryDirectory).forEach(button => button.addEventListener('click', () => {
+    const previous = galleryDirectoryState.status;
     galleryDirectoryState.status = button.dataset.directoryStatus;
     syncDirectoryControls();
     renderGalleryDirectory();
+    reportDirectoryFilter('status', galleryDirectoryState.status, previous);
   }));
   $('[data-directory-category-select]', galleryDirectory)?.addEventListener('change', event => {
+    const previous = galleryDirectoryState.category;
     galleryDirectoryState.category = event.currentTarget.value;
     syncDirectoryControls();
     renderGalleryDirectory();
+    reportDirectoryFilter('category', galleryDirectoryState.category, previous);
   });
   $('[data-directory-status-select]', galleryDirectory)?.addEventListener('change', event => {
+    const previous = galleryDirectoryState.status;
     galleryDirectoryState.status = event.currentTarget.value;
     syncDirectoryControls();
     renderGalleryDirectory();
+    reportDirectoryFilter('status', galleryDirectoryState.status, previous);
   });
   galleryDirectoryGrid?.addEventListener('click', event => {
     const card = event.target.closest('[data-directory-card]');
@@ -2239,6 +2316,7 @@
       paintPhotoDetails(work, index); loadPhotoImages(work, true);
       photoMotion.phase = 'open';
       commitPhoto(work, index, photoMotion.historyMode);
+      if (oldWork !== work) recordInteraction(direction > 0 ? 'photo-next' : 'photo-prev', work.id, work.title, 'photo', task);
       if (oldSource && oldRect && !reducedMotion) {
         const old = document.createElement('img'); old.className = 'photo-transition-image'; old.alt = ''; old.src = oldSource;
         Object.assign(old.style, { left: `${oldRect.left}px`, top: `${oldRect.top}px`, width: `${oldRect.width}px`, height: `${oldRect.height}px` });
@@ -2390,7 +2468,7 @@
     return true;
   }
 
-  async function copyPhotoLink() {
+  async function copyPhotoLink(event) {
     const work = photoMotion.displayed || archiveCanvas?.visibleWorks[photoIndex];
     if (!work) return;
     const absolute = new URL(photoUrl(work.id), location.origin).href;
@@ -2418,11 +2496,13 @@
         input.remove();
       }
       if (!copied) throw new Error('Clipboard unavailable');
+      recordInteraction('photo-copy', work.id, work.title, 'photo', event);
       const button = $('[data-photo-copy-link]', photoDialog);
       button.textContent = '已复制';
       clearTimeout(photoCopyResetTimer);
       photoCopyResetTimer = window.setTimeout(() => { button.textContent = '复制链接'; }, 3000);
     } catch {
+      recordInteraction('photo-copy-manual', work.id, work.title, 'photo', event);
       window.prompt('复制这张作品的链接', absolute);
     }
   }
@@ -2502,6 +2582,8 @@
   const equipmentTabs = $$('[data-equipment-tab]');
   const equipmentPanels = $$('[data-equipment-panel]');
   function showEquipment(name, moveFocus = false) {
+    if (!equipmentTabs.some(tab => tab.dataset.equipmentTab === name)) return;
+    const previous = equipmentTabs.find(tab => tab.classList.contains('active'))?.dataset.equipmentTab;
     equipmentTabs.forEach(tab => {
       const active = tab.dataset.equipmentTab === name;
       tab.classList.toggle('active', active);
@@ -2514,6 +2596,7 @@
       panel.hidden = !active;
       panel.classList.toggle('active', active);
     });
+    if (previous !== name) recordInteraction('equipment-tab', name, name === 'deep' ? '深空系统' : '日常影像', 'equipment');
   }
   equipmentTabs.forEach((tab, index) => {
     tab.addEventListener('click', () => showEquipment(tab.dataset.equipmentTab));
@@ -2552,6 +2635,7 @@
   let equipmentWheelIdleTimer = 0;
   let equipmentNormalizeTimer = 0;
   let equipmentMediaReady = false;
+  let equipmentInteractionTimer = 0;
 
   function hydrateEquipmentAround() {
     if (!equipmentMediaReady || !equipmentOriginals.length) return;
@@ -2602,18 +2686,27 @@
     equipmentNormalizeTimer = window.setTimeout(() => normalizeEquipmentIndex(true), reducedMotion ? 20 : 460);
   }
 
-  function moveEquipment(offset) {
+  function moveEquipment(offset, entry = 'button') {
     if (!equipmentOriginals.length) return;
     normalizeEquipmentIndex(true);
+    const previous = equipmentLogicalIndex();
     const limit = Math.max(equipmentOriginals.length - 1, 1);
     equipmentIndex += clamp(Math.trunc(offset), -limit, limit);
     updateEquipmentTrack();
     scheduleEquipmentNormalization();
+    clearTimeout(equipmentInteractionTimer);
+    const current = equipmentLogicalIndex();
+    if (previous !== current) equipmentInteractionTimer = setTimeout(() => {
+      if (equipmentLogicalIndex() === current) recordInteraction('equipment-photo', `photo:${current + 1}`, $('figcaption', equipmentOriginals[current])?.textContent || `设备照片 ${current + 1}`, entry);
+    }, reducedMotion ? 0 : 460);
   }
+  window.addEventListener('pagehide', () => clearTimeout(equipmentInteractionTimer));
 
+  equipmentTrack?.addEventListener('dragstart', event => event.preventDefault());
   equipmentTrack?.addEventListener('pointerdown', event => {
     if (event.target.closest('button')) return;
     clearTimeout(equipmentNormalizeTimer);
+    clearTimeout(equipmentInteractionTimer);
     equipmentWheelAccumulator = 0;
     normalizeEquipmentIndex(true);
     equipmentPointer = { id: event.pointerId, x: event.clientX, delta: 0, started: performance.now(), velocity: 0, lastX: event.clientX, lastTime: performance.now() };
@@ -2637,7 +2730,7 @@
     if (equipmentTrack.hasPointerCapture?.(event.pointerId)) equipmentTrack.releasePointerCapture(event.pointerId);
     equipmentTrack.classList.remove('is-dragging');
     equipmentPointer = null;
-    if (type !== 'pointercancel' && (Math.abs(delta) > equipmentStep() * .16 || Math.abs(velocity) > .38)) moveEquipment((delta || velocity) < 0 ? 1 : -1);
+    if (type !== 'pointercancel' && (Math.abs(delta) > equipmentStep() * .16 || Math.abs(velocity) > .38)) moveEquipment((delta || velocity) < 0 ? 1 : -1, 'drag');
     else updateEquipmentTrack();
   }));
   equipmentTrack?.addEventListener('wheel', event => {
@@ -2654,11 +2747,11 @@
     const steps = Math.trunc(equipmentWheelAccumulator / threshold);
     if (steps) {
       equipmentWheelAccumulator -= steps * threshold;
-      moveEquipment(steps);
+      moveEquipment(steps, 'wheel');
     }
     clearTimeout(equipmentWheelIdleTimer);
     equipmentWheelIdleTimer = window.setTimeout(() => {
-      if (Math.abs(equipmentWheelAccumulator) >= threshold * .5) moveEquipment(Math.sign(equipmentWheelAccumulator));
+      if (Math.abs(equipmentWheelAccumulator) >= threshold * .5) moveEquipment(Math.sign(equipmentWheelAccumulator), 'wheel');
       else updateEquipmentTrack();
       equipmentWheelAccumulator = 0;
     }, 100);
@@ -2908,6 +3001,8 @@
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       videoFrame.append(iframe);
       videoExternalLink.href = pageUrl;
+      videoExternalLink.dataset.analyticsTarget = `video:${film.id}`;
+      videoExternalLink.dataset.analyticsTitle = film.title;
     } else {
       videoPlayer.src = film.videoUrl;
       videoPlayer.poster = film.posterUrl || '';

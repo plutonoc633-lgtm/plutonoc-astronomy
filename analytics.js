@@ -23,27 +23,47 @@
     session.last = now;
     if (now - activitySaved > 30000) { persist(); activitySaved = now; }
   }
-  function record(kind, key = '', title = '') {
+  function record(kind, key = '', title = '', extra = {}, at = Date.now()) {
     try {
       if (!started) return;
       touch();
       const unique = kind + ':' + key;
-      if (kind !== 'page' && seen.has(unique)) return;
-      if (kind !== 'page') seen.add(unique);
-      const event = { id: uuid(), kind, key, title: String(title).slice(0, 120), at: Date.now() };
+      const dedupe = kind === 'section' || kind === 'work';
+      if (dedupe && seen.has(unique)) return;
+      if (dedupe) seen.add(unique);
+      const event = { id: uuid(), kind, key, title: String(title).slice(0, 120), at, ...extra };
+      if (pending.length >= 100) {
+        const expendable = pending.findIndex(item => item.event.kind === 'interaction');
+        if (expendable >= 0) pending.splice(expendable, 1);
+        else if (kind === 'interaction') return;
+        else pending.shift();
+      }
       pending.push({ session: session.id, source: session.source, event });
-      if (pending.length > 100) pending.shift();
-      persist();
+      if (kind !== 'interaction') persist();
     } catch { /* analytics never interrupts the page */ }
   }
   // Preserve work opens that happened before this optional script's idle start.
   const early = window.plutonoCEarlyWork || [];
+  const earlyInteractions = window.plutonoCEarlyInteractions || [];
   delete window.plutonoCEarlyWork;
+  delete window.plutonoCEarlyInteractions;
+  const interactionTokens = new WeakSet();
   window.PlutonoCAnalytics = { work(kind, id, title) {
     try {
       if (!started) { if (early.length < 20) early.push([kind, id, title]); }
       else record('work', kind + ':' + id, title);
     } catch { /* optional feature */ }
+  }, interaction(key, target, title, entry, token, at = Date.now()) {
+    try {
+      if (config.interactionEnabled !== true) return;
+      if (token && typeof token === 'object') {
+        if (interactionTokens.has(token)) return;
+        interactionTokens.add(token);
+      }
+      const args = [String(key).slice(0, 40), String(target).slice(0, 128), String(title || '').slice(0, 120), String(entry).slice(0, 20), null, at];
+      if (!started) { if (earlyInteractions.length < 100) earlyInteractions.push(args); }
+      else record('interaction', args[0], args[2], { target: args[1], entry: args[3] }, at);
+    } catch { /* optional reporting never owns the user action */ }
   } };
   function batch() {
     if (!pending.length) return '';
@@ -86,6 +106,7 @@
       started = true;
       record('page');
       early.splice(0).forEach(args => window.PlutonoCAnalytics.work(...args));
+      earlyInteractions.splice(0).forEach(args => window.PlutonoCAnalytics.interaction(...args));
       setInterval(() => flush(), 10000);
       for (const name of ['pointerdown', 'keydown', 'scroll']) window.addEventListener(name, () => { try { touch(); } catch { /* storage */ } }, { passive: true });
       const timers = new Map();

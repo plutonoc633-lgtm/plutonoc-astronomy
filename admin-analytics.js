@@ -6,6 +6,14 @@
     const day = time => new Date(time + 8 * 3600000).toISOString().slice(0, 10);
     const dateTime = time => new Date(time).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
     const labels = { desktop: '电脑', phone: '手机', tablet: '平板', unknown: '未知', home: '首页', works: '摄影作品', films: '动态影像', records: '媒体与荣誉', equipment: '设备', contact: '结尾' };
+    const actions = { outbound: '点击跳转', category: '选择分类', 'index-open': '打开 INDEX', 'index-select': 'INDEX 选择入口', 'directory-open': '打开作品目录', 'directory-filter': '目录筛选', 'directory-search': '目录搜索', 'directory-select': '目录选图', 'directory-unseen': '查看未看作品', 'directory-continue': '继续浏览', 'photo-next': '下一张照片', 'photo-prev': '上一张照片', 'photo-copy': '已复制作品链接', 'photo-copy-manual': '打开手动复制提示', 'equipment-tab': '切换设备标签', 'equipment-photo': '切换设备照片' };
+    const entries = { home: '首页', index: 'INDEX', gallery: '摄影筛选栏', directory: '作品目录', photo: '大图', records: '媒体与荣誉', footer: '社交链接', video: '视频窗口', equipment: '设备', button: '按钮', keyboard: '键盘', touch: '触屏', drag: '拖动', wheel: '横向滚动' };
+    function eventText(event) {
+      if (event.kind === 'page') return '打开网页';
+      if (event.kind === 'section') return '浏览栏目：' + (labels[event.key] || event.key);
+      if (event.kind === 'interaction') return `${actions[event.key] || '互动'}：${event.title || event.target || ''}${event.entry ? ' · ' + (entries[event.entry] || event.entry) : ''}`;
+      return '打开作品：' + (event.title || event.key);
+    }
     let generation = 0, page = 0, active = false, loading = false, selectedRange = null;
     function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; }
     const dates = () => ({ start: $('[data-stats-start]').value, end: $('[data-stats-end]').value });
@@ -19,7 +27,7 @@
       $('[data-stats-start]').value = day(Date.parse(today + 'T00:00:00+08:00') - (days - 1) * 86400000);
     }
     function clear() {
-      for (const name of ['metrics', 'trend', 'works', 'devices', 'sources', 'visits']) $('[data-stats-' + name + ']').replaceChildren();
+      for (const name of ['metrics', 'trend', 'works', 'devices', 'sources', 'interactions', 'outbound', 'visits']) $('[data-stats-' + name + ']').replaceChildren();
       $('[data-stats-page]').textContent = '';
       $('[data-stats-prev]').disabled = true; $('[data-stats-next]').disabled = true;
     }
@@ -31,7 +39,7 @@
     function summary(data) {
       const counts = Object.fromEntries(data.counts.map(row => [row._id, row.count]));
       const metrics = $('[data-stats-metrics]'); metrics.replaceChildren();
-      for (const [title, count] of [['匿名访客人数', data.visitors], ['访问次数', counts.page || 0], ['作品打开次数', counts.work || 0]]) {
+      for (const [title, count] of [['匿名访客人数', data.visitors], ['访问次数', counts.page || 0], ['作品打开次数', counts.work || 0], ['互动次数', counts.interaction || 0]]) {
         const card = node('div', undefined, 'stats-metric'); card.append(node('span', title), node('strong', count.toLocaleString())); metrics.append(card);
       }
       const daily = new Map();
@@ -43,6 +51,8 @@
       list('works', data.works, row => row.title || row._id);
       list('devices', data.devices, row => labels[row._id] || '未知');
       list('sources', data.sources, row => row._id || '直接访问 / 来源不可用');
+      list('interactions', data.interactions || [], row => actions[row._id] || row._id);
+      list('outbound', data.outbound || [], row => row.title || row._id);
     }
     function visits(data, token, selectedDates) {
       const target = $('[data-stats-visits]'); target.replaceChildren();
@@ -50,19 +60,33 @@
       data.rows.forEach(row => {
         const details = node('details', undefined, 'stats-visit');
         const title = node('summary', `${dateTime(row.first)} · ${labels[row.device] || '未知设备'} · ${row.source || '直接访问'} · ${row.actions} 条活动`);
-        const body = node('div', undefined, 'stats-timeline'); let loaded = false, fetching = false;
+        const body = node('div', undefined, 'stats-timeline'); let loaded = false, fetching = false, cursor = null;
+        const more = node('button', '继续加载访问过程'); more.type = 'button'; more.hidden = true;
+        const errorText = node('p', '', 'stats-muted');
         details.append(title, body); target.append(details);
-        details.addEventListener('toggle', async () => {
-          if (!details.open || loaded || fetching) return;
-          fetching = true; body.replaceChildren(node('p', '正在读取访问过程…'));
+        async function loadDetail() {
+          if (fetching || (loaded && !cursor)) return;
+          fetching = true; more.disabled = true; errorText.textContent = '';
+          if (!loaded) body.replaceChildren(node('p', '正在读取访问过程…'));
           try {
-            const result = await request('detail', { ...selectedDates, visitor: row._id.visitor, session: row._id.session });
+            const result = await request('detail', { ...selectedDates, visitor: row._id.visitor, session: row._id.session, ...(cursor ? { cursor } : {}) });
             if (token !== generation || !active) return;
-            body.replaceChildren(node('p', `匿名访客 ${row._id.visitor.slice(0, 8)} · 时间为北京时间`, 'stats-muted'));
-            result.rows.forEach(event => body.append(node('p', `${dateTime(event.at)}　${event.kind === 'page' ? '打开网页' : event.kind === 'section' ? '浏览栏目：' + (labels[event.key] || event.key) : '打开作品：' + (event.title || event.key)}`)));
+            if (!loaded) body.replaceChildren(node('p', `匿名访客 ${row._id.visitor.slice(0, 8)} · 时间为北京时间`, 'stats-muted'));
+            more.remove(); errorText.remove();
+            result.rows.forEach(event => body.append(node('p', `${dateTime(event.at)}　${eventText(event)}`)));
+            cursor = result.nextCursor || null;
+            more.hidden = !cursor; body.append(errorText, more);
             loaded = true;
-          } catch (error) { if (token === generation && active) body.replaceChildren(node('p', error.message + '；收起后可再次展开重试。')); }
-          finally { fetching = false; }
+          } catch (error) {
+            if (token === generation && active) {
+              if (!loaded) body.replaceChildren(node('p', error.message + '；收起后可再次展开重试。'));
+              else errorText.textContent = error.message + '；可继续加载重试。';
+            }
+          } finally { fetching = false; if (token === generation && active) more.disabled = false; }
+        }
+        more.addEventListener('click', loadDetail);
+        details.addEventListener('toggle', () => {
+          if (details.open && !loaded) loadDetail();
         });
       });
       $('[data-stats-page]').textContent = `第 ${data.page + 1} 页 · 每页 50 条浏览过程`;

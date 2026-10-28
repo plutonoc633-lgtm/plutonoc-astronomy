@@ -6,6 +6,31 @@ const LIMITS = 'plutonoc_analytics_limits';
 const ADMIN = '2066559012906586114';
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const sections = new Set(['home', 'works', 'films', 'records', 'equipment', 'contact']);
+const interactionActions = new Set(['outbound', 'category', 'index-open', 'index-select', 'directory-open', 'directory-filter', 'directory-search', 'directory-select', 'directory-unseen', 'directory-continue', 'photo-next', 'photo-prev', 'photo-copy', 'photo-copy-manual', 'equipment-tab', 'equipment-photo']);
+const interactionEntries = new Set(['home', 'index', 'gallery', 'directory', 'photo', 'records', 'footer', 'video', 'equipment', 'button', 'keyboard', 'touch', 'drag', 'wheel']);
+const categories = new Set(['all', 'deepsky', 'sunmoon', 'planet', 'nightscape', 'earth']);
+const outboundNames = { 'article-first-light': '中国国家天文：何时达遥夜，乍见初日明', 'article-snow-stars': '中国国家天文：风霜固成雪，时光结为星', 'article-stars': '中国国家天文：亿万星辰奔涌向我', 'award-a1': '星耀山河：A1优秀奖', 'award-b1': '星耀山河：B1三等奖', 'award-b2': '星耀山河：B2优秀奖', 'jiangnan-report': '江南大学：一起来数星星', 'social-bilibili': 'PlutonoC B站主页', 'social-douyin': 'PlutonoC 抖音主页', 'social-xiaohongshu': 'PlutonoC 小红书主页' };
+function interactionFields(event) {
+  const target = String(event.target || ''), entry = String(event.entry || '');
+  if (!interactionActions.has(event.key) || !interactionEntries.has(entry) || !/^[a-z0-9][a-z0-9._:-]{0,127}$/.test(target)) throw fail('INVALID_INPUT', '互动格式无效');
+  const photo = /^(photo:)?[a-z0-9][a-z0-9._:-]{0,119}$/;
+  let valid = false;
+  switch (event.key) {
+    case 'outbound': valid = Boolean(outboundNames[target]) || /^video:[a-z0-9][a-z0-9._:-]{0,119}$/.test(target); break;
+    case 'category': valid = categories.has(target); break;
+    case 'index-open': valid = target === 'index'; break;
+    case 'index-select': valid = sections.has(target) || target === 'guestbook' || /^works:(deepsky|sunmoon|planet|nightscape|earth)$/.test(target); break;
+    case 'directory-open': case 'directory-unseen': valid = target === 'directory'; break;
+    case 'directory-filter': valid = /^(category:(all|deepsky|sunmoon|planet|nightscape|earth)|status:(all|seen|unseen))$/.test(target); break;
+    case 'directory-search': valid = /^results:(0|[1-9]\d{0,5})$/.test(target); break;
+    case 'directory-continue': valid = target === 'directory' || photo.test(target); break;
+    case 'equipment-tab': valid = ['deep', 'daily'].includes(target); break;
+    case 'equipment-photo': valid = /^photo:([1-9]|[1-9]\d)$/.test(target); break;
+    default: valid = photo.test(target);
+  }
+  if (!valid) throw fail('INVALID_INPUT', '互动目标无效');
+  return { target, entry };
+}
 const origins = new Set(['https://plutonoc.cn', 'https://www.plutonoc.cn', 'https://plutonoc633-lgtm.github.io']);
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const day = time => new Date(time + 8 * 3600000).toISOString().slice(0, 10);
@@ -20,14 +45,16 @@ function normalize(body, now = Date.now()) {
   }
   return body.events.map(event => {
     if (!event || typeof event !== 'object') throw fail('INVALID_INPUT', '记录格式无效');
-    if (!UUID.test(event.id) || !['page', 'section', 'work'].includes(event.kind)) throw fail('INVALID_INPUT', '记录格式无效');
+    if (!UUID.test(event.id) || !['page', 'section', 'work', 'interaction'].includes(event.kind)) throw fail('INVALID_INPUT', '记录格式无效');
     const key = String(event.key || '');
     if (event.kind === 'section' && !sections.has(key)) throw fail('INVALID_INPUT', '栏目无效');
     if (event.kind === 'work' && !/^(photo|video):[a-z0-9._:-]{1,120}$/i.test(key)) throw fail('INVALID_INPUT', '作品编号无效');
     const at = Math.max(now - 60000, Math.min(now, Number(event.at) || now));
-    const unique = event.kind === 'page' ? event.id : event.kind + ':' + key;
+    const extra = event.kind === 'interaction' ? interactionFields(event) : {};
+    const unique = event.kind === 'page' ? event.id : event.kind === 'interaction' ? 'interaction:' + event.id : event.kind + ':' + key;
     return { _id: hash(body.visitor + ':' + body.session + ':' + unique), visitor: body.visitor, session: body.session,
-      kind: event.kind, key: event.kind === 'page' ? 'home' : key, title: String(event.title || '').replace(/[\x00-\x1f]/g, '').slice(0, 120),
+      kind: event.kind, key: event.kind === 'page' ? 'home' : key, ...extra,
+      title: String(event.kind === 'interaction' && key === 'directory-search' ? `搜索结果 ${extra.target.slice(8)} 张` : event.kind === 'interaction' && key === 'outbound' && outboundNames[extra.target] || event.title || '').replace(/[\x00-\x1f]/g, '').slice(0, 120),
       at, day: day(at), receivedAt: now, device, source, test: body.test === true };
   });
 }
@@ -94,16 +121,18 @@ async function query(event, context) {
     const pipeline = () => db.collection(EVENTS).aggregate().match(match);
     const run = async chain => (await chain.end()).data;
     if (event.action === 'summary') {
-      const [counts, visitors, trendCounts, trendVisitors, works, devices, sources] = await Promise.all([
+      const [counts, visitors, trendCounts, trendVisitors, works, devices, sources, interactions, outbound] = await Promise.all([
         run(pipeline().group({ _id: '$kind', count: $.sum(1) })),
         run(pipeline().group({ _id: '$visitor' }).count('count')),
-        run(pipeline().group({ _id: { day: '$day', kind: '$kind' }, count: $.sum(1) }).limit(300)),
+        run(pipeline().group({ _id: { day: '$day', kind: '$kind' }, count: $.sum(1) }).limit(400)),
         run(pipeline().group({ _id: { day: '$day', visitor: '$visitor' } }).group({ _id: '$_id.day', count: $.sum(1) }).limit(90)),
         run(pipeline().match({ kind: 'work' }).group({ _id: '$key', title: $.first('$title'), count: $.sum(1) }).sort({ count: -1, _id: 1 }).limit(20)),
         run(pipeline().match({ kind: 'page' }).group({ _id: '$device', count: $.sum(1) }).sort({ count: -1 }).limit(10)),
-        run(pipeline().match({ kind: 'page' }).group({ _id: '$source', count: $.sum(1) }).sort({ count: -1, _id: 1 }).limit(20))
+        run(pipeline().match({ kind: 'page' }).group({ _id: '$source', count: $.sum(1) }).sort({ count: -1, _id: 1 }).limit(20)),
+        run(pipeline().match({ kind: 'interaction' }).group({ _id: '$key', count: $.sum(1) }).sort({ count: -1, _id: 1 }).limit(30)),
+        run(pipeline().match({ kind: 'interaction', key: 'outbound' }).group({ _id: '$target', title: $.first('$title'), count: $.sum(1) }).sort({ count: -1, _id: 1 }).limit(20))
       ]);
-      return { ok: true, data: { dates, counts, visitors: visitors[0]?.count || 0, trendCounts, trendVisitors, works, devices, sources } };
+      return { ok: true, data: { dates, counts, visitors: visitors[0]?.count || 0, trendCounts, trendVisitors, works, devices, sources, interactions, outbound } };
     }
     if (event.action === 'visits') {
       const page = Math.min(10000, Math.max(0, Math.floor(Number(event.page) || 0)));
@@ -112,8 +141,14 @@ async function query(event, context) {
     }
     if (event.action === 'detail') {
       if (!UUID.test(event.visitor) || !UUID.test(event.session)) throw fail('INVALID_INPUT', '访问编号无效');
-      const rows = await run(pipeline().match({ visitor: event.visitor, session: event.session }).sort({ at: 1, _id: 1 }).limit(500));
-      return { ok: true, data: { rows } };
+      let chain = pipeline().match({ visitor: event.visitor, session: event.session });
+      if (event.cursor) {
+        const c = event.cursor;
+        if (!Number.isSafeInteger(c.at) || c.at < 0 || !/^[a-f0-9]{64}$/.test(c.id)) throw fail('INVALID_INPUT', '访问游标无效');
+        chain = chain.match(_.or([{ at: _.gt(c.at) }, { at: c.at, _id: _.gt(c.id) }]));
+      }
+      const result = await run(chain.sort({ at: 1, _id: 1 }).limit(501)), rows = result.slice(0, 500), last = rows.at(-1);
+      return { ok: true, data: { rows, nextCursor: result.length > 500 ? { at: last.at, id: last._id } : null } };
     }
     throw fail('INVALID_ACTION', '不支持的统计操作');
   } catch (error) { return { ok: false, error: { code: error.code || 'ANALYTICS_ERROR', message: ['FORBIDDEN', 'INVALID_RANGE', 'INVALID_INPUT', 'INVALID_ACTION'].includes(error.code) ? error.message : '统计暂时不可用，请稍后刷新' } }; }
