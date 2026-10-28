@@ -108,6 +108,88 @@ test('visible thumbnails start before queued high-resolution upgrades', async ()
   } finally { fake.restore(); }
 });
 
+test('high-resolution work leaves download slots for newly visible thumbnails', async () => {
+  const fake = fakeImages(() => {});
+  try {
+    const Cache = cacheWith();
+    const cache = new Cache(1000000, 6);
+    const upgrades = Array.from({ length: 6 }, (_, index) => `upgrade-${index}`);
+    upgrades.forEach(source => cache.request(source, 1));
+    cache.protect(upgrades);
+    await tick();
+    assert.equal(cache.activeUpgrades, 2);
+    assert.equal(fake.requests.length, 2);
+    cache.request('visible', 0);
+    cache.request('upcoming', .5);
+    cache.protect([...upgrades, 'visible', 'upcoming']);
+    await tick();
+    assert.deepEqual(fake.requests.slice(2).map(image => image.source), ['visible', 'upcoming']);
+    cache.cancelPending();
+    await tick();
+    assert.equal(cache.active, 0);
+    assert.equal(cache.activeUpgrades, 0);
+  } finally { fake.restore(); }
+});
+
+test('an upcoming queued thumbnail is promoted when it becomes visible', async () => {
+  const fake = fakeImages(() => {});
+  try {
+    const Cache = cacheWith();
+    const cache = new Cache(1000000, 1);
+    cache.request('busy');
+    cache.request('upcoming', .5);
+    cache.request('later', .5);
+    cache.protect(['busy', 'upcoming', 'later']);
+    await tick();
+    cache.request('upcoming', 0);
+    assert.equal(cache.entries.get('upcoming').priority, 0);
+    fake.requests[0].onload();
+    await tick();
+    assert.equal(fake.requests[1].source, 'upcoming');
+    cache.cancelPending();
+    await tick();
+  } finally { fake.restore(); }
+});
+
+test('speculative thumbnails cannot occupy all visible-image download slots', async () => {
+  const fake = fakeImages(() => {});
+  try {
+    const Cache = cacheWith();
+    const cache = new Cache(1000000, 6);
+    const upcoming = Array.from({ length: 8 }, (_, index) => `upcoming-${index}`);
+    upcoming.forEach(source => cache.request(source, .5));
+    cache.protect(upcoming);
+    await tick();
+    assert.equal(cache.activeWarmups, 2);
+    cache.request('newly-visible');
+    cache.protect([...upcoming, 'newly-visible']);
+    await tick();
+    assert.ok(fake.requests.some(image => image.source === 'newly-visible'));
+    cache.cancelPending();
+    await tick();
+    assert.equal(cache.activeWarmups, 0);
+  } finally { fake.restore(); }
+});
+
+test('cancelling outdated upgrades immediately lets new thumbnails proceed', async () => {
+  const fake = fakeImages(() => {});
+  try {
+    const Cache = cacheWith();
+    const cache = new Cache(1000000, 4);
+    cache.request('old-upgrade', 1);
+    cache.protect(['old-upgrade']);
+    await tick();
+    assert.equal(cache.activeUpgrades, 1);
+    cache.request('new-thumbnail');
+    cache.protect(['new-thumbnail']);
+    await tick();
+    assert.equal(cache.activeUpgrades, 0);
+    assert.ok(fake.requests.some(image => image.source === 'new-thumbnail'));
+    cache.cancelPending();
+    await tick();
+  } finally { fake.restore(); }
+});
+
 test('stalled images release their slots and allow following images to load', async () => {
   const fake = fakeImages((image, source) => {
     if (source === 'healthy') queueMicrotask(() => image.onload?.());

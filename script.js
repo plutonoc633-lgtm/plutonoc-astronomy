@@ -766,6 +766,8 @@
       this.protectedSources = new Set();
       this.queue = [];
       this.active = 0;
+      this.activeUpgrades = 0;
+      this.activeWarmups = 0;
       this.pumpScheduled = false;
     }
 
@@ -778,7 +780,12 @@
     failed(source) { return Boolean(this.entries.get(source)?.failed); }
 
     request(source, priority = 0) {
-      if (!source || this.entries.has(source)) return;
+      if (!source) return;
+      const existing = this.entries.get(source);
+      if (existing) {
+        if (existing.pending) existing.priority = Math.min(existing.priority, priority);
+        return;
+      }
       const entry = { bitmap: null, bytes: 0, used: performance.now(), pending: true, queued: true, priority };
       this.entries.set(source, entry);
       this.queue.push(source);
@@ -792,14 +799,30 @@
     pump() {
       this.queue.sort((a, b) => (this.entries.get(a)?.priority || 0) - (this.entries.get(b)?.priority || 0));
       while (this.active < this.concurrency && this.queue.length) {
-        const source = this.queue.shift();
+        const backgroundLimit = Math.max(1, Math.floor(this.concurrency / 3));
+        // Neither speculative thumbnails nor large upgrades may fill the pool.
+        const index = this.queue.findIndex(source => {
+          const entry = this.entries.get(source);
+          if (!entry?.pending || !entry.queued) return true;
+          if (entry.priority >= 1) return this.activeUpgrades < backgroundLimit;
+          if (entry.priority > 0) return this.activeWarmups < backgroundLimit;
+          return true;
+        });
+        if (index < 0) break;
+        const [source] = this.queue.splice(index, 1);
         const entry = this.entries.get(source);
         if (!entry?.pending || !entry.queued) continue;
         entry.queued = false;
         entry.controller = new AbortController();
+        const upgrade = entry.priority >= 1;
+        const warmup = entry.priority > 0 && !upgrade;
         this.active += 1;
+        if (upgrade) this.activeUpgrades += 1;
+        if (warmup) this.activeWarmups += 1;
         this.load(source, entry).finally(() => {
           this.active -= 1;
+          if (upgrade) this.activeUpgrades -= 1;
+          if (warmup) this.activeWarmups -= 1;
           this.pump();
         });
       }
@@ -1358,12 +1381,30 @@
       this.frameSources = new Set();
       this.wallUsed = new Set();
       const slow = Math.abs(this.velocity.x) + Math.abs(this.velocity.y) < 2.4;
+      const loadingMotion = Boolean(this.pointer?.dragging) || Math.abs(this.velocity.x) + Math.abs(this.velocity.y) > .04;
+      const warmRadius = this.wallRadius() * 1.35;
+      const warmMargin = this.mobile ? 140 : 240;
+      const leadX = clamp(this.velocity.x * 12, -warmMargin, warmMargin);
+      const leadY = clamp(this.velocity.y * 12, -warmMargin, warmMargin);
+      const nearby = new Map();
       const candidates = [];
       for (const node of this.nodes) {
         for (let offsetX = -1; offsetX <= 1; offsetX++) {
           for (let offsetY = -1; offsetY <= 1; offsetY++) {
             const latticeX = node.x - this.camera.x + offsetX * this.tile.width;
             const latticeY = node.y - this.camera.y + offsetY * this.tile.height;
+            if (this.visible !== false) {
+              const aheadX = latticeX - leadX, aheadY = latticeY - leadY;
+              const flat = reducedMotion || !this.perspectiveSupported;
+              const near = flat
+                ? Math.abs(aheadX) < this.width / 2 + node.width / 2 + warmMargin && Math.abs(aheadY) < this.sceneHeight / 2 + node.height / 2 + warmMargin
+                : Math.hypot(aheadX, aheadY) < warmRadius + Math.max(node.width, node.height) / 2;
+              if (near) {
+                const source = node.work.thumbnailSrc || node.work.previewSrc || node.work.src;
+                const score = aheadX * aheadX + aheadY * aheadY;
+                if (!nearby.has(source) || nearby.get(source) > score) nearby.set(source, score);
+              }
+            }
             const point = this.project(latticeX, latticeY);
             if (!point) continue;
             const width = node.width * point.scale, height = node.height * point.scale;
@@ -1381,10 +1422,25 @@
       for (const item of candidates) item.hovered = item.key === hover?.key;
       this.hovered = hover || null;
       const score = item => item.key === this.opening?.key || item.hovered || item.focused ? -Infinity : -item.width * item.height * item.opacity;
-      this.previewSources = new Set((this.visible === false || this.filterTransition ? [] : [...candidates]).sort((a, b) => score(a) - score(b)).slice(0, this.mobile ? 4 : 6).map(i => i.node.work.previewSrc || i.node.work.src));
+      const previewCandidates = this.visible === false || this.filterTransition ? [] : candidates.filter(item => !loadingMotion
+        || (this.previewSources.has(item.node.work.previewSrc || item.node.work.src) && this.cache.entries.get(item.node.work.previewSrc || item.node.work.src)?.bitmap));
+      this.previewSources = new Set(previewCandidates.sort((a, b) => score(a) - score(b)).slice(0, this.mobile ? 4 : 6).map(i => i.node.work.previewSrc || i.node.work.src));
       for (const [source, entry] of this.cache.entries) {
         if (this.filterTransition || !this.allPreviewSources.has(source) || this.allThumbnailSources.has(source) || this.previewSources.has(source)) continue;
         entry.controller?.abort(); entry.bitmap?.close?.(); this.cache.bytes -= entry.bytes; this.cache.entries.delete(source);
+      }
+      // Request order is independent of far-to-near paint order. The center gets
+      // its thumbnail first; a bounded ring also warms the sphere's hidden edge.
+      const thumbnailScore = item => item.hovered || item.focused ? -Infinity : (item.x - this.width / 2) ** 2 + (item.y - this.sceneHeight / 2) ** 2;
+      for (const item of [...candidates].filter(item => item.opacity > .015).sort((a, b) => thumbnailScore(a) - thumbnailScore(b))) {
+        const source = item.node.work.thumbnailSrc || item.node.work.previewSrc || item.node.work.src;
+        this.frameSources.add(source); this.cache.request(source, 0);
+      }
+      let warmed = 0;
+      for (const [source] of [...nearby].sort((a, b) => a[1] - b[1])) {
+        if (this.frameSources.has(source)) continue;
+        this.frameSources.add(source); this.cache.request(source, .5);
+        if (++warmed >= (this.mobile ? 6 : 12)) break;
       }
       candidates.sort((a, b) => b.distance - a.distance);
       for (const original of candidates) {
@@ -1430,7 +1486,9 @@
       const small = this.cache.get(thumbnail);
       const bitmap = preview || small;
       if (!small) this.cache.request(thumbnail, 0);
-      if (!preview && this.previewSources.has(source) && this.visible !== false && (small || thumbnail === source || this.cache.failed(thumbnail))) this.cache.request(source, 1);
+      if (!preview && this.previewSources.has(source) && this.visible !== false && !this.pointer?.dragging
+        && Math.abs(this.velocity.x) + Math.abs(this.velocity.y) <= .04
+        && (small || thumbnail === source || this.cache.failed(thumbnail))) this.cache.request(source, 1);
       if (!this.perspectiveSupported) {
         context.save(); context.beginPath(); context.rect(0, 0, this.width, this.sceneHeight); context.clip(); context.globalAlpha = opacity;
         this.roundedRect(context, item.x - item.width / 2, item.y - item.height / 2, item.width, item.height, 12);
